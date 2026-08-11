@@ -10,6 +10,7 @@ import MemberCorner from "@/components/home/MemberCorner";
 import CoopCalendar from "@/components/home/CoopCalendar";
 import OfficerService from "@/components/home/OfficerService";
 import ScrollProgress from "@/components/ui/ScrollProgress";
+import PageTracker from "@/components/site/PageTracker";
 import BackToTop from "@/components/ui/BackToTop";
 import { site } from "@/data/home";
 import { getRates, getSiteInfo, getSplash } from "@/lib/settings";
@@ -54,6 +55,7 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <PageTracker />
       <ScrollProgress />
       <SplashGate content={splash} />
       <Header />

@@ -36,9 +36,6 @@ function CardShell({
           <p className="mt-0.5 text-xs text-gray-500">{subtitle}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 ring-1 ring-amber-200">
-            ข้อมูลตัวอย่าง
-          </span>
           <button
             onClick={() => setAsTable((v) => !v)}
             title={asTable ? "ดูเป็นกราฟ" : "ดูเป็นตาราง"}
@@ -61,6 +58,19 @@ export type YearPoint = { year: number; visitors: number };
 
 export function VisitorsChart({ data }: { data: YearPoint[] }) {
   const [hover, setHover] = useState<number | null>(null);
+
+  // ยังไม่มีใครเข้าเว็บเลย — บอกตรงๆ ดีกว่าโชว์กราฟเปล่า
+  if (data.length === 0) {
+    return (
+      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+        <h2 className="font-semibold text-gray-800">ผู้เข้าชมเว็บไซต์</h2>
+        <p className="mt-0.5 text-xs text-gray-500">จำนวนผู้เข้าชมรายปี (ปีบัญชี พ.ศ.)</p>
+        <p className="mt-6 grid place-items-center rounded-xl bg-gray-50 py-10 text-center text-sm text-gray-400">
+          ยังไม่มีข้อมูล — ระบบเริ่มนับตั้งแต่วันนี้เป็นต้นไป
+        </p>
+      </section>
+    );
+  }
 
   const peak = Math.max(...data.map((d) => d.visitors));
   // ปัดเพดานขึ้นเป็นเลขกลมๆ เพื่อให้เส้นกริดอ่านง่าย
@@ -178,6 +188,19 @@ export type PagePoint = { page: string; views: number };
 export function PopularPagesChart({ data }: { data: PagePoint[] }) {
   const [hover, setHover] = useState<number | null>(null);
   const rows = [...data].sort((a, b) => b.views - a.views);
+
+  if (rows.length === 0) {
+    return (
+      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+        <h2 className="font-semibold text-gray-800">หน้าที่มีผู้เข้าชมมากที่สุด</h2>
+        <p className="mt-0.5 text-xs text-gray-500">จำนวนครั้งที่เปิดดู ย้อนหลัง 12 เดือน</p>
+        <p className="mt-6 grid place-items-center rounded-xl bg-gray-50 py-10 text-center text-sm text-gray-400">
+          ยังไม่มีข้อมูล — ระบบเริ่มนับตั้งแต่วันนี้เป็นต้นไป
+        </p>
+      </section>
+    );
+  }
+
   const peak = rows[0]?.views ?? 1;
 
   return (

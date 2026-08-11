@@ -4,6 +4,7 @@ import Footer from "@/components/site/Footer";
 import Reveal from "@/components/ui/Reveal";
 import { pageMetadata } from "@/lib/seo";
 import ScrollProgress from "@/components/ui/ScrollProgress";
+import PageTracker from "@/components/site/PageTracker";
 import BackToTop from "@/components/ui/BackToTop";
 
 import c01 from "@/data/asset/committee_15_images/committee-01.png";
@@ -50,6 +51,7 @@ export const generateMetadata = () => pageMetadata("/about/directory/board");
 export default function BoardPage() {
   return (
     <>
+      <PageTracker />
       <ScrollProgress />
       <Header />
       <main>

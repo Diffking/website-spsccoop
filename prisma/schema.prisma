@@ -74,6 +74,30 @@ model NewsTicker {
   @@index([published, sortOrder])
 }
 
+/// จำนวนครั้งที่เปิดดูแต่ละหน้า รายวัน — เก็บเป็นตัวนับ ไม่เก็บทีละครั้ง
+/// (ตารางเล็ก ค้นเร็ว และไม่มีข้อมูลส่วนตัวของผู้เข้าชมเลย)
+model PageView {
+  id    String   @id @default(cuid())
+  path  String
+  /// วันที่ตามเวลาไทย (เที่ยงคืน)
+  day   DateTime
+  count Int      @default(0)
+
+  @@unique([path, day])
+  @@index([day])
+}
+
+/// นับ "คน" รายวันแบบไม่ระบุตัวตน — เก็บเฉพาะลายนิ้วมือที่ผ่านการแฮชแล้ว
+/// (IP + เบราว์เซอร์ + วันที่ + ค่าลับ) ย้อนกลับเป็น IP ไม่ได้ และเปลี่ยนทุกวัน
+model VisitorDay {
+  id          String   @id @default(cuid())
+  fingerprint String
+  day         DateTime
+
+  @@unique([fingerprint, day])
+  @@index([day])
+}
+
 /// แบนเนอร์สไลด์บนหน้าแรก — เดิมฮาร์ดโค้ดใน src/data/home.ts
 model Slide {
   id        String   @id @default(cuid())

@@ -1,4 +1,5 @@
 import SplashView from "@/components/site/SplashView";
+import PageTracker from "@/components/site/PageTracker";
 import { getSplash } from "@/lib/settings";
 import { pageMetadata } from "@/lib/seo";
 
@@ -10,5 +11,10 @@ export const dynamic = "force-dynamic";
 
 export default async function SplashPage() {
   const content = await getSplash();
-  return <SplashView content={content} />;
+  return (
+    <>
+      <PageTracker />
+      <SplashView content={content} />
+    </>
+  );
 }

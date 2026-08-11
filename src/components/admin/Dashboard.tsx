@@ -61,10 +61,10 @@ export default function Dashboard({
   visitors: YearPoint[];
   popular: PagePoint[];
 }) {
-  const latestYear = visitors[visitors.length - 1];
-  const prevYear = visitors[visitors.length - 2];
+  const latestYear = visitors.at(-1);
+  const prevYear = visitors.at(-2);
   const growth =
-    prevYear && prevYear.visitors > 0
+    latestYear && prevYear && prevYear.visitors > 0
       ? Math.round(((latestYear.visitors - prevYear.visitors) / prevYear.visitors) * 100)
       : null;
 
@@ -76,13 +76,15 @@ export default function Dashboard({
         transition={{ duration: 0.45, ease: "easeOut" }}
         className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-400 p-5 text-white shadow-sm"
       >
-        <p className="text-sm text-brand-50/80">ผู้เข้าชมเว็บไซต์ปีบัญชี {latestYear.year}</p>
+        <p className="text-sm text-brand-50/80">
+          ผู้เข้าชมเว็บไซต์{latestYear ? `ปีบัญชี ${latestYear.year}` : ""}
+        </p>
         <p className="mt-1 text-5xl font-bold tabular-nums leading-none">
-          {latestYear.visitors.toLocaleString("th-TH")}
+          {(latestYear?.visitors ?? 0).toLocaleString("th-TH")}
         </p>
         <p className="mt-2 text-sm text-brand-50/90">
           คน
-          {growth !== null && (
+          {growth !== null && prevYear && (
             <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium">
               {growth >= 0 ? "▲" : "▼"} {Math.abs(growth)}% จากปี {prevYear.year}
             </span>

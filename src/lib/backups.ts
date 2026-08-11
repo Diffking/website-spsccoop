@@ -28,7 +28,9 @@ export async function getBackupStatus(): Promise<BackupStatus> {
 
   try {
     const dir = backupDir();
-    const names = (await readdir(dir)).filter((n) => n.startsWith("coopsmile-") && n.endsWith(".sql"));
+    const names = (await readdir(dir)).filter(
+      (n) => (n.startsWith("coopsmile-") && n.endsWith(".sql")) || (n.startsWith("uploads-") && n.endsWith(".tar.gz")),
+    );
 
     const files = await Promise.all(
       names.map(async (name) => {
