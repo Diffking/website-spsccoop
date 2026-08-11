@@ -2,38 +2,26 @@
 
 import { useRef, useState } from "react";
 import { Save, Loader2, Sparkles, Wand2 } from "lucide-react";
-import type { InterestRates, SiteInfo, UpdateMode } from "@/lib/settings";
+import type { InterestRates, UpdateMode } from "@/lib/settings";
 import ModeSwitch from "./ModeSwitch";
 
-const FIELDS: { key: keyof SiteInfo; label: string; hint?: string }[] = [
-  { key: "address", label: "ที่อยู่สหกรณ์" },
-  { key: "phone", label: "เบอร์โทรศัพท์" },
-  { key: "fax", label: "โทรสาร", hint: "เว้นว่างได้" },
-  { key: "email", label: "อีเมล" },
-  { key: "officeHours", label: "เวลาทำการ" },
-  { key: "memberCount", label: "จำนวนสมาชิก", hint: "ใส่ตัวเลขพร้อมคอมมา เช่น 220,031" },
-];
-
-export default function HomeSettings({
-  initialSiteInfo,
-  initialRates,
-  ratesMode,
+export default function RatesForm({
+  initial,
+  mode,
   aiReady,
 }: {
-  initialSiteInfo: SiteInfo;
-  initialRates: InterestRates;
-  ratesMode: UpdateMode;
+  initial: InterestRates;
+  mode: UpdateMode;
   aiReady: boolean;
 }) {
-  const [siteInfo, setSiteInfo] = useState(initialSiteInfo);
-  const [rates, setRates] = useState(initialRates);
+  const [rates, setRates] = useState(initial);
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
   const rateFile = useRef<HTMLInputElement>(null);
 
   /** ให้ AI อ่านภาพประกาศอัตราดอกเบี้ยแล้วเติมตารางให้ — ยังไม่บันทึก คนกดบันทึกเอง */
-  async function readRatesFromImage(file: File) {
+  async function readFromImage(file: File) {
     setStatus(null);
     setReading(true);
 
@@ -71,7 +59,7 @@ export default function HomeSettings({
     const response = await fetch("/api/admin/home/", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ siteInfo, interestRates: rates }),
+      body: JSON.stringify({ interestRates: rates }),
     });
     const data = await response.json().catch(() => ({}));
 
@@ -86,34 +74,17 @@ export default function HomeSettings({
   return (
     <div className="space-y-4">
       <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-        <h2 className="font-semibold text-gray-800">ข้อมูลสหกรณ์</h2>
-        <p className="mt-0.5 text-xs text-gray-500">แสดงที่ส่วนติดต่อเราและท้ายเว็บ</p>
-
-        <div className="mt-3 space-y-3">
-          {FIELDS.map((field) => (
-            <label key={field.key} className="block text-sm text-gray-600">
-              {field.label}
-              {field.hint && <span className="ml-1 text-xs text-gray-400">({field.hint})</span>}
-              <input
-                value={siteInfo[field.key]}
-                onChange={(e) => setSiteInfo({ ...siteInfo, [field.key]: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-base outline-none focus:border-brand-500"
-              />
-            </label>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-semibold text-gray-800">อัตราดอกเบี้ย</h2>
-            <p className="mt-0.5 text-xs text-gray-500">ตารางบนหน้าแรก — ใส่เฉพาะตัวเลข ไม่ต้องใส่ %</p>
+            <p className="mt-0.5 text-xs text-gray-500">
+              ตารางบนหน้าแรก — ใส่เฉพาะตัวเลข ไม่ต้องใส่ %
+            </p>
           </div>
-          <ModeSwitch component="rates" value={ratesMode} aiReady={aiReady} />
+          <ModeSwitch component="rates" value={mode} aiReady={aiReady} />
         </div>
 
-        {ratesMode === "ai" && (
+        {mode === "ai" && (
           <div className="mt-3 rounded-xl border border-dashed border-gray-300 p-3">
             <input
               ref={rateFile}
@@ -122,7 +93,7 @@ export default function HomeSettings({
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) readRatesFromImage(file);
+                if (file) readFromImage(file);
                 e.target.value = "";
               }}
             />
@@ -170,24 +141,21 @@ export default function HomeSettings({
         ))}
       </section>
 
-      {status && (
-        <p
-          className={`rounded-lg px-3 py-2 text-sm ${
-            status.kind === "ok" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
-          }`}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={save}
+          disabled={busy}
+          className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-brand-700 disabled:opacity-60"
         >
-          {status.text}
-        </p>
-      )}
-
-      <button
-        onClick={save}
-        disabled={busy}
-        className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 font-medium text-white transition hover:bg-brand-700 disabled:opacity-60"
-      >
-        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-        บันทึกข้อมูลสหกรณ์และดอกเบี้ย
-      </button>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          บันทึกอัตราดอกเบี้ย
+        </button>
+        {status && (
+          <span className={`text-sm ${status.kind === "ok" ? "text-emerald-600" : "text-red-500"}`}>
+            {status.text}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

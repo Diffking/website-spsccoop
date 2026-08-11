@@ -26,6 +26,8 @@ const ITEMS: {
   icon: typeof LayoutDashboard;
   label: string;
   desc: string;
+  /** ส่วนย่อยของหน้านั้น — โผล่ใต้เมนูแม่เมื่อกำลังอยู่ในหมวดนี้ */
+  children?: { href: string; label: string }[];
 }[] = [
   {
     key: "dashboard",
@@ -39,7 +41,14 @@ const ITEMS: {
     href: "/admin/home",
     icon: Megaphone,
     label: "หน้าแรก",
-    desc: "ข่าววิ่ง ประกาศ อัตราดอกเบี้ย และข้อมูลสหกรณ์",
+    desc: "ดูหน้าแรกและแก้ทีละส่วน",
+    children: [
+      { href: "/admin/home/slides", label: "แบนเนอร์สไลด์" },
+      { href: "/admin/home/ticker", label: "ข่าววิ่ง" },
+      { href: "/admin/home/announcements", label: "ประกาศสหกรณ์" },
+      { href: "/admin/home/info", label: "ข้อมูลสหกรณ์" },
+      { href: "/admin/home/rates", label: "อัตราดอกเบี้ย" },
+    ],
   },
   {
     key: "splash",
@@ -86,36 +95,74 @@ function Nav({ isAdmin, onNavigate }: { isAdmin: boolean; onNavigate?: () => voi
     <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
       {items.map((item) => {
         // /admin ต้องเทียบแบบเป๊ะ ไม่งั้นจะค้างสว่างตลอดเพราะทุกหน้าขึ้นต้นด้วย /admin
-        const active =
+        const inSection =
           item.href === "/admin"
             ? pathname === "/admin" || pathname === "/admin/"
             : pathname.startsWith(item.href);
+        // เมนูแม่ที่มีลูกจะสว่างเฉพาะตอนอยู่ที่หน้าตัวเอง ไม่ใช่ตอนอยู่หน้าลูก
+        const active = item.children
+          ? pathname === item.href || pathname === `${item.href}/`
+          : inSection;
 
         return (
-          <Link
-            key={item.key}
-            href={item.href}
-            onClick={onNavigate}
-            title={item.desc}
-            className={`relative flex items-start gap-3 rounded-xl px-3 py-2.5 transition ${
-              active ? "text-white" : "text-brand-50/80 hover:bg-white/10 hover:text-white"
-            }`}
-          >
-            {active && (
-              <motion.span
-                layoutId="admin-nav-active"
-                transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                className="absolute inset-0 rounded-xl bg-white/15 ring-1 ring-white/20"
-              />
-            )}
-            <item.icon className="relative mt-0.5 h-5 w-5 shrink-0" />
-            <span className="relative min-w-0">
-              <span className="block text-sm font-medium leading-tight">{item.label}</span>
-              <span className="mt-0.5 block text-[11px] leading-snug text-brand-100/70">
-                {item.desc}
+          <div key={item.key}>
+            <Link
+              href={item.href}
+              onClick={onNavigate}
+              title={item.desc}
+              className={`relative flex items-start gap-3 rounded-xl px-3 py-2.5 transition ${
+                active ? "text-white" : "text-brand-50/80 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {active && (
+                <motion.span
+                  layoutId="admin-nav-active"
+                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                  className="absolute inset-0 rounded-xl bg-white/15 ring-1 ring-white/20"
+                />
+              )}
+              <item.icon className="relative mt-0.5 h-5 w-5 shrink-0" />
+              <span className="relative min-w-0">
+                <span className="block text-sm font-medium leading-tight">{item.label}</span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-brand-100/70">
+                  {item.desc}
+                </span>
               </span>
-            </span>
-          </Link>
+            </Link>
+
+            {/* ส่วนย่อย — คลี่ออกเมื่อกำลังอยู่ในหมวดนี้ */}
+            <AnimatePresence initial={false}>
+              {item.children && inSection && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                  className="overflow-hidden"
+                >
+                  <div className="ml-5 mt-1 space-y-0.5 border-l border-white/15 pl-3">
+                    {item.children.map((child) => {
+                      const childActive = pathname.startsWith(child.href);
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          onClick={onNavigate}
+                          className={`block rounded-lg px-2.5 py-1.5 text-[13px] transition ${
+                            childActive
+                              ? "bg-white/15 font-medium text-white"
+                              : "text-brand-100/70 hover:bg-white/10 hover:text-white"
+                          }`}
+                        >
+                          {child.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         );
       })}
     </nav>
