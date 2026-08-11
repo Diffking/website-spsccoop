@@ -9,6 +9,8 @@ import Recommend from "@/components/home/Recommend";
 import MemberCorner from "@/components/home/MemberCorner";
 import CoopCalendar from "@/components/home/CoopCalendar";
 import OfficerService from "@/components/home/OfficerService";
+import ScrollProgress from "@/components/ui/ScrollProgress";
+import BackToTop from "@/components/ui/BackToTop";
 import { site } from "@/data/home";
 import { getRates, getSiteInfo, getSplash } from "@/lib/settings";
 import { getAnnouncements, getHolidayEvents } from "@/lib/content";
@@ -47,6 +49,7 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <ScrollProgress />
       <SplashGate content={splash} />
       <Header />
       <main>
@@ -59,6 +62,7 @@ export default async function Home() {
         <CoopCalendar holidays={holidays} />
         <OfficerService />
       </main>
+      <BackToTop />
       <Footer />
     </>
   );

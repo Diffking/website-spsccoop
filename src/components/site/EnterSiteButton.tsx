@@ -15,9 +15,10 @@ export default function EnterSiteButton({ label = "เข้าสู่เว�
   return (
     <button
       onClick={enter}
-      className="inline-flex items-center gap-2 rounded-full border border-amber-200/40 bg-white/5 px-8 py-3 text-base font-medium text-amber-50/90 backdrop-blur transition hover:border-amber-200/70 hover:bg-white/10 hover:text-amber-50"
+      className="group inline-flex items-center gap-2 rounded-full border border-amber-200/40 bg-white/5 px-8 py-3 text-base font-medium text-amber-50/90 backdrop-blur transition duration-300 hover:border-amber-200/70 hover:bg-white/10 hover:text-amber-50"
     >
-      {label} <ArrowRight className="h-4 w-4" />
+      {label}{" "}
+      <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
     </button>
   );
 }

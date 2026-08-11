@@ -3,6 +3,8 @@ import Image from "next/image";
 import Header from "@/components/site/Header";
 import Footer from "@/components/site/Footer";
 import Reveal from "@/components/ui/Reveal";
+import ScrollProgress from "@/components/ui/ScrollProgress";
+import BackToTop from "@/components/ui/BackToTop";
 
 import c01 from "@/data/asset/committee_15_images/committee-01.png";
 import c02 from "@/data/asset/committee_15_images/committee-02.png";
@@ -50,6 +52,7 @@ export const metadata: Metadata = {
 export default function BoardPage() {
   return (
     <>
+      <ScrollProgress />
       <Header />
       <main>
         {/* หัวเรื่อง */}
@@ -81,6 +84,7 @@ export default function BoardPage() {
           </div>
         </section>
       </main>
+      <BackToTop />
       <Footer />
     </>
   );

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight, ZoomIn, X } from "lucide-react";
 import { activitySlides } from "@/data/home";
 import type { InterestRates } from "@/lib/settings";
@@ -10,6 +10,7 @@ import type { InterestRates } from "@/lib/settings";
 const SLIDE_MS = 6500; // เลื่อนช้าๆ ไม่เร็วเกินไป
 
 function BannerSlider() {
+  const reduce = useReducedMotion();
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
   const [zoom, setZoom] = useState(false);
@@ -77,9 +78,13 @@ function BannerSlider() {
             </div>
             {/* ภาพด้านขวา */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
+              // ภาพค่อยๆ ซูมเข้าช้าๆ ตลอดช่วงที่สไลด์ค้างอยู่ (Ken Burns) ให้ภาพนิ่งดูมีชีวิต
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, scale: reduce ? 1 : 1.04 }}
+              transition={{
+                opacity: { duration: 0.6, ease: "easeOut" },
+                scale: { duration: SLIDE_MS / 1000, ease: "linear" },
+              }}
               className="relative h-full"
             >
               <Image
