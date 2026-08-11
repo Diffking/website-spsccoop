@@ -3,7 +3,7 @@
 import EnterSiteButton from "@/components/site/EnterSiteButton";
 import {
   getActiveOccasion,
-  splashContent,
+  type SplashContent,
   type SplashOccasion,
 } from "@/content/splash";
 import { useIsClient } from "@/lib/useIsClient";
@@ -15,22 +15,22 @@ import { useIsClient } from "@/lib/useIsClient";
  * ?preview=<id> = บังคับดูวันสำคัญที่ระบุ ไม่สนวันที่ — ใช้จากปุ่มดูตัวอย่างในหลังบ้าน
  */
 /** null = วันนี้ไม่มีวันสำคัญที่ต้องแสดง */
-function resolveOccasion(): SplashOccasion | null {
+function resolveOccasion(content: SplashContent): SplashOccasion | null {
   let previewId: string | null = null;
   try {
     previewId = new URLSearchParams(window.location.search).get("preview");
   } catch {}
 
   if (previewId) {
-    return splashContent.occasions.find((o) => o.id === previewId) ?? null;
+    return content.occasions.find((o) => o.id === previewId) ?? null;
   }
-  return getActiveOccasion();
+  return getActiveOccasion(content);
 }
 
-export default function SplashView() {
+export default function SplashView({ content }: { content: SplashContent }) {
   const isClient = useIsClient();
   // ยังไม่ hydrate = ยังไม่รู้วันที่/query string ของผู้ใช้ (จอดำเปล่าๆ กันภาพผิดกระพริบ)
-  const occasion = isClient ? resolveOccasion() : undefined;
+  const occasion = isClient ? resolveOccasion(content) : undefined;
 
   if (occasion === undefined) {
     return <main className="min-h-screen bg-black" />;
@@ -41,7 +41,7 @@ export default function SplashView() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-black px-4 py-10 text-center">
         <p className="text-white/60">ขณะนี้ไม่มีหน้าวันสำคัญที่กำลังแสดง</p>
-        <EnterSiteButton label={splashContent.buttonText} />
+        <EnterSiteButton label={content.buttonText} />
       </main>
     );
   }
@@ -69,7 +69,7 @@ export default function SplashView() {
         </div>
       )}
 
-      <EnterSiteButton label={splashContent.buttonText} />
+      <EnterSiteButton label={content.buttonText} />
     </main>
   );
 }

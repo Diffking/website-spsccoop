@@ -5,42 +5,70 @@ import Link from "next/link";
 import { FileText, CalendarDays, ChevronLeft, ChevronRight, UserRound } from "lucide-react";
 import Reveal from "@/components/ui/Reveal";
 import SectionHeading from "@/components/ui/SectionHeading";
-import { announcements, committees } from "@/data/home";
+import { committees } from "@/data/home";
+import type { AnnouncementItem } from "@/lib/content";
 
 const TABS = ["ประกาศ", "จดหมายข่าว", "รายงานผลดำเนินงาน"];
+const PER_PAGE = 5;
 
-function AnnouncementList() {
+function AnnouncementList({ items }: { items: AnnouncementItem[] }) {
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(items.length / PER_PAGE));
+  // กันหน้าค้างเกินขอบเวลาประกาศถูกลบจนเหลือน้อยลง
+  const current = Math.min(page, pageCount - 1);
+  const shown = items.slice(current * PER_PAGE, current * PER_PAGE + PER_PAGE);
+
   return (
     <div className="flex h-full flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
       <p className="mb-3 border-b border-gray-100 pb-2 text-sm font-semibold text-brand-700">
         ประกาศ · ปีบัญชี 2569
       </p>
-      <ul className="flex-1 divide-y divide-gray-100">
-        {announcements.map((a) => (
-          <li key={a.no}>
-            <Link href={a.href} className="group flex items-start gap-3 py-3 transition hover:bg-brand-50/60 rounded-lg px-2 -mx-2">
-              <FileText className="mt-0.5 h-5 w-5 shrink-0 text-brand-400" />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-gray-700 group-hover:text-brand-700">
-                  ประกาศที่ {a.no} {a.title}
-                </p>
-                <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
-                  <CalendarDays className="h-3.5 w-3.5" /> {a.date}
-                </p>
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-500">
-        <button className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 hover:bg-gray-50">
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <span>หน้า 1 / 2</span>
-        <button className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 hover:bg-gray-50">
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
+
+      {items.length === 0 ? (
+        <p className="flex-1 grid place-items-center py-10 text-center text-sm text-gray-400">
+          ยังไม่มีประกาศ
+        </p>
+      ) : (
+        <ul className="flex-1 divide-y divide-gray-100">
+          {shown.map((a) => (
+            <li key={a.id}>
+              <Link href={a.href} className="group flex items-start gap-3 py-3 transition hover:bg-brand-50/60 rounded-lg px-2 -mx-2">
+                <FileText className="mt-0.5 h-5 w-5 shrink-0 text-brand-400" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-gray-700 group-hover:text-brand-700">
+                    ประกาศที่ {a.number} {a.title}
+                  </p>
+                  <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
+                    <CalendarDays className="h-3.5 w-3.5" /> {a.date}
+                  </p>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {pageCount > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-500">
+          <button
+            onClick={() => setPage(current - 1)}
+            disabled={current === 0}
+            aria-label="ประกาศหน้าก่อนหน้า"
+            className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 transition hover:bg-gray-50 disabled:opacity-30"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="tabular-nums">หน้า {current + 1} / {pageCount}</span>
+          <button
+            onClick={() => setPage(current + 1)}
+            disabled={current >= pageCount - 1}
+            aria-label="ประกาศหน้าถัดไป"
+            className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 transition hover:bg-gray-50 disabled:opacity-30"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <div className="mt-4 text-center">
         <Link
@@ -91,7 +119,7 @@ function CommitteeCard() {
   );
 }
 
-export default function NewsSection() {
+export default function NewsSection({ announcements }: { announcements: AnnouncementItem[] }) {
   const [tab, setTab] = useState(TABS[0]);
   return (
     <section className="bg-white py-12">
@@ -114,7 +142,7 @@ export default function NewsSection() {
 
         <div className="grid items-stretch gap-6 lg:grid-cols-[1.7fr_1fr]">
           <Reveal className="h-full">
-            <AnnouncementList />
+            <AnnouncementList items={announcements} />
           </Reveal>
           <Reveal delay={0.1} className="h-full">
             <CommitteeCard />

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { splashContent as DEFAULT_SPLASH, type SplashContent } from "@/content/splash";
 
 /**
  * ค่าของหน้าแรกที่ไม่ใช่รายการ — เก็บใน Setting เป็น key -> JSON
@@ -64,3 +65,10 @@ export async function saveSetting(key: string, value: unknown): Promise<void> {
 
 export const getSiteInfo = () => getSetting<SiteInfo>("siteInfo", DEFAULT_SITE_INFO);
 export const getRates = () => getSetting<InterestRates>("interestRates", DEFAULT_RATES);
+
+/**
+ * หน้า splash วันสำคัญ — ค่าตั้งต้นคือ src/content/splash.json ที่ติดมากับโค้ด
+ * พอบันทึกจากหลังบ้านครั้งแรกจะมีแถวในฐานแล้วใช้ของในฐานแทนตลอด
+ */
+export const getSplash = () => getSetting<SplashContent>("splash", DEFAULT_SPLASH);
+export type { SplashContent };

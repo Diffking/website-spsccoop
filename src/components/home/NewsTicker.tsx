@@ -1,8 +1,12 @@
 import { Megaphone } from "lucide-react";
-import { breakingNews } from "@/data/home";
+import { getTickerItems } from "@/lib/content";
 
-export default function NewsTicker() {
-  const items = [...breakingNews, ...breakingNews]; // ทำซ้ำเพื่อวิ่งต่อเนื่องไม่มีรอยต่อ
+// ข้อความมาจากตาราง NewsTicker แก้ได้ที่ /admin/home
+export default async function NewsTicker() {
+  const texts = await getTickerItems();
+  if (texts.length === 0) return null; // ยังไม่มีข่าววิ่ง — ไม่ต้องมีแถบเปล่าคาหน้า
+
+  const items = [...texts, ...texts]; // ทำซ้ำเพื่อวิ่งต่อเนื่องไม่มีรอยต่อ
   return (
     <div className="border-y border-brand-100 bg-white">
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5">

@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Users, Megaphone, FileStack, ChevronRight } from "lucide-react";
+import { Users, Megaphone, FileStack, Sparkles, ChevronRight } from "lucide-react";
 import { currentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getSplash } from "@/lib/settings";
 import LoginForm from "@/components/admin/LoginForm";
 import LogoutButton from "@/components/admin/LogoutButton";
 
@@ -11,6 +12,12 @@ const MENU = [
     icon: Megaphone,
     title: "หน้าแรก",
     desc: "ข่าววิ่ง ประกาศ ดอกเบี้ย ข้อมูลสหกรณ์",
+  },
+  {
+    href: "/admin/splash",
+    icon: Sparkles,
+    title: "หน้าวันสำคัญ",
+    desc: "ภาพที่เด้งก่อนเข้าเว็บในวันสำคัญ",
   },
   {
     href: "/admin/pages",
@@ -26,14 +33,16 @@ export default async function AdminPage() {
     return <LoginForm />;
   }
 
-  const [announcements, tickers, pages, users] = await Promise.all([
+  const [announcements, tickers, pages, users, splash] = await Promise.all([
     db.announcement.count(),
     db.newsTicker.count(),
     db.page.count(),
     db.user.count(),
+    getSplash(),
   ]);
   const counts: Record<string, number> = {
     "/admin/home": announcements + tickers,
+    "/admin/splash": splash.occasions.length,
     "/admin/pages": pages,
     "/admin/users": users,
   };

@@ -10,14 +10,20 @@ import MemberCorner from "@/components/home/MemberCorner";
 import CoopCalendar from "@/components/home/CoopCalendar";
 import OfficerService from "@/components/home/OfficerService";
 import { site } from "@/data/home";
-import { getRates, getSiteInfo } from "@/lib/settings";
+import { getRates, getSiteInfo, getSplash } from "@/lib/settings";
+import { getAnnouncements } from "@/lib/content";
 
 // อ่านที่อยู่/ดอกเบี้ยจากฐานทุกครั้งที่มีคนเข้า — แก้ในหลังบ้านแล้วเห็นผลทันทีไม่ต้อง deploy
 // (ห้าม prerender ตอน build ด้วย เพราะตอน build ใน Docker ยังไม่มี DATABASE_URL)
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [info, rates] = await Promise.all([getSiteInfo(), getRates()]);
+  const [info, rates, announcements, splash] = await Promise.all([
+    getSiteInfo(),
+    getRates(),
+    getAnnouncements(),
+    getSplash(),
+  ]);
 
   // JSON-LD structured data สำหรับ SEO หน้า Home
   const jsonLd = {
@@ -40,12 +46,12 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <SplashGate />
+      <SplashGate content={splash} />
       <Header />
       <main>
         <Hero rates={rates} />
         <NewsTicker />
-        <NewsSection />
+        <NewsSection announcements={announcements} />
         <Services />
         <Recommend />
         <MemberCorner />
