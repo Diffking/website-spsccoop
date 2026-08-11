@@ -74,6 +74,24 @@ model NewsTicker {
   @@index([published, sortOrder])
 }
 
+/// แบนเนอร์สไลด์บนหน้าแรก — เดิมฮาร์ดโค้ดใน src/data/home.ts
+model Slide {
+  id        String   @id @default(cuid())
+  /// ที่อยู่รูป เช่น /uploads/xxx.jpg
+  imageUrl  String
+  title     String
+  /// คำอธิบายใต้หัวข้อ — เว้นว่างได้
+  caption   String?
+  /// ลิงก์ปลายทางเมื่อคลิก — เว้นว่างได้
+  href      String?
+  sortOrder Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published, sortOrder])
+}
+
 /// วันหยุดทำการของสหกรณ์ — ขึ้นบนปฏิทินหน้าแรก
 model Holiday {
   id   String   @id @default(cuid())

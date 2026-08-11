@@ -1,22 +1,25 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
+import Image, { type StaticImageData } from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight, ZoomIn, X } from "lucide-react";
 import { activitySlides } from "@/data/home";
 import type { InterestRates } from "@/lib/settings";
 
+/** สไลด์มาจากฐาน (แก้ที่ /admin/home) — ถ้ายังไม่มี ใช้ชุดที่ติดมากับโค้ดแทน */
+export type HeroSlide = { src: string | StaticImageData; title: string; desc: string; href: string };
+
 const SLIDE_MS = 6500; // เลื่อนช้าๆ ไม่เร็วเกินไป
 
-function BannerSlider() {
+function BannerSlider({ slides }: { slides: HeroSlide[] }) {
   const reduce = useReducedMotion();
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
   const [zoom, setZoom] = useState(false);
-  const n = activitySlides.length;
+  const n = slides.length;
   const go = useCallback((d: number) => setI((v) => (v + d + n) % n), [n]);
-  const slide = activitySlides[i];
+  const slide = slides[i];
 
   // autoplay ช้าๆ (หยุดตอนเอาเมาส์ชี้ หรือเปิดภาพใหญ่)
   useEffect(() => {
@@ -120,7 +123,7 @@ function BannerSlider() {
         </button>
 
         <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 gap-2">
-          {activitySlides.map((_, idx) => (
+          {slides.map((_, idx) => (
             <button
               key={idx}
               aria-label={`สไลด์ ${idx + 1}`}
@@ -162,12 +165,13 @@ function BannerSlider() {
               onClick={(e) => e.stopPropagation()}
               className="relative"
             >
-              <Image
-                src={slide.src}
+              {/* ภาพใหญ่ใช้ <img> ธรรมดา — สไลด์จากหลังบ้านเป็น URL ที่ไม่รู้ขนาดล่วงหน้า
+                  ซึ่ง next/image ต้องการ width/height เสมอถ้าไม่ได้ใช้ fill */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={typeof slide.src === "string" ? slide.src : slide.src.src}
                 alt={slide.title}
-                sizes="90vw"
                 className="max-h-[85vh] w-auto rounded-lg object-contain"
-                style={{ height: "auto" }}
               />
             </motion.div>
             <button
@@ -223,11 +227,12 @@ function RateCard({ rates }: { rates: InterestRates }) {
 }
 
 // อัตราดอกเบี้ยส่งมาจากหน้า (server) เพราะ component นี้เป็น client — อ่านฐานเองไม่ได้
-export default function Hero({ rates }: { rates: InterestRates }) {
+export default function Hero({ rates, slides }: { rates: InterestRates; slides: HeroSlide[] }) {
+  const shown = slides.length > 0 ? slides : activitySlides;
   return (
     <section className="bg-gradient-to-b from-brand-500 to-brand-300 pb-8 pt-6">
       <div className="mx-auto grid max-w-6xl gap-5 px-4 md:grid-cols-[1.9fr_1fr]">
-        <BannerSlider />
+        <BannerSlider slides={shown} />
         <RateCard rates={rates} />
       </div>
     </section>

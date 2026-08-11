@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Save, Loader2 } from "lucide-react";
-import type { InterestRates, SiteInfo } from "@/lib/settings";
+import { useRef, useState } from "react";
+import { Save, Loader2, Sparkles, Wand2 } from "lucide-react";
+import type { InterestRates, SiteInfo, UpdateMode } from "@/lib/settings";
+import ModeSwitch from "./ModeSwitch";
 
 const FIELDS: { key: keyof SiteInfo; label: string; hint?: string }[] = [
   { key: "address", label: "ที่อยู่สหกรณ์" },
@@ -16,14 +17,45 @@ const FIELDS: { key: keyof SiteInfo; label: string; hint?: string }[] = [
 export default function HomeSettings({
   initialSiteInfo,
   initialRates,
+  ratesMode,
+  aiReady,
 }: {
   initialSiteInfo: SiteInfo;
   initialRates: InterestRates;
+  ratesMode: UpdateMode;
+  aiReady: boolean;
 }) {
   const [siteInfo, setSiteInfo] = useState(initialSiteInfo);
   const [rates, setRates] = useState(initialRates);
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState(false);
+  const rateFile = useRef<HTMLInputElement>(null);
+
+  /** ให้ AI อ่านภาพประกาศอัตราดอกเบี้ยแล้วเติมตารางให้ — ยังไม่บันทึก คนกดบันทึกเอง */
+  async function readRatesFromImage(file: File) {
+    setStatus(null);
+    setReading(true);
+
+    const form = new FormData();
+    form.append("file", file);
+    form.append("target", "rates");
+    const response = await fetch("/api/admin/ai/read-image/", { method: "POST", body: form });
+    const data = await response.json().catch(() => ({}));
+    setReading(false);
+
+    if (!response.ok) {
+      setStatus({ kind: "error", text: data.error ?? "AI อ่านภาพไม่สำเร็จ" });
+      return;
+    }
+    const draft = data.data as InterestRates | undefined;
+    if (!draft?.deposit?.length && !draft?.loan?.length) {
+      setStatus({ kind: "error", text: "AI ไม่พบตารางอัตราดอกเบี้ยในภาพนี้" });
+      return;
+    }
+    setRates({ deposit: draft.deposit ?? [], loan: draft.loan ?? [] });
+    setStatus({ kind: "ok", text: "AI อ่านให้แล้ว — ตรวจตัวเลขทุกช่องก่อนกดบันทึก" });
+  }
 
   function setRate(group: "deposit" | "loan", index: number, field: "label" | "rate", value: string) {
     setRates((prev) => ({
@@ -73,8 +105,41 @@ export default function HomeSettings({
       </section>
 
       <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-        <h2 className="font-semibold text-gray-800">อัตราดอกเบี้ย</h2>
-        <p className="mt-0.5 text-xs text-gray-500">ตารางบนหน้าแรก — ใส่เฉพาะตัวเลข ไม่ต้องใส่ %</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-gray-800">อัตราดอกเบี้ย</h2>
+            <p className="mt-0.5 text-xs text-gray-500">ตารางบนหน้าแรก — ใส่เฉพาะตัวเลข ไม่ต้องใส่ %</p>
+          </div>
+          <ModeSwitch component="rates" value={ratesMode} aiReady={aiReady} />
+        </div>
+
+        {ratesMode === "ai" && (
+          <div className="mt-3 rounded-xl border border-dashed border-gray-300 p-3">
+            <input
+              ref={rateFile}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) readRatesFromImage(file);
+                e.target.value = "";
+              }}
+            />
+            <button
+              onClick={() => rateFile.current?.click()}
+              disabled={reading}
+              className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3.5 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100 disabled:opacity-60"
+            >
+              {reading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {reading ? "AI กำลังอ่านภาพ..." : "อัปภาพประกาศดอกเบี้ย ให้ AI อ่าน"}
+            </button>
+            <p className="mt-2 flex items-start gap-1.5 text-xs text-gray-500">
+              <Wand2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              AI จะเติมตารางให้ แต่ยังไม่บันทึก — ตรวจตัวเลขทุกช่องแล้วกดบันทึกเอง
+            </p>
+          </div>
+        )}
 
         {(
           [

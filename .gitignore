@@ -47,4 +47,6 @@ next-env.d.ts
 
 # ข้อมูลรันไทม์ของ Docker — ไม่ commit
 /uploads/
+# รูปที่อัปตอน npm run dev (ในคอนเทนเนอร์ path นี้ถูก mount มาจาก /uploads ด้านบน)
+/public/uploads/
 /backups/

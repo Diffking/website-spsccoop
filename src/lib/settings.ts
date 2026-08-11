@@ -72,3 +72,15 @@ export const getRates = () => getSetting<InterestRates>("interestRates", DEFAULT
  */
 export const getSplash = () => getSetting<SplashContent>("splash", DEFAULT_SPLASH);
 export type { SplashContent };
+
+/**
+ * โหมดอัปเดตของแต่ละ component บนหน้าแรก
+ * "manual" = พิมพ์เอง · "ai" = อัปภาพประกาศแล้วให้ AI ถอดข้อมูลมาเติมให้ (คนยืนยันก่อนบันทึกเสมอ)
+ */
+export type UpdateMode = "manual" | "ai";
+export type ComponentModes = { slides: UpdateMode; rates: UpdateMode };
+
+export const DEFAULT_MODES: ComponentModes = { slides: "manual", rates: "manual" };
+
+export const getComponentModes = () =>
+  getSetting<ComponentModes>("componentModes", DEFAULT_MODES);

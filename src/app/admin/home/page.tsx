@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { currentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getRates, getSiteInfo } from "@/lib/settings";
+import { getComponentModes, getRates, getSiteInfo } from "@/lib/settings";
+import { AI_READY } from "@/lib/ai";
 import HomeSettings from "@/components/admin/HomeSettings";
+import SlidesManager from "@/components/admin/SlidesManager";
 import TickerManager from "@/components/admin/TickerManager";
 import AnnouncementsManager from "@/components/admin/AnnouncementsManager";
 
@@ -12,11 +14,13 @@ export default async function AdminHomePage() {
   const user = await currentUser();
   if (!user) redirect("/admin/");
 
-  const [siteInfo, rates, tickers, announcements] = await Promise.all([
+  const [siteInfo, rates, tickers, announcements, slides, modes] = await Promise.all([
     getSiteInfo(),
     getRates(),
     db.newsTicker.findMany({ orderBy: { sortOrder: "asc" } }),
     db.announcement.findMany({ orderBy: { publishedAt: "desc" } }),
+    db.slide.findMany({ orderBy: { sortOrder: "asc" } }),
+    getComponentModes(),
   ]);
 
   return (
@@ -31,6 +35,19 @@ export default async function AdminHomePage() {
       </header>
 
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-5">
+        <SlidesManager
+          items={slides.map((s) => ({
+            id: s.id,
+            imageUrl: s.imageUrl,
+            title: s.title,
+            caption: s.caption,
+            href: s.href,
+            published: s.published,
+          }))}
+          mode={modes.slides}
+          aiReady={AI_READY}
+        />
+
         <TickerManager items={tickers.map((t) => ({ id: t.id, text: t.text, published: t.published }))} />
 
         <AnnouncementsManager
@@ -44,7 +61,12 @@ export default async function AdminHomePage() {
           }))}
         />
 
-        <HomeSettings initialSiteInfo={siteInfo} initialRates={rates} />
+        <HomeSettings
+          initialSiteInfo={siteInfo}
+          initialRates={rates}
+          ratesMode={modes.rates}
+          aiReady={AI_READY}
+        />
       </main>
     </>
   );

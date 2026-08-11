@@ -72,6 +72,31 @@ export async function getHolidayEvents(): Promise<CalendarEvent[]> {
   }
 }
 
+export type SlideItem = { id: string; src: string; title: string; desc: string; href: string };
+
+/**
+ * แบนเนอร์สไลด์หน้าแรก — คืนลิสต์ว่างถ้ายังไม่มีในฐาน
+ * (หน้าแรกจะใช้ภาพชุดเดิมที่ติดมากับโค้ดแทน จะได้ไม่มีช่องว่างคาหน้า)
+ */
+export async function getSlides(): Promise<SlideItem[]> {
+  try {
+    const rows = await db.slide.findMany({
+      where: { published: true },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      src: r.imageUrl,
+      title: r.title,
+      desc: r.caption ?? "",
+      href: r.href ?? "#",
+    }));
+  } catch (error) {
+    console.error("อ่านแบนเนอร์สไลด์ไม่ได้:", error);
+    return [];
+  }
+}
+
 export async function getAnnouncements(take = 20): Promise<AnnouncementItem[]> {
   try {
     const rows = await db.announcement.findMany({
