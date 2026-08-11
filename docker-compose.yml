@@ -21,6 +21,26 @@ services:
       timeout: 3s
       retries: 10
 
+  # ฐานข้อมูลสำหรับพัฒนาบนเครื่อง (npm run dev + prisma CLI) — คนละก้อนกับ db ของเว็บจริง
+  # เครื่องนี้เสิร์ฟโดเมนจริงแล้ว ถ้า dev ใช้ db เดียวกันจะเผลอลบข้อมูลจริงหรือ
+  # migrate dev พังคาเว็บจริงได้ · DATABASE_URL ใน .env ชี้มาที่ 5436 นี้
+  db-dev:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: coopsmile
+      POSTGRES_PASSWORD: coopsmile
+      POSTGRES_DB: coopsmile
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5436:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coopsmile"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   # อัปเดตโครงตารางให้ตรง schema แล้วจบไป (รันซ้ำได้ ไม่มีอะไรเสีย)
   # ใช้ image ขั้น build เพราะมี prisma CLI ครบ ส่วน image ที่รันเว็บจริงไม่ต้องมี
   migrate:
@@ -85,3 +105,4 @@ services:
 
 volumes:
   pgdata:
+  pgdata_dev:

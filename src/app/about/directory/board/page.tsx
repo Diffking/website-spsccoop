@@ -4,21 +4,21 @@ import Header from "@/components/site/Header";
 import Footer from "@/components/site/Footer";
 import Reveal from "@/components/ui/Reveal";
 
-import c01 from "@/data/asset/committee_15_images/01-G-ประธาน-จำลอง-แก้วพิทยานนท์.png";
-import c02 from "@/data/asset/committee_15_images/02-G-รอง1-ชวนหลุ๊ดหล๊ะ-1.png";
-import c03 from "@/data/asset/committee_15_images/03-G-สมชาย-ประดิษฐ์อำนวย.png";
-import c04 from "@/data/asset/committee_15_images/04-G-ประธานเงินกู้-เป็น-รักเกิด.png";
-import c05 from "@/data/asset/committee_15_images/05-G-เหรัญญิก-อนุชา-ซุ้นสุวรรณ.png";
-import c06 from "@/data/asset/committee_15_images/06-G-ปธะธานศึกษา-บุญญิสา-เมืองทอง.png";
-import c07 from "@/data/asset/committee_15_images/07-G-เลขา-ภานุมาศ-สุขขัง-1.png";
-import c08 from "@/data/asset/committee_15_images/08-เงินกู้-นายเจริญ-จิโรภาส.png";
-import c09 from "@/data/asset/committee_15_images/09-เงินกู้-นายอำนาจ-ทองผอม.png";
-import c10 from "@/data/asset/committee_15_images/10-G-กรรมการศึกษา-สุธน-หนูสังข์-1.png";
-import c11 from "@/data/asset/committee_15_images/11-G-กรรมการศึกษา-ชญานนท์-สุวรรณชัย.png";
-import c12 from "@/data/asset/committee_15_images/12-เงินกู้-นายพิเชษฐ์-สุขทร.png";
-import c13 from "@/data/asset/committee_15_images/13-นายสมศักดิ์-สินโน.png";
-import c14 from "@/data/asset/committee_15_images/14-ศึกษา-สุพัตศร-มากทอง.jpg";
-import c15 from "@/data/asset/committee_15_images/15-ศึกษา-เกตย์สิรี-พันธอุบล.png";
+import c01 from "@/data/asset/committee_15_images/committee-01.png";
+import c02 from "@/data/asset/committee_15_images/committee-02.png";
+import c03 from "@/data/asset/committee_15_images/committee-03.png";
+import c04 from "@/data/asset/committee_15_images/committee-04.png";
+import c05 from "@/data/asset/committee_15_images/committee-05.png";
+import c06 from "@/data/asset/committee_15_images/committee-06.png";
+import c07 from "@/data/asset/committee_15_images/committee-07.png";
+import c08 from "@/data/asset/committee_15_images/committee-08.png";
+import c09 from "@/data/asset/committee_15_images/committee-09.png";
+import c10 from "@/data/asset/committee_15_images/committee-10.png";
+import c11 from "@/data/asset/committee_15_images/committee-11.png";
+import c12 from "@/data/asset/committee_15_images/committee-12.png";
+import c13 from "@/data/asset/committee_15_images/committee-13.png";
+import c14 from "@/data/asset/committee_15_images/committee-14.jpg";
+import c15 from "@/data/asset/committee_15_images/committee-15.png";
 
 // เรียงตามลำดับบนภาพ 01→15 (ซ้าย→ขวา บน→ล่าง) — ชื่อ/ตำแหน่งอยู่บนภาพ, name ใช้เป็น alt
 const members: { img: typeof c01; name: string }[] = [

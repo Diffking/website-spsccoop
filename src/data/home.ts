@@ -3,8 +3,8 @@
  * (ตอนนี้เป็น placeholder ถอดจาก mockup — จะเสียบของจริงจาก mysql dump ทีหลัง)
  */
 
-import slideWelfare from "@/data/asset/slider-img/สวัสดิการใหม่-1-600x600.jpg";
-import slideDepositCert from "@/data/asset/slider-img/ใบรับรองเงินฝาก-3_0-600x600.jpg";
+import slideWelfare from "@/data/asset/slider-img/slide-welfare.jpg";
+import slideDepositCert from "@/data/asset/slider-img/slide-deposit-cert.jpg";
 import slideScreenshot from "@/data/asset/slider-img/Screenshot-2026-06-08-105311.png";
 // หมายเหตุ: ภาพ "ธ สถิตในดวงใจฯ" (พระองค์ภา) ย้ายไปหน้า /splash ไม่อยู่ในสไลด์แล้ว
 
