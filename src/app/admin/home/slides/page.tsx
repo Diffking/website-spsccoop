@@ -33,6 +33,12 @@ export default async function AdminSlidesPage() {
           caption: s.caption,
           href: s.href,
           published: s.published,
+          startsAt: s.startsAt
+            ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(s.startsAt)
+            : "",
+          endsAt: s.endsAt
+            ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(s.endsAt)
+            : "",
         }))}
         mode={modes.slides}
         aiReady={AI_READY}

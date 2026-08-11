@@ -25,7 +25,39 @@ export type SlideRow = {
   caption: string | null;
   href: string | null;
   published: boolean;
+  /** "YYYY-MM-DD" หรือ "" = ไม่จำกัด */
+  startsAt: string;
+  endsAt: string;
 };
+
+const thaiDate = new Intl.DateTimeFormat("th-TH", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "Asia/Bangkok",
+});
+
+const readable = (value: string) => {
+  const d = new Date(`${value}T00:00:00+07:00`);
+  return Number.isNaN(d.getTime()) ? value : thaiDate.format(d);
+};
+
+/** สถานะการเผยแพร่ตามช่วงวันที่ — เทียบกับวันนี้ตามเวลาไทย */
+function scheduleState(slide: SlideRow): { label: string; tone: string } | null {
+  if (!slide.published) return null;
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+
+  if (slide.startsAt && today < slide.startsAt) {
+    return { label: `รอถึง ${readable(slide.startsAt)}`, tone: "bg-amber-50 text-amber-700 ring-amber-200" };
+  }
+  if (slide.endsAt && today > slide.endsAt) {
+    return { label: `หมดอายุ ${readable(slide.endsAt)}`, tone: "bg-red-50 text-red-600 ring-red-200" };
+  }
+  if (slide.endsAt) {
+    return { label: `แสดงถึง ${readable(slide.endsAt)}`, tone: "bg-emerald-50 text-emerald-700 ring-emerald-200" };
+  }
+  return { label: "กำลังแสดง", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200" };
+}
 
 export default function SlidesManager({
   items,
@@ -43,6 +75,8 @@ export default function SlidesManager({
   const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
   const [href, setHref] = useState("");
+  const [startsAt, setStartsAt] = useState("");
+  const [endsAt, setEndsAt] = useState("");
   const [busy, setBusy] = useState<null | "upload" | "ai" | "save" | "row">(null);
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
@@ -82,7 +116,16 @@ export default function SlidesManager({
     }
     setTitle(data.data?.title ?? "");
     setCaption(data.data?.caption ?? "");
-    setStatus({ kind: "ok", text: "AI อ่านให้แล้ว — ตรวจข้อความก่อนกดเพิ่ม" });
+    setStartsAt(data.data?.startsAt ?? "");
+    setEndsAt(data.data?.endsAt ?? "");
+
+    const gotDates = Boolean(data.data?.startsAt || data.data?.endsAt);
+    setStatus({
+      kind: "ok",
+      text: gotDates
+        ? "AI อ่านให้แล้ว รวมถึงช่วงวันที่ — ตรวจให้ครบก่อนกดเพิ่ม"
+        : "AI อ่านให้แล้ว แต่ในภาพไม่ได้ระบุวันหมดเขต ใส่วันสิ้นสุดเองได้",
+    });
   }
 
   async function add() {
@@ -94,7 +137,7 @@ export default function SlidesManager({
     const response = await fetch("/api/admin/slides/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageUrl, title, caption, href }),
+      body: JSON.stringify({ imageUrl, title, caption, href, startsAt, endsAt }),
     });
     const data = await response.json().catch(() => ({}));
     setBusy(null);
@@ -107,6 +150,8 @@ export default function SlidesManager({
     setTitle("");
     setCaption("");
     setHref("");
+    setStartsAt("");
+    setEndsAt("");
     setStatus({ kind: "ok", text: "เพิ่มสไลด์แล้ว" });
     router.refresh();
   }
@@ -221,6 +266,30 @@ export default function SlidesManager({
               className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
             />
           </label>
+
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-xs text-gray-500">วันเริ่มแสดง (เว้นว่าง = แสดงทันที)</span>
+              <input
+                type="date"
+                value={startsAt}
+                onChange={(e) => setStartsAt(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs text-gray-500">วันสิ้นสุด (เว้นว่าง = แสดงตลอด)</span>
+              <input
+                type="date"
+                value={endsAt}
+                onChange={(e) => setEndsAt(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+              />
+            </label>
+          </div>
+          <p className="text-xs text-gray-400">
+            ใส่วันสิ้นสุดไว้ พอเลยวันแล้วสไลด์จะหายจากหน้าเว็บเอง ไม่ต้องมาคอยลบ
+          </p>
         </div>
 
         <div className="mt-3 flex items-center gap-3">
@@ -256,8 +325,9 @@ export default function SlidesManager({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.25, ease: "easeOut" }}
-                className="flex items-center gap-3 py-3"
+                className="py-3"
               >
+                <div className="flex items-center gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={slide.imageUrl}
@@ -277,6 +347,16 @@ export default function SlidesManager({
                       {slide.caption}
                     </span>
                   )}
+                  {(() => {
+                    const state = scheduleState(slide);
+                    return state ? (
+                      <span
+                        className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${state.tone}`}
+                      >
+                        {state.label}
+                      </span>
+                    ) : null;
+                  })()}
                 </span>
 
                 <span className="flex shrink-0 items-center">
@@ -313,6 +393,28 @@ export default function SlidesManager({
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </span>
+                </div>
+
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-[11px] text-gray-400">วันเริ่มแสดง</span>
+                    <input
+                      type="date"
+                      defaultValue={slide.startsAt}
+                      onChange={(e) => patch(slide.id, { startsAt: e.target.value })}
+                      className="mt-0.5 w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-brand-400"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-[11px] text-gray-400">วันสิ้นสุด</span>
+                    <input
+                      type="date"
+                      defaultValue={slide.endsAt}
+                      onChange={(e) => patch(slide.id, { endsAt: e.target.value })}
+                      className="mt-0.5 w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-brand-400"
+                    />
+                  </label>
+                </div>
               </motion.li>
             ))}
           </AnimatePresence>

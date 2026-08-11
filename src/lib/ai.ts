@@ -9,7 +9,13 @@ import Anthropic from "@anthropic-ai/sdk";
 
 export const AI_READY = Boolean(process.env.ANTHROPIC_API_KEY);
 
-export type SlideDraft = { title: string; caption: string };
+export type SlideDraft = {
+  title: string;
+  caption: string;
+  /** "YYYY-MM-DD" หรือ "" ถ้าในภาพไม่ได้บอกไว้ */
+  startsAt: string;
+  endsAt: string;
+};
 export type RatesDraft = {
   deposit: { label: string; rate: string }[];
   loan: { label: string; rate: string }[];
@@ -78,8 +84,18 @@ const SLIDE_SCHEMA = {
   properties: {
     title: { type: "string", description: "หัวข้อสั้น ๆ ของประกาศ ไม่เกิน 60 ตัวอักษร" },
     caption: { type: "string", description: "สรุปสาระสำคัญ 1-2 ประโยค ไม่เกิน 160 ตัวอักษร" },
+    startsAt: {
+      type: "string",
+      description:
+        'วันเริ่มของเรื่องนี้ในรูปแบบ YYYY-MM-DD (ค.ศ.) เช่น 2026-06-08 — ถ้าในภาพไม่ได้ระบุให้ตอบ ""',
+    },
+    endsAt: {
+      type: "string",
+      description:
+        'วันสุดท้ายที่เรื่องนี้ยังมีผล เช่น วันปิดรับสมัคร วันหมดเขต ในรูปแบบ YYYY-MM-DD (ค.ศ.) — ถ้าในภาพไม่ได้ระบุให้ตอบ ""',
+    },
   },
-  required: ["title", "caption"],
+  required: ["title", "caption", "startsAt", "endsAt"],
   additionalProperties: false,
 };
 
@@ -88,7 +104,10 @@ export function readSlideFromImage(base64: string, mediaType: Parameters<typeof 
     base64,
     mediaType,
     "นี่คือภาพประกาศของสหกรณ์ออมทรัพย์ อ่านข้อความในภาพแล้วสรุปเป็นหัวข้อและคำอธิบายสำหรับใช้เป็นแบนเนอร์บนหน้าเว็บ " +
-      "ตอบเป็นภาษาไทย ใช้ถ้อยคำทางการ เอาเฉพาะสาระที่อยู่ในภาพจริง ห้ามแต่งเติมตัวเลขหรือเงื่อนไขที่ไม่ได้เขียนไว้",
+      "ตอบเป็นภาษาไทย ใช้ถ้อยคำทางการ เอาเฉพาะสาระที่อยู่ในภาพจริง ห้ามแต่งเติมตัวเลขหรือเงื่อนไขที่ไม่ได้เขียนไว้ " +
+      "เรื่องวันที่: ประกาศไทยมักเขียนปีเป็น พ.ศ. ให้แปลงเป็น ค.ศ. ก่อนตอบ (ลบ 543 เช่น 2569 = 2026) " +
+      "และแปลงชื่อเดือนไทยเป็นตัวเลข เช่น 8 มิถุนายน 2569 = 2026-06-08 " +
+      'วันไหนที่ภาพไม่ได้ระบุไว้ให้ตอบเป็นข้อความว่าง "" ห้ามเดาเองเด็ดขาด',
     SLIDE_SCHEMA,
   );
 }

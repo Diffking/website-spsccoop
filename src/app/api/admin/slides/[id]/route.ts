@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
+import { parseDay } from "../route";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -19,6 +20,8 @@ export async function PATCH(request: Request, { params }: Params) {
     href?: string;
     imageUrl?: string;
     published?: boolean;
+    startsAt?: string;
+    endsAt?: string;
     move?: "up" | "down";
   };
 
@@ -46,6 +49,8 @@ export async function PATCH(request: Request, { params }: Params) {
     href?: string | null;
     imageUrl?: string;
     published?: boolean;
+    startsAt?: Date | null;
+    endsAt?: Date | null;
   } = {};
 
   if (body.title !== undefined) {
@@ -61,6 +66,9 @@ export async function PATCH(request: Request, { params }: Params) {
   if (body.caption !== undefined) data.caption = body.caption.trim() || null;
   if (body.href !== undefined) data.href = body.href.trim() || null;
   if (body.published !== undefined) data.published = body.published;
+  // ส่งค่าว่างมา = ล้างวันออก (ไม่จำกัดช่วงเวลา)
+  if (body.startsAt !== undefined) data.startsAt = parseDay(body.startsAt);
+  if (body.endsAt !== undefined) data.endsAt = parseDay(body.endsAt);
 
   const item = await db.slide.update({ where: { id }, data });
   return NextResponse.json({ item });

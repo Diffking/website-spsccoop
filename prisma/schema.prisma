@@ -74,6 +74,46 @@ model NewsTicker {
   @@index([published, sortOrder])
 }
 
+/// รายการย่อยของหน้าแรกทุกส่วน — ใช้ตารางเดียวแยกด้วย section
+/// (บริการของเรา / แนะนำ / สำหรับสมาชิก / คณะกรรมการ / สำนักงาน / ลิงก์ท้ายเว็บ)
+/// ทุกส่วนมีรูปร่างใกล้กันมาก แยกเป็นตารางละส่วนจะได้ 6 ตารางที่แทบเหมือนกัน
+model HomeItem {
+  id        String  @id @default(cuid())
+  /// services | recommends | memberFeatures | memberLinks | committees | officers | footerLinks
+  section   String
+  title     String
+  subtitle  String?
+  /// ชื่อไอคอน lucide เช่น Users, FileText (ดูรายชื่อที่รองรับใน src/components/ui/Icon.tsx)
+  icon      String?
+  href      String?
+  imageUrl  String?
+  /// ใช้เฉพาะการ์ดแนะนำ: blue | green | orange
+  theme     String?
+  sortOrder Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([section, published, sortOrder])
+}
+
+/// กิจกรรมบนปฏิทินหน้าแรก — วันหยุดสหกรณ์อยู่คนละตาราง (Holiday) เพราะแก้คนละเมนู
+model CalendarEvent {
+  id        String   @id @default(cuid())
+  /// วันที่ในเดือน 1-31 (ปฏิทินแสดงทีละเดือน)
+  day       Int
+  /// mobile = รถโมบาย · project = โครงการ
+  type      String   @default("project")
+  title     String
+  place     String?
+  time      String?
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published, day])
+}
+
 /// จำนวนครั้งที่เปิดดูแต่ละหน้า รายวัน — เก็บเป็นตัวนับ ไม่เก็บทีละครั้ง
 /// (ตารางเล็ก ค้นเร็ว และไม่มีข้อมูลส่วนตัวของผู้เข้าชมเลย)
 model PageView {
@@ -110,6 +150,10 @@ model Slide {
   href      String?
   sortOrder Int      @default(0)
   published Boolean  @default(true)
+  /// ช่วงเวลาที่ให้แสดงบนหน้าเว็บ — ว่าง = ไม่จำกัด
+  /// มีไว้กันข่าวเก่าค้างหน้าแรก พอเลยวันสิ้นสุดจะหายไปเอง ไม่ต้องมาคอยลบ
+  startsAt  DateTime?
+  endsAt    DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

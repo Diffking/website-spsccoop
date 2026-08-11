@@ -80,8 +80,16 @@ export type SlideItem = { id: string; src: string; title: string; desc: string; 
  */
 export async function getSlides(): Promise<SlideItem[]> {
   try {
+    // แสดงเฉพาะที่ถึงวันเริ่มแล้วและยังไม่เลยวันสิ้นสุด — ข่าวเก่าหายเองไม่ต้องมาคอยลบ
+    const now = new Date();
     const rows = await db.slide.findMany({
-      where: { published: true },
+      where: {
+        published: true,
+        AND: [
+          { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+          { OR: [{ endsAt: null }, { endsAt: { gte: now } }] },
+        ],
+      },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     });
     return rows.map((r) => ({
