@@ -44,9 +44,9 @@ function EventItem({ ev }: { ev: CalendarEvent }) {
 }
 
 function DayCard({
-  day, year, month, today, focus,
+  day, year, month, today, focus, events,
 }: {
-  day: number | null; year: number; month: number; today: number; focus: boolean;
+  day: number | null; year: number; month: number; today: number; focus: boolean; events: CalendarEvent[];
 }) {
   // ช่องว่างเมื่อเลยขอบเดือน (คงรูปแบบ 3 คอลัมน์)
   if (day === null) {
@@ -54,7 +54,7 @@ function DayCard({
   }
 
   const dow = new Date(year, month, day).getDay();
-  const evs = calendarEvents.filter((e) => e.day === day);
+  const evs = events.filter((e) => e.day === day);
   const isToday = day === today;
   const rel = day < today ? "ผ่านมาแล้ว" : isToday ? "วันนี้" : "ล่วงหน้า";
   const relColor = day < today ? "bg-gray-400" : isToday ? "bg-brand-500" : "bg-accent-green";
@@ -96,7 +96,8 @@ function DayCard({
   );
 }
 
-export default function CoopCalendar() {
+// holidays = วันหยุดสหกรณ์จากฐานข้อมูล (แก้ที่ /admin/holidays) รวมกับกิจกรรมที่ยังฮาร์ดโค้ดไว้
+export default function CoopCalendar({ holidays = [] }: { holidays?: CalendarEvent[] }) {
   const isClient = useIsClient();
   // null = ยังไม่ได้เลื่อนเอง ให้ยึดวันนี้เป็นศูนย์กลาง
   const [center, setCenter] = useState<number | null>(null);
@@ -131,6 +132,7 @@ export default function CoopCalendar() {
   const today = now.getDate();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const active = center ?? today;
+  const events = [...calendarEvents, ...holidays];
 
   const go = (step: number) => {
     setDir(step);
@@ -181,7 +183,7 @@ export default function CoopCalendar() {
               className="grid grid-cols-[1fr_1.2fr_1fr] items-stretch gap-2 md:gap-4"
             >
               {cols.map((d, i) => (
-                <DayCard key={i} day={d} year={year} month={month} today={today} focus={i === 1} />
+                <DayCard key={i} day={d} year={year} month={month} today={today} focus={i === 1} events={events} />
               ))}
             </motion.div>
           </div>

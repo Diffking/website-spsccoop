@@ -46,6 +46,18 @@ TypeError: Cannot convert argument to a ByteString ... value of 3626
 ชื่อไฟล์เป็น ASCII เสมอ ส่วนชื่อคน/หัวข้อภาษาไทยเก็บในโค้ด เช่น array `members` ใน
 `src/app/about/directory/board/page.tsx` ที่จับคู่ `committee-01.png` → ชื่อกรรมการ
 
+## สถิติในหน้าภาพรวมหลังบ้านยังเป็นข้อมูลตัวอย่าง
+
+กราฟผู้เข้าชมและหน้ายอดนิยมใน `/admin` ใช้ค่าคงที่ใน `src/app/admin/page.tsx`
+(`SAMPLE_VISITORS` / `SAMPLE_POPULAR`) — **ยังไม่มีระบบเก็บสถิติจริง** บนจอมีป้าย
+"ข้อมูลตัวอย่าง" กำกับไว้ อย่าถอดป้ายออกจนกว่าจะต่อของจริง
+
+ส่วน "การสำรองข้อมูล" ในหน้าเดียวกัน**เป็นของจริง** — อ่านไฟล์จาก `/backups`
+(mount แบบ read-only เข้า service `web`) ผ่าน `src/lib/backups.ts`
+
+กราฟวาดด้วย HTML/CSS ล้วนใน `src/components/admin/StatsCharts.tsx` ไม่มี chart library
+ซีรีส์เดียว = สีเดียว (`#1c7fca`) ผ่านเกณฑ์ contrast บนพื้นขาวแล้ว
+
 ## ไฟล์ที่ไม่อยู่ใน git — ต้องก๊อปมือเวลาย้ายเครื่อง
 
 `.env` (มี `TUNNEL_TOKEN` ตัวจริง) · `backups/*.sql` · `uploads/` · `_data/`

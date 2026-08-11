@@ -65,6 +65,8 @@ services:
     volumes:
       # รูปที่อัปจากหลังบ้าน — เก็บนอก image ไม่งั้น build ใหม่แล้วรูปหาย
       - ./uploads:/app/public/uploads
+      # หน้าภาพรวมหลังบ้านอ่านสถานะไฟล์สำรอง — อ่านอย่างเดียวพอ ไม่ให้เว็บเขียนทับได้
+      - ./backups:/backups:ro
     depends_on:
       db:
         condition: service_healthy

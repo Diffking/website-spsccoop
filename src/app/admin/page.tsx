@@ -1,30 +1,27 @@
-import Link from "next/link";
-import { Users, Megaphone, FileStack, Sparkles, ChevronRight } from "lucide-react";
 import { currentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getSplash } from "@/lib/settings";
+import { getBackupStatus } from "@/lib/backups";
 import LoginForm from "@/components/admin/LoginForm";
-import LogoutButton from "@/components/admin/LogoutButton";
+import Dashboard from "@/components/admin/Dashboard";
 
-const MENU = [
-  {
-    href: "/admin/home",
-    icon: Megaphone,
-    title: "หน้าแรก",
-    desc: "ข่าววิ่ง ประกาศ ดอกเบี้ย ข้อมูลสหกรณ์",
-  },
-  {
-    href: "/admin/splash",
-    icon: Sparkles,
-    title: "หน้าวันสำคัญ",
-    desc: "ภาพที่เด้งก่อนเข้าเว็บในวันสำคัญ",
-  },
-  {
-    href: "/admin/pages",
-    icon: FileStack,
-    title: "หน้าเนื้อหา",
-    desc: "ประวัติความเป็นมา วิสัยทัศน์ ฯลฯ",
-  },
+/**
+ * ตัวเลขผู้เข้าชม — ยังไม่ได้ต่อระบบเก็บสถิติจริง ใส่ตัวอย่างไว้ให้เห็นหน้าตาก่อน
+ * ในหน้าจอมีป้าย "ข้อมูลตัวอย่าง" กำกับไว้แล้ว จะได้ไม่มีใครเอาไปใช้อ้างอิง
+ */
+const SAMPLE_VISITORS = [
+  { year: 2565, visitors: 42180 },
+  { year: 2566, visitors: 58940 },
+  { year: 2567, visitors: 76320 },
+  { year: 2568, visitors: 98650 },
+  { year: 2569, visitors: 124870 },
+];
+
+const SAMPLE_POPULAR = [
+  { page: "หน้าแรก", views: 18420 },
+  { page: "ประกาศสหกรณ์", views: 9860 },
+  { page: "ดาวน์โหลดเอกสาร", views: 7310 },
+  { page: "คณะกรรมการดำเนินการ", views: 4950 },
+  { page: "อัตราดอกเบี้ย", views: 3720 },
 ];
 
 export default async function AdminPage() {
@@ -33,61 +30,24 @@ export default async function AdminPage() {
     return <LoginForm />;
   }
 
-  const [announcements, tickers, pages, users, splash] = await Promise.all([
+  const [announcements, tickers, holidays, pages, users, backup] = await Promise.all([
     db.announcement.count(),
     db.newsTicker.count(),
+    db.holiday.count(),
     db.page.count(),
     db.user.count(),
-    getSplash(),
+    getBackupStatus(),
   ]);
-  const counts: Record<string, number> = {
-    "/admin/home": announcements + tickers,
-    "/admin/splash": splash.occasions.length,
-    "/admin/pages": pages,
-    "/admin/users": users,
-  };
-
-  // จัดการผู้ใช้ให้เห็นเฉพาะผู้ดูแลระบบ
-  const menu =
-    user.role === "ADMIN"
-      ? [...MENU, { href: "/admin/users", icon: Users, title: "ผู้ใช้งาน", desc: "เพิ่ม/แก้ไขคนที่เข้าหลังบ้านได้" }]
-      : MENU;
 
   return (
-    <>
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
-          <div className="min-w-0">
-            <p className="truncate font-semibold text-gray-800">หลังบ้านเว็บไซต์</p>
-            <p className="truncate text-xs text-gray-500">
-              {user.name} · {user.username}
-            </p>
-          </div>
-          <LogoutButton />
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-3xl px-4 py-6">
-        <div className="grid gap-3">
-          {menu.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5 transition hover:shadow-md active:scale-[0.99]"
-            >
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
-                <item.icon className="h-5 w-5" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-medium text-gray-800">{item.title}</span>
-                <span className="block truncate text-sm text-gray-500">{item.desc}</span>
-              </span>
-              <span className="shrink-0 text-sm text-gray-400">{counts[item.href] ?? 0} รายการ</span>
-              <ChevronRight className="h-5 w-5 shrink-0 text-gray-300" />
-            </Link>
-          ))}
-        </div>
-      </main>
-    </>
+    <main className="mx-auto max-w-5xl px-4 py-6">
+      <h1 className="mb-5 text-xl font-bold text-gray-800">ภาพรวมระบบ</h1>
+      <Dashboard
+        counts={{ announcements, tickers, holidays, pages, users }}
+        backup={backup}
+        visitors={SAMPLE_VISITORS}
+        popular={SAMPLE_POPULAR}
+      />
+    </main>
   );
 }

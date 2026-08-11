@@ -74,6 +74,21 @@ model NewsTicker {
   @@index([published, sortOrder])
 }
 
+/// วันหยุดทำการของสหกรณ์ — ขึ้นบนปฏิทินหน้าแรก
+model Holiday {
+  id   String   @id @default(cuid())
+  /// เก็บเป็นวันที่ล้วน (เที่ยงคืนตามเวลาไทย) ไม่ใช้เวลา
+  date DateTime
+  title String
+  /// รายละเอียดเพิ่ม เช่น "หยุดชดเชย" — เว้นว่างได้
+  note      String?
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published, date])
+}
+
 /// หน้าเนื้อหาทั่วไป เช่น ประวัติความเป็นมา / วิสัยทัศน์ — ถอดจาก www.spsccoop.com ทีละหน้า
 model Page {
   id          String   @id @default(cuid())

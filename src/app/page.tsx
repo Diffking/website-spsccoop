@@ -11,18 +11,19 @@ import CoopCalendar from "@/components/home/CoopCalendar";
 import OfficerService from "@/components/home/OfficerService";
 import { site } from "@/data/home";
 import { getRates, getSiteInfo, getSplash } from "@/lib/settings";
-import { getAnnouncements } from "@/lib/content";
+import { getAnnouncements, getHolidayEvents } from "@/lib/content";
 
 // อ่านที่อยู่/ดอกเบี้ยจากฐานทุกครั้งที่มีคนเข้า — แก้ในหลังบ้านแล้วเห็นผลทันทีไม่ต้อง deploy
 // (ห้าม prerender ตอน build ด้วย เพราะตอน build ใน Docker ยังไม่มี DATABASE_URL)
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [info, rates, announcements, splash] = await Promise.all([
+  const [info, rates, announcements, splash, holidays] = await Promise.all([
     getSiteInfo(),
     getRates(),
     getAnnouncements(),
     getSplash(),
+    getHolidayEvents(),
   ]);
 
   // JSON-LD structured data สำหรับ SEO หน้า Home
@@ -55,7 +56,7 @@ export default async function Home() {
         <Services />
         <Recommend />
         <MemberCorner />
-        <CoopCalendar />
+        <CoopCalendar holidays={holidays} />
         <OfficerService />
       </main>
       <Footer />

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CalendarEvent } from "@/data/home";
 
 /**
  * เนื้อหาหน้าแรกที่เป็น "รายการ" — ข่าววิ่งกับประกาศ ที่แก้ได้จากหลังบ้าน /admin/home
@@ -32,6 +33,41 @@ export async function getTickerItems(): Promise<string[]> {
     return rows.map((r) => r.text);
   } catch (error) {
     console.error("อ่านข่าววิ่งไม่ได้:", error);
+    return [];
+  }
+}
+
+/**
+ * วันหยุดสหกรณ์ของ "เดือนนี้" สำหรับปฏิทินหน้าแรก (ปฏิทินแสดงทีละเดือน)
+ * ตัดเดือนตามเวลาไทย ไม่ใช่ UTC ไม่งั้นต้นเดือน/ปลายเดือนจะคลาดไปหนึ่งวัน
+ */
+export async function getHolidayEvents(): Promise<CalendarEvent[]> {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Bangkok",
+      year: "numeric",
+      month: "2-digit",
+    }).format(new Date());
+    const [year, month] = parts.split("-").map(Number);
+
+    const from = new Date(`${parts}-01T00:00:00+07:00`);
+    const to = new Date(Date.UTC(year, month, 1) - 7 * 3_600_000);
+
+    const rows = await db.holiday.findMany({
+      where: { published: true, date: { gte: from, lt: to } },
+      orderBy: { date: "asc" },
+    });
+
+    const dayOf = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", day: "numeric" });
+
+    return rows.map((r) => ({
+      day: Number(dayOf.format(r.date)),
+      type: "holiday" as const,
+      title: r.title,
+      place: r.note ?? undefined,
+    }));
+  } catch (error) {
+    console.error("อ่านวันหยุดไม่ได้:", error);
     return [];
   }
 }
