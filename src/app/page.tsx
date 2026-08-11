@@ -14,10 +14,14 @@ import BackToTop from "@/components/ui/BackToTop";
 import { site } from "@/data/home";
 import { getRates, getSiteInfo, getSplash } from "@/lib/settings";
 import { getAnnouncements, getHolidayEvents, getSlides } from "@/lib/content";
+import { pageMetadata } from "@/lib/seo";
 
 // อ่านที่อยู่/ดอกเบี้ยจากฐานทุกครั้งที่มีคนเข้า — แก้ในหลังบ้านแล้วเห็นผลทันทีไม่ต้อง deploy
 // (ห้าม prerender ตอน build ด้วย เพราะตอน build ใน Docker ยังไม่มี DATABASE_URL)
 export const dynamic = "force-dynamic";
+
+// ตั้งค่า SEO ของหน้านี้ที่ /admin/seo
+export const generateMetadata = () => pageMetadata("/");
 
 export default async function Home() {
   const [info, rates, announcements, splash, holidays, slides] = await Promise.all([

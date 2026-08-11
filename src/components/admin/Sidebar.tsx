@@ -11,13 +11,14 @@ import {
   CalendarOff,
   FileStack,
   Users,
+  Search,
   Menu,
   X,
   ExternalLink,
 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
 
-export type MenuKey = "dashboard" | "home" | "splash" | "holidays" | "pages" | "users";
+export type MenuKey = "dashboard" | "home" | "splash" | "holidays" | "pages" | "seo" | "users";
 
 const ITEMS: {
   key: MenuKey;
@@ -60,6 +61,13 @@ const ITEMS: {
     icon: FileStack,
     label: "หน้าเนื้อหา",
     desc: "ประวัติความเป็นมา วิสัยทัศน์ ระเบียบข้อบังคับ",
+  },
+  {
+    key: "seo",
+    href: "/admin/seo",
+    icon: Search,
+    label: "SEO",
+    desc: "กำหนดหน้าที่ให้เครื่องมือค้นหาเก็บ",
   },
   {
     key: "users",

@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
 import Image from "next/image";
 import Header from "@/components/site/Header";
 import Footer from "@/components/site/Footer";
 import Reveal from "@/components/ui/Reveal";
+import { pageMetadata } from "@/lib/seo";
 import ScrollProgress from "@/components/ui/ScrollProgress";
 import BackToTop from "@/components/ui/BackToTop";
 
@@ -44,10 +44,8 @@ const members: { img: typeof c01; name: string }[] = [
 // Footer อ่านข้อมูลติดต่อจากฐาน — prerender ตอน build ไม่ได้ (ยังไม่มี DATABASE_URL)
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "คณะกรรมการดำเนินการ ชุดที่ 45",
-  description: "ทำเนียบคณะกรรมการดำเนินการ ชุดที่ 45 ของสหกรณ์ออมทรัพย์สาธารณสุขสงขลา จำกัด",
-};
+// ตั้งค่า SEO ของหน้านี้ที่ /admin/seo
+export const generateMetadata = () => pageMetadata("/about/directory/board");
 
 export default function BoardPage() {
   return (

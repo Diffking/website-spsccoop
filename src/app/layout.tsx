@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { Sarabun } from "next/font/google";
 import "./globals.css";
 
@@ -9,46 +8,8 @@ const sarabun = Sarabun({
   display: "swap",
 });
 
-const siteName = "สหกรณ์ออมทรัพย์สาธารณสุขสงขลา จำกัด";
-const siteUrl = "https://beta.spsccoop.com";
-
-// ---- SEO หน้า Home ----
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: {
-    default: `${siteName} | เงินฝาก เงินกู้ สวัสดิการสมาชิก`,
-    template: `%s | ${siteName}`,
-  },
-  description:
-    "เว็บไซต์ทางการของสหกรณ์ออมทรัพย์สาธารณสุขสงขลา จำกัด ให้บริการเงินรับฝาก เงินให้กู้ สวัสดิการสมาชิก ข่าวประกาศ อัตราดอกเบี้ย และบริการออนไลน์สำหรับสมาชิก",
-  keywords: [
-    "สหกรณ์ออมทรัพย์สาธารณสุขสงขลา",
-    "สหกรณ์ออมทรัพย์",
-    "เงินฝากสหกรณ์",
-    "เงินกู้สหกรณ์",
-    "อัตราดอกเบี้ยสหกรณ์",
-    "สวัสดิการสมาชิก",
-    "spsccoop",
-  ],
-  authors: [{ name: siteName }],
-  alternates: { canonical: "/" },
-  openGraph: {
-    type: "website",
-    locale: "th_TH",
-    url: siteUrl,
-    siteName,
-    title: `${siteName} | เงินฝาก เงินกู้ สวัสดิการสมาชิก`,
-    description:
-      "บริการเงินรับฝาก เงินให้กู้ สวัสดิการสมาชิก ข่าวประกาศ และอัตราดอกเบี้ยล่าสุดของสหกรณ์ออมทรัพย์สาธารณสุขสงขลา จำกัด",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: siteName,
-    description:
-      "บริการเงินรับฝาก เงินให้กู้ สวัสดิการสมาชิก และข่าวประกาศของสหกรณ์ออมทรัพย์สาธารณสุขสงขลา จำกัด",
-  },
-  robots: { index: true, follow: true },
-};
+// SEO ทั้งหมดย้ายไปตั้งที่หลังบ้าน (/admin/seo) แล้ว — แต่ละหน้าเรียก pageMetadata(path)
+// ของตัวเอง ไฟล์นี้เหลือแค่โครง html + ฟอนต์
 
 export default function RootLayout({
   children,
