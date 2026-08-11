@@ -1,37 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# website-spsccoop
 
-## Getting Started
+เว็บไซต์สหกรณ์ออมทรัพย์สาธารณสุขสงขลา จำกัด — Next.js ตัวเดียวจบ (หน้าบ้าน + หลังบ้าน + API)
+ข้อมูลอยู่ใน PostgreSQL · ออกอินเทอร์เน็ตผ่าน Cloudflare Tunnel · รันด้วย Docker Compose
 
-First, run the development server:
+## เริ่มพัฒนา
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env      # แล้วเติม TUNNEL_TOKEN ถ้าต้องใช้ (ไม่ใส่ก็ dev ได้)
+npm install
+docker compose up -d db-dev
+npx prisma migrate deploy # สร้างตารางใน db-dev
+npx prisma db seed        # สร้างผู้ใช้หลังบ้านคนแรก (รหัส 07337)
+npm run dev               # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`npm run dev` ต่อฐานข้อมูล **db-dev** (พอร์ต 5436) ไม่ใช่ฐานของเว็บจริง — ดู [AGENTS.md](AGENTS.md)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## โครงสร้าง
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| ที่อยู่ | คำอธิบาย |
+|---|---|
+| `src/app/` | หน้าเว็บ (App Router) + API ที่ `src/app/api/` |
+| `src/components/` | `site/` = โครงเว็บ · `home/` = หน้าแรก · `admin/` = หลังบ้าน · `ui/` = ตัวเล็ก ๆ |
+| `src/data/home.ts` | เนื้อหาหน้าแรกที่ยังไม่ได้ย้ายเข้าฐานข้อมูล (แก้ในไฟล์) |
+| `src/data/asset/` | รูปที่ import เข้า bundle — **ตั้งชื่อไฟล์เป็น ASCII เท่านั้น** |
+| `src/lib/` | `db.ts` (Prisma client) · `auth.ts` (session) · `settings.ts` (ค่าหน้าแรกในฐานข้อมูล) |
+| `src/proxy.ts` | กัน `/admin` ไม่ให้เปิดจากโดเมนสาธารณะ |
+| `prisma/` | schema + migrations + seed |
 
-## Learn More
+## หน้าเว็บตอนนี้
 
-To learn more about Next.js, take a look at the following resources:
+หน้าบ้าน `/` · `/splash` (หน้าวันสำคัญ) · `/about/directory/board` (คณะกรรมการ)
+หลังบ้าน `/admin` · `/admin/home` · `/admin/pages` · `/admin/users`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+หลังบ้านเข้าได้เฉพาะโดเมนที่ตั้งใน `ADMIN_HOST` กับ localhost — โดเมนอื่นตอบ 404
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## คำสั่งที่ใช้บ่อย
 
-## Deploy on Vercel
+```bash
+npm run dev                            # เซิร์ฟเวอร์พัฒนา
+npm run build                          # ตรวจว่า build ผ่านก่อน deploy
+npm run lint
+npx prisma migrate dev --name ชื่อ      # แก้ schema แล้วสร้าง migration (ลง db-dev)
+docker compose up -d --build web       # deploy ขึ้นเว็บจริง
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# website-spsccoop
+รายละเอียดการ deploy · พอร์ต · ข้อควรระวัง อยู่ใน [AGENTS.md](AGENTS.md)
