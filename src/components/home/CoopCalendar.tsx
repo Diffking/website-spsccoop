@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "motion/react";
 import { CalendarX, Bus, FolderKanban, MapPin, Clock, ChevronLeft, ChevronRight, RotateCcw, CalendarDays } from "lucide-react";
 import SectionHeading from "@/components/ui/SectionHeading";
 import { calendarEvents, type CalendarEvent } from "@/data/home";
+import { useIsClient } from "@/lib/useIsClient";
 
 const TYPE = {
   holiday: { color: "bg-accent-red", ring: "ring-accent-red/30", Icon: CalendarX, label: "วันหยุด" },
@@ -96,15 +97,10 @@ function DayCard({
 }
 
 export default function CoopCalendar() {
-  const [now, setNow] = useState<Date | null>(null);
-  const [center, setCenter] = useState(0);
+  const isClient = useIsClient();
+  // null = ยังไม่ได้เลื่อนเอง ให้ยึดวันนี้เป็นศูนย์กลาง
+  const [center, setCenter] = useState<number | null>(null);
   const [dir, setDir] = useState(0);
-
-  useEffect(() => {
-    const d = new Date();
-    setNow(d);
-    setCenter(d.getDate());
-  }, []);
 
   const legend = (
     <div className="mb-6 flex flex-wrap justify-center gap-4 text-sm text-gray-600">
@@ -116,7 +112,8 @@ export default function CoopCalendar() {
     </div>
   );
 
-  if (!now) {
+  // วันที่ของเครื่องผู้ใช้ — ตอน SSR ยังไม่รู้ ต้องวางโครงเปล่าไว้ก่อน
+  if (!isClient) {
     return (
       <section className="bg-sky-soft py-12">
         <div className="mx-auto max-w-6xl px-4">
@@ -128,22 +125,24 @@ export default function CoopCalendar() {
     );
   }
 
+  const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
   const today = now.getDate();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const active = center ?? today;
 
   const go = (step: number) => {
     setDir(step);
-    setCenter((c) => clamp(c + step, 1, daysInMonth));
+    setCenter((c) => clamp((c ?? today) + step, 1, daysInMonth));
   };
   const backToToday = () => {
-    setDir(today < center ? -1 : 1);
+    setDir(today < active ? -1 : 1);
     setCenter(today);
   };
 
   const inRange = (d: number) => (d >= 1 && d <= daysInMonth ? d : null);
-  const cols = [inRange(center - 1), inRange(center), inRange(center + 1)];
+  const cols = [inRange(active - 1), inRange(active), inRange(active + 1)];
 
   return (
     <section className="bg-sky-soft py-12">
@@ -155,7 +154,7 @@ export default function CoopCalendar() {
           {/* ปุ่มเลื่อนไปอดีต */}
           <button
             onClick={() => go(-1)}
-            disabled={center <= 1}
+            disabled={active <= 1}
             aria-label="ดูวันก่อนหน้า"
             className="absolute -left-2 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white text-brand-600 shadow-lg ring-1 ring-brand-100 transition hover:bg-brand-500 hover:text-white disabled:opacity-30 md:-left-5"
           >
@@ -165,7 +164,7 @@ export default function CoopCalendar() {
           {/* ปุ่มเลื่อนไปอนาคต */}
           <button
             onClick={() => go(1)}
-            disabled={center >= daysInMonth}
+            disabled={active >= daysInMonth}
             aria-label="ดูวันถัดไป"
             className="absolute -right-2 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white text-brand-600 shadow-lg ring-1 ring-brand-100 transition hover:bg-brand-500 hover:text-white disabled:opacity-30 md:-right-5"
           >
@@ -175,7 +174,7 @@ export default function CoopCalendar() {
           {/* 3 คอลัมน์: อดีต | ปัจจุบัน | อนาคต (สไลด์เบาๆ ไม่ fade กันภาพกระพริบ) */}
           <div className="overflow-hidden px-1">
             <motion.div
-              key={center}
+              key={active}
               initial={{ x: dir * 28 }}
               animate={{ x: 0 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
@@ -189,7 +188,7 @@ export default function CoopCalendar() {
         </div>
 
         {/* ปุ่มกลับมาวันนี้ (โผล่เมื่อเลื่อนออกจากวันนี้) */}
-        {center !== today && (
+        {active !== today && (
           <div className="mt-5 text-center">
             <button
               onClick={backToToday}

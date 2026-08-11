@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, Clock, Menu, X, Minus, Plus } from "lucide-react";
 import { nav, site } from "@/data/home";
+import { useIsClient } from "@/lib/useIsClient";
 import logo from "@/data/asset/logo_vector.svg";
 
 const THAI_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
@@ -14,12 +15,15 @@ const THAI_MONTHS = [
 ];
 
 function ThaiClock() {
-  const [now, setNow] = useState<Date | null>(null);
+  const isClient = useIsClient();
+  const [tick, setTick] = useState<Date | null>(null);
   useEffect(() => {
-    setNow(new Date());
-    const t = setInterval(() => setNow(new Date()), 1000);
+    const t = setInterval(() => setTick(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // วินาทีแรกยังไม่มี tick — อ่านเวลาสดตอน render ได้เลยเพราะถึงตรงนี้ hydrate เสร็จแล้ว
+  const now = tick ?? (isClient ? new Date() : null);
   if (!now) return <span className="tabular-nums opacity-70">--:--:--</span>;
   const time = now.toLocaleTimeString("th-TH", { hour12: false });
   const dateStr = `วัน${THAI_DAYS[now.getDay()]}ที่ ${now.getDate()} ${THAI_MONTHS[now.getMonth()]} ${now.getFullYear() + 543}`;

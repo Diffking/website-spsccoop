@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import EnterSiteButton from "@/components/site/EnterSiteButton";
 import {
   getActiveOccasion,
   splashContent,
   type SplashOccasion,
 } from "@/content/splash";
+import { useIsClient } from "@/lib/useIsClient";
 
 /**
  * เนื้อหาหน้า splash — เลือกวันสำคัญฝั่ง client เท่านั้น
@@ -14,22 +14,23 @@ import {
  *
  * ?preview=<id> = บังคับดูวันสำคัญที่ระบุ ไม่สนวันที่ — ใช้จากปุ่มดูตัวอย่างในหลังบ้าน
  */
+/** null = วันนี้ไม่มีวันสำคัญที่ต้องแสดง */
+function resolveOccasion(): SplashOccasion | null {
+  let previewId: string | null = null;
+  try {
+    previewId = new URLSearchParams(window.location.search).get("preview");
+  } catch {}
+
+  if (previewId) {
+    return splashContent.occasions.find((o) => o.id === previewId) ?? null;
+  }
+  return getActiveOccasion();
+}
+
 export default function SplashView() {
-  // undefined = ยังไม่ได้เช็ค (จอดำเปล่าๆ กันภาพผิดกระพริบ) | null = วันนี้ไม่มีวันสำคัญ
-  const [occasion, setOccasion] = useState<SplashOccasion | null | undefined>(undefined);
-
-  useEffect(() => {
-    let previewId: string | null = null;
-    try {
-      previewId = new URLSearchParams(window.location.search).get("preview");
-    } catch {}
-
-    if (previewId) {
-      setOccasion(splashContent.occasions.find((o) => o.id === previewId) ?? null);
-      return;
-    }
-    setOccasion(getActiveOccasion());
-  }, []);
+  const isClient = useIsClient();
+  // ยังไม่ hydrate = ยังไม่รู้วันที่/query string ของผู้ใช้ (จอดำเปล่าๆ กันภาพผิดกระพริบ)
+  const occasion = isClient ? resolveOccasion() : undefined;
 
   if (occasion === undefined) {
     return <main className="min-h-screen bg-black" />;
