@@ -79,8 +79,12 @@ services:
       # 8020/8021=coopmeeting · 8080/8081=qgeniuscoop → ระบบนี้ใช้ 8030
       - "8030:3000"
 
-  # สำรองฐานข้อมูลรายวัน → ./backups/coopsmile-YYYY-MM-DD.sql (เก็บย้อนหลัง 14 วัน)
+  # สำรองรายวัน เก็บย้อนหลัง 14 วัน → ./backups/
+  #   coopsmile-YYYY-MM-DD.sql      = ฐานข้อมูล
+  #   uploads-YYYY-MM-DD.tar.gz     = รูปที่อัปจากหลังบ้าน
+  # ต้องสำรองรูปด้วย ไม่งั้นกู้ฐานกลับมาแล้วจะเหลือแต่ path ที่ชี้ไปไฟล์ที่ไม่มีอยู่
   # กู้คืน: docker compose exec -T db psql -U coopsmile coopsmile < backups/ไฟล์.sql
+  #         tar -xzf backups/uploads-ไฟล์.tar.gz -C uploads/
   db-backup:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -91,10 +95,12 @@ services:
       PGPASSWORD: coopsmile
     volumes:
       - ./backups:/backups
+      # อ่านอย่างเดียว — งานนี้แค่คัดลอกออก ไม่ต้องมีสิทธิ์เขียนทับรูปจริง
+      - ./uploads:/uploads:ro
     entrypoint:
       - sh
       - -c
-      - while true; do pg_dump -h db -U coopsmile coopsmile > /backups/coopsmile-$$(date +%F).sql && echo "backup OK $$(date)"; find /backups -name 'coopsmile-*.sql' -mtime +14 -delete; sleep 86400; done
+      - while true; do pg_dump -h db -U coopsmile coopsmile > /backups/coopsmile-$$(date +%F).sql && echo "db backup OK $$(date)"; tar -czf /backups/uploads-$$(date +%F).tar.gz -C /uploads . && echo "uploads backup OK $$(date)"; find /backups -name 'coopsmile-*.sql' -mtime +14 -delete; find /backups -name 'uploads-*.tar.gz' -mtime +14 -delete; sleep 86400; done
 
   # Cloudflare Tunnel — ชี้โดเมนเข้า web:3000 (ตั้ง ingress ฝั่ง Cloudflare)
   # TUNNEL_TOKEN อยู่ในไฟล์ .env ข้างไฟล์นี้ (ไม่ commit)

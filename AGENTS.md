@@ -67,8 +67,7 @@ TypeError: Cannot convert argument to a ByteString ... value of 3626
 `next.config.ts` ตั้ง `images.unoptimized: true` ไว้ ภาพจากโดเมนภายนอกจึงใช้ได้เลย
 ไม่ต้องประกาศ `images.remotePatterns` — ถ้าวันไหนเปิด image optimization ต้องมาเพิ่มโดเมนตรงนั้นด้วย
 
-⚠️ `uploads/` **ไม่ได้ถูกสำรอง** — service `db-backup` ดัมป์เฉพาะฐานข้อมูล ถ้าดิสก์พังรูปหายหมด
-และฐานจะเหลือ path ที่ชี้ไปไฟล์ที่ไม่มีอยู่
+`uploads/` ถูกสำรองรายวันแล้วโดย service `db-backup` (ดูหัวข้อสำรองข้อมูลด้านล่าง)
 
 ## ไฟล์ที่ไม่อยู่ใน git — ต้องก๊อปมือเวลาย้ายเครื่อง
 
@@ -77,11 +76,19 @@ TypeError: Cannot convert argument to a ByteString ... value of 3626
 
 ## สำรองข้อมูล
 
-service `db-backup` ดัมป์ `db` ทุก 24 ชม. ลง `backups/coopsmile-YYYY-MM-DD.sql` เก็บย้อนหลัง 14 วัน
+service `db-backup` ทำงานทุก 24 ชม. เก็บย้อนหลัง 14 วัน ลง `backups/`
+
+| ไฟล์ | คืออะไร |
+|---|---|
+| `coopsmile-YYYY-MM-DD.sql` | ฐานข้อมูล |
+| `uploads-YYYY-MM-DD.tar.gz` | รูปที่อัปจากหลังบ้าน |
+
+ต้องกู้ทั้งสองอย่างคู่กัน — กู้แต่ฐานจะเหลือ path ที่ชี้ไปไฟล์ที่ไม่มีอยู่ หน้าเว็บรูปแตก
 
 ```bash
 # กู้คืน
 docker compose exec -T db psql -v ON_ERROR_STOP=1 -U coopsmile coopsmile < backups/ไฟล์.sql
+tar -xzf backups/uploads-ไฟล์.tar.gz -C uploads/
 ```
 
 `migration/import-new-machine.sh` ทำขั้นตอนกู้ทั้งชุดให้ (สำรองของเดิมไว้ก่อนแล้วค่อยทับ)
