@@ -58,6 +58,18 @@ TypeError: Cannot convert argument to a ByteString ... value of 3626
 กราฟวาดด้วย HTML/CSS ล้วนใน `src/components/admin/StatsCharts.tsx` ไม่มี chart library
 ซีรีส์เดียว = สีเดียว (`#1c7fca`) ผ่านเกณฑ์ contrast บนพื้นขาวแล้ว
 
+## รูปที่อัปจากหลังบ้านเก็บที่ไหน
+
+เก็บลง `uploads/` ของเครื่องนี้เสมอ (mount เข้า container ที่ `/app/public/uploads`)
+ถ้าตั้งค่า `FTP_*` + `ASSETS_BASE_URL` ครบใน `.env` จะส่งสำเนาขึ้น FTP ด้วย แล้วบันทึก URL
+ของโดเมนนั้นลงฐานแทน — ส่งไม่สำเร็จก็ถอยมาใช้ไฟล์ในเครื่อง **การอัปในหลังบ้านไม่พังตาม FTP**
+
+`next.config.ts` ตั้ง `images.unoptimized: true` ไว้ ภาพจากโดเมนภายนอกจึงใช้ได้เลย
+ไม่ต้องประกาศ `images.remotePatterns` — ถ้าวันไหนเปิด image optimization ต้องมาเพิ่มโดเมนตรงนั้นด้วย
+
+⚠️ `uploads/` **ไม่ได้ถูกสำรอง** — service `db-backup` ดัมป์เฉพาะฐานข้อมูล ถ้าดิสก์พังรูปหายหมด
+และฐานจะเหลือ path ที่ชี้ไปไฟล์ที่ไม่มีอยู่
+
 ## ไฟล์ที่ไม่อยู่ใน git — ต้องก๊อปมือเวลาย้ายเครื่อง
 
 `.env` (มี `TUNNEL_TOKEN` ตัวจริง) · `backups/*.sql` · `uploads/` · `_data/`

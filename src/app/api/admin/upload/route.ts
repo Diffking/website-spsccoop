@@ -4,6 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { requireUser } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
+import { uploadToFtp } from "@/lib/ftp";
 
 /**
  * อัปโหลดรูปจากหลังบ้าน → public/uploads (mount เป็น volume ไว้แล้ว ไม่หายตอน build ใหม่)
@@ -43,11 +44,16 @@ export async function POST(request: Request) {
   }
 
   const name = `${randomUUID()}.${extension}`;
+  const bytes = Buffer.from(await file.arrayBuffer());
+
+  // เก็บไว้ในเครื่องเสมอ — กันไว้เผื่อโฮสต์ FTP เปลี่ยน/หมดอายุ ภาพยังอยู่ครบในมือเรา
   const directory = path.join(process.cwd(), "public", "uploads");
   await mkdir(directory, { recursive: true });
-  await writeFile(path.join(directory, name), Buffer.from(await file.arrayBuffer()));
+  await writeFile(path.join(directory, name), bytes);
 
-  const url = `/uploads/${name}`;
+  // ตั้งค่า FTP ครบ = ใช้ URL จากโดเมนนั้น ถ้าส่งไม่สำเร็จก็ถอยมาใช้ไฟล์ในเครื่อง
+  const remote = await uploadToFtp(bytes, name);
+  const url = remote ?? `/uploads/${name}`;
   await db.media.create({
     data: {
       url,
@@ -58,5 +64,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.json({ url }, { status: 201 });
+  return NextResponse.json({ url, storedOn: remote ? "ftp" : "local" }, { status: 201 });
 }
