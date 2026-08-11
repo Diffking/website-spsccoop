@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronLeft, ChevronRight, ZoomIn, X } from "lucide-react";
-import { activitySlides, interestRates } from "@/data/home";
+import { activitySlides } from "@/data/home";
+import type { InterestRates } from "@/lib/settings";
 
 const SLIDE_MS = 6500; // เลื่อนช้าๆ ไม่เร็วเกินไป
 
@@ -178,9 +179,9 @@ function BannerSlider() {
   );
 }
 
-function RateCard() {
+function RateCard({ rates }: { rates: InterestRates }) {
   const [tab, setTab] = useState<"deposit" | "loan">("deposit");
-  const rows = interestRates[tab];
+  const rows = rates[tab];
   const isDeposit = tab === "deposit";
   const valueColor = isDeposit ? "text-emerald-600" : "text-orange-600";
   return (
@@ -216,12 +217,13 @@ function RateCard() {
   );
 }
 
-export default function Hero() {
+// อัตราดอกเบี้ยส่งมาจากหน้า (server) เพราะ component นี้เป็น client — อ่านฐานเองไม่ได้
+export default function Hero({ rates }: { rates: InterestRates }) {
   return (
     <section className="bg-gradient-to-b from-brand-500 to-brand-300 pb-8 pt-6">
       <div className="mx-auto grid max-w-6xl gap-5 px-4 md:grid-cols-[1.9fr_1fr]">
         <BannerSlider />
-        <RateCard />
+        <RateCard rates={rates} />
       </div>
     </section>
   );

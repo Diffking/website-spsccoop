@@ -10,23 +10,30 @@ import MemberCorner from "@/components/home/MemberCorner";
 import CoopCalendar from "@/components/home/CoopCalendar";
 import OfficerService from "@/components/home/OfficerService";
 import { site } from "@/data/home";
+import { getRates, getSiteInfo } from "@/lib/settings";
 
-// JSON-LD structured data สำหรับ SEO หน้า Home
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  name: site.name,
-  url: "https://beta.spsccoop.com",
-  telephone: site.phone,
-  email: site.email,
-  address: {
-    "@type": "PostalAddress",
-    streetAddress: site.address,
-    addressCountry: "TH",
-  },
-};
+// อ่านที่อยู่/ดอกเบี้ยจากฐานทุกครั้งที่มีคนเข้า — แก้ในหลังบ้านแล้วเห็นผลทันทีไม่ต้อง deploy
+// (ห้าม prerender ตอน build ด้วย เพราะตอน build ใน Docker ยังไม่มี DATABASE_URL)
+export const dynamic = "force-dynamic";
 
-export default function Home() {
+export default async function Home() {
+  const [info, rates] = await Promise.all([getSiteInfo(), getRates()]);
+
+  // JSON-LD structured data สำหรับ SEO หน้า Home
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: site.name,
+    url: "https://beta.spsccoop.com",
+    telephone: info.phone,
+    email: info.email,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: info.address,
+      addressCountry: "TH",
+    },
+  };
+
   return (
     <>
       <script
@@ -36,7 +43,7 @@ export default function Home() {
       <SplashGate />
       <Header />
       <main>
-        <Hero />
+        <Hero rates={rates} />
         <NewsTicker />
         <NewsSection />
         <Services />

@@ -8,15 +8,11 @@ import slideDepositCert from "@/data/asset/slider-img/slide-deposit-cert.jpg";
 import slideScreenshot from "@/data/asset/slider-img/Screenshot-2026-06-08-105311.png";
 // หมายเหตุ: ภาพ "ธ สถิตในดวงใจฯ" (พระองค์ภา) ย้ายไปหน้า /splash ไม่อยู่ในสไลด์แล้ว
 
+// ข้อมูลติดต่อ (ที่อยู่ เบอร์ แฟกซ์ อีเมล เวลาทำการ จำนวนผู้เข้าชม) ย้ายไปอยู่ในฐานข้อมูลแล้ว
+// แก้ที่ /admin/home · โค้ดอ่านผ่าน getSiteInfo() ใน src/lib/settings.ts
 export const site = {
   name: "สหกรณ์ออมทรัพย์สาธารณสุขสงขลา จำกัด",
   shortName: "สอ.สธ.สงขลา",
-  phone: "074-313-229,074-300-662-3",
-  fax: "074-311-759",
-  email: "spsccoop229@gmail.com",
-  address: "ที่อยู่ 229 หมู่ 6 ถนน ลพบุรีราเมศวร์ ตำบลน้ำน้อย อำเภอหาดใหญ่ สงขลา 90110",
-  office: "จันทร์ – ศุกร์ 08:30 – 16:30 น.",
-  memberCount: "220,031",
 };
 
 export type NavItem = { label: string; href: string; children?: NavItem[] };
@@ -69,18 +65,8 @@ export const nav: NavItem[] = [
   },
 ];
 
-export const interestRates = {
-  deposit: [
-    { label: "ออมทรัพย์", rate: "1.5" },
-    { label: "ออมทรัพย์พิเศษ", rate: "1.70" },
-    { label: "เกษียณมั่นคง", rate: "3.50" },
-  ],
-  loan: [
-    { label: "เงินกู้สามัญ", rate: "5.75" },
-    { label: "เงินกู้ฉุกเฉิน", rate: "5.75" },
-    { label: "เงินกู้พิเศษ", rate: "5.50" },
-  ],
-};
+// อัตราดอกเบี้ยย้ายไปอยู่ในฐานข้อมูลแล้วเหมือนกัน — แก้ที่ /admin/home
+// ค่าตั้งต้น (ใช้ตอนยังไม่เคยบันทึก) อยู่ที่ DEFAULT_RATES ใน src/lib/settings.ts
 
 /**
  * ภาพสไลด์กิจกรรม (Hero) — โปสเตอร์ 600x600 / 1024x1024 (มีข้อความบนภาพแล้ว)

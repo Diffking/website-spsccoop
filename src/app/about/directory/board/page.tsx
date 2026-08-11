@@ -39,6 +39,9 @@ const members: { img: typeof c01; name: string }[] = [
   { img: c15, name: "กรรมการศึกษา – เกตย์สิรี พันธอุบล" },
 ];
 
+// Footer อ่านข้อมูลติดต่อจากฐาน — prerender ตอน build ไม่ได้ (ยังไม่มี DATABASE_URL)
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "คณะกรรมการดำเนินการ ชุดที่ 45",
   description: "ทำเนียบคณะกรรมการดำเนินการ ชุดที่ 45 ของสหกรณ์ออมทรัพย์สาธารณสุขสงขลา จำกัด",

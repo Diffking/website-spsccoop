@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MapPin, Phone, Mail, Clock, Users, ExternalLink } from "lucide-react";
-import { site, footerLinks } from "@/data/home";
+import { footerLinks, site } from "@/data/home";
+import { getSiteInfo } from "@/lib/settings";
 
 function FacebookIcon({ className }: { className?: string }) {
   return (
@@ -10,7 +11,9 @@ function FacebookIcon({ className }: { className?: string }) {
   );
 }
 
-export default function Footer() {
+// ที่อยู่/เบอร์/เวลาทำการ มาจากตาราง Setting ที่แก้ได้ที่ /admin/home
+export default async function Footer() {
+  const info = await getSiteInfo();
   return (
     <footer className="mt-auto bg-brand-800 text-white">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-4">
@@ -21,7 +24,7 @@ export default function Footer() {
             <Users className="h-8 w-8 text-brand-200" />
             <div>
               <p className="text-2xl font-bold tabular-nums">
-                {site.memberCount} <span className="text-sm font-normal">ครั้ง</span>
+                {info.memberCount} <span className="text-sm font-normal">ครั้ง</span>
               </p>
               <p className="text-xs text-white/70">จำนวนผู้เยี่ยมชมภายในปีบัญชี</p>
             </div>
@@ -39,10 +42,10 @@ export default function Footer() {
         <div>
           <p className="mb-3 text-sm font-semibold text-white/80">ติดต่อเรา</p>
           <ul className="space-y-2.5 text-sm text-white/80">
-            <li className="flex gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0" /> {site.address}</li>
-            <li className="flex gap-2"><Phone className="h-4 w-4 shrink-0" /> {site.phone}</li>
-            <li className="flex gap-2"><Phone className="h-4 w-4 shrink-0" /> {site.fax}</li>
-            <li className="flex gap-2"><Mail className="h-4 w-4 shrink-0" /> {site.email}</li>
+            <li className="flex gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0" /> {info.address}</li>
+            <li className="flex gap-2"><Phone className="h-4 w-4 shrink-0" /> {info.phone}</li>
+            <li className="flex gap-2"><Phone className="h-4 w-4 shrink-0" /> {info.fax}</li>
+            <li className="flex gap-2"><Mail className="h-4 w-4 shrink-0" /> {info.email}</li>
           </ul>
         </div>
 
@@ -50,7 +53,7 @@ export default function Footer() {
         <div>
           <p className="mb-3 text-sm font-semibold text-white/80">เวลาทำการ</p>
           <p className="flex gap-2 text-sm text-white/80">
-            <Clock className="mt-0.5 h-4 w-4 shrink-0" /> {site.office}
+            <Clock className="mt-0.5 h-4 w-4 shrink-0" /> {info.officeHours}
           </p>
         </div>
 

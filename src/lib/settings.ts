@@ -19,11 +19,12 @@ export type InterestRates = {
   loan: { label: string; rate: string }[];
 };
 
+// ค่าตั้งต้น = ค่าที่ใช้จริงตอนนี้ เผื่อฐานยังไม่มีแถวนี้หรือฐานล่ม จะได้แสดงของถูก
 export const DEFAULT_SITE_INFO: SiteInfo = {
-  address: "เลขที่ 229 ม.6 ต.น้ำน้อย อ.หาดใหญ่ จ.สงขลา 90110",
-  phone: "074-XXXXXX",
-  fax: "",
-  email: "info@spsccoop.com",
+  address: "229 หมู่ 6 ถนน ลพบุรีราเมศวร์ ตำบลน้ำน้อย อำเภอหาดใหญ่ สงขลา 90110",
+  phone: "074-313-229,074-300-662-3",
+  fax: "074-311-759",
+  email: "spsccoop229@gmail.com",
   officeHours: "จันทร์ – ศุกร์ 08:30 – 16:30 น.",
   memberCount: "220,031",
 };
@@ -42,8 +43,15 @@ export const DEFAULT_RATES: InterestRates = {
 };
 
 export async function getSetting<T>(key: string, fallback: T): Promise<T> {
-  const row = await db.setting.findUnique({ where: { key } });
-  return row ? (row.value as T) : fallback;
+  // หน้าบ้านทุกหน้าเรียกผ่านนี้ — ถ้าฐานล่มต้องได้ค่าตั้งต้นไปแสดงแทนที่จะพังทั้งหน้า
+  // (รันเครื่องเดียว ฐานล่ม = เว็บล่มไปด้วยไม่ได้)
+  try {
+    const row = await db.setting.findUnique({ where: { key } });
+    return row ? (row.value as T) : fallback;
+  } catch (error) {
+    console.error(`อ่าน Setting "${key}" ไม่ได้ ใช้ค่าตั้งต้นแทน:`, error);
+    return fallback;
+  }
 }
 
 export async function saveSetting(key: string, value: unknown): Promise<void> {
