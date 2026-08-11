@@ -2,16 +2,13 @@
 
 import { useRef, useState } from "react";
 import { Save, Loader2, Sparkles, Wand2 } from "lucide-react";
-import type { InterestRates, UpdateMode } from "@/lib/settings";
-import ModeSwitch from "./ModeSwitch";
+import type { InterestRates } from "@/lib/settings";
 
 export default function RatesForm({
   initial,
-  mode,
   aiReady,
 }: {
   initial: InterestRates;
-  mode: UpdateMode;
   aiReady: boolean;
 }) {
   const [rates, setRates] = useState(initial);
@@ -81,10 +78,9 @@ export default function RatesForm({
               ตารางบนหน้าแรก — ใส่เฉพาะตัวเลข ไม่ต้องใส่ %
             </p>
           </div>
-          <ModeSwitch component="rates" value={mode} aiReady={aiReady} />
         </div>
 
-        {mode === "ai" && (
+        {aiReady && (
           <div className="mt-3 rounded-xl border border-dashed border-gray-300 p-3">
             <input
               ref={rateFile}

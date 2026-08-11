@@ -15,8 +15,6 @@ import {
   Sparkles,
   Images,
 } from "lucide-react";
-import type { UpdateMode } from "@/lib/settings";
-import ModeSwitch from "./ModeSwitch";
 
 export type SlideRow = {
   id: string;
@@ -61,11 +59,9 @@ function scheduleState(slide: SlideRow): { label: string; tone: string } | null 
 
 export default function SlidesManager({
   items,
-  mode,
   aiReady,
 }: {
   items: SlideRow[];
-  mode: UpdateMode;
   aiReady: boolean;
 }) {
   const router = useRouter();
@@ -97,7 +93,8 @@ export default function SlidesManager({
     }
     setImageUrl(uploadData.url);
 
-    if (mode !== "ai") {
+    // ไม่มีคีย์ AI ก็จบแค่อัปรูป — ที่เหลือพิมพ์เอง
+    if (!aiReady) {
       setBusy(null);
       return;
     }
@@ -184,7 +181,6 @@ export default function SlidesManager({
             </p>
           </div>
         </div>
-        <ModeSwitch component="slides" value={mode} aiReady={aiReady} />
       </div>
 
       {/* ฟอร์มเพิ่มสไลด์ */}
@@ -209,7 +205,7 @@ export default function SlidesManager({
           >
             {busy === "upload" || busy === "ai" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
-            ) : mode === "ai" ? (
+            ) : aiReady ? (
               <Sparkles className="h-4 w-4" />
             ) : (
               <ImagePlus className="h-4 w-4" />
@@ -218,16 +214,14 @@ export default function SlidesManager({
               ? "กำลังอัปโหลด..."
               : busy === "ai"
                 ? "AI กำลังอ่านภาพ..."
-                : mode === "ai"
-                  ? "เลือกภาพประกาศ ให้ AI อ่าน"
-                  : "เลือกรูปแบนเนอร์"}
+                : "เลือกภาพประกาศ"}
           </button>
 
-          {mode === "ai" && (
-            <span className="text-xs text-gray-500">
-              AI จะเติมหัวข้อและคำอธิบายให้ — ตรวจก่อนกดเพิ่มเสมอ
-            </span>
-          )}
+          <span className="text-xs text-gray-500">
+            {aiReady
+              ? "อัปแล้ว AI จะอ่านภาพและเติมหัวข้อ คำอธิบาย และช่วงวันที่ให้ — ตรวจก่อนกดเพิ่มเสมอ"
+              : "ยังไม่ได้ตั้งค่าคีย์ AI จึงต้องพิมพ์เอง (ใส่ ANTHROPIC_API_KEY ใน .env แล้วรีสตาร์ต)"}
+          </span>
         </div>
 
         {imageUrl && (

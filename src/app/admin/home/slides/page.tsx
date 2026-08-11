@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getComponentModes } from "@/lib/settings";
 import { AI_READY } from "@/lib/ai";
 import SlidesManager from "@/components/admin/SlidesManager";
 import StorageStatus from "@/components/admin/StorageStatus";
@@ -11,10 +10,7 @@ export default async function AdminSlidesPage() {
   const user = await currentUser();
   if (!user) redirect("/admin/");
 
-  const [slides, modes] = await Promise.all([
-    db.slide.findMany({ orderBy: { sortOrder: "asc" } }),
-    getComponentModes(),
-  ]);
+  const slides = await db.slide.findMany({ orderBy: { sortOrder: "asc" } });
 
   const storage = storageTarget();
 
@@ -40,7 +36,6 @@ export default async function AdminSlidesPage() {
             ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(s.endsAt)
             : "",
         }))}
-        mode={modes.slides}
         aiReady={AI_READY}
       />
     </main>
