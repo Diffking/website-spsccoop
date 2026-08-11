@@ -1,0 +1,109 @@
+// ฐานข้อมูลเว็บสหกรณ์ — เนื้อหาทั้งหมดที่แก้ผ่านหลังบ้านเก็บที่นี่
+// แก้ไฟล์นี้แล้วรัน: npx prisma migrate dev --name ชื่อการเปลี่ยนแปลง
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7: connection URL ไม่อยู่ที่นี่แล้ว ย้ายไป prisma.config.ts
+datasource db {
+  provider = "postgresql"
+}
+
+/// ผู้ใช้หลังบ้าน — เริ่มที่รหัส 07337 คนเดียวก่อน
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  name         String
+  /// เบอร์โทรของเจ้าตัว — 4 ตัวท้ายใช้เป็นรหัสผ่าน (เก็บเบอร์ไว้เพื่อออกรหัสใหม่ให้ได้)
+  phone        String?
+  passwordHash String
+  role         Role      @default(EDITOR)
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions Session[]
+  uploads  Media[]
+}
+
+enum Role {
+  ADMIN // จัดการผู้ใช้ได้ด้วย
+  EDITOR // แก้เนื้อหาได้อย่างเดียว
+}
+
+/// ล็อกอินค้างไว้ — เก็บใน DB เพื่อให้ถอนสิทธิ์ได้ทันทีถ้าจำเป็น
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// ประกาศสหกรณ์ — การ์ด "ประกาศ" หน้าแรก
+model Announcement {
+  id          String    @id @default(cuid())
+  /// เลขที่ประกาศ เช่น "19/2569"
+  number      String
+  title       String
+  /// วันที่ของประกาศเอง (ไม่ใช่วันที่บันทึก)
+  publishedAt DateTime
+  /// ไฟล์แนบ/ลิงก์ปลายทาง — ว่างได้ถ้ายังไม่มีไฟล์
+  fileUrl     String?
+  published   Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([published, publishedAt])
+}
+
+/// ข่าววิ่งบนแถบด้านบน — สั้นๆ ไม่มีไฟล์แนบ
+model NewsTicker {
+  id        String   @id @default(cuid())
+  text      String
+  sortOrder Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published, sortOrder])
+}
+
+/// หน้าเนื้อหาทั่วไป เช่น ประวัติความเป็นมา / วิสัยทัศน์ — ถอดจาก www.spsccoop.com ทีละหน้า
+model Page {
+  id          String   @id @default(cuid())
+  /// ส่วนท้าย URL เช่น "about/history"
+  slug        String   @unique
+  title       String
+  /// เนื้อหาแบบ HTML
+  body        String   @default("")
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// ค่าต่างๆ ของหน้าแรกที่ไม่ใช่รายการ เช่น ที่อยู่/เบอร์โทร/อัตราดอกเบี้ย
+/// เก็บเป็น key -> JSON เพื่อเพิ่มช่องใหม่ได้โดยไม่ต้อง migrate ทุกครั้ง
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+/// ไฟล์ที่อัปจากหลังบ้าน — ไฟล์จริงอยู่ใน public/uploads (mount เป็น volume)
+model Media {
+  id           String   @id @default(cuid())
+  url          String   @unique
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+}

@@ -1,0 +1,28 @@
+import { NextResponse, type NextRequest } from "next/server";
+
+/**
+ * หลังบ้านเปิดได้เฉพาะโดเมนของหลังบ้าน (coopsmile.org)
+ * โดเมนสาธารณะ (spsccoop.com) จะตอบ 404 เหมือนไม่มีหน้านี้อยู่จริง
+ * — คนนอกหาหลังบ้านไม่เจอ ถึงจะเดา URL ถูกก็ตาม
+ *
+ * ตั้งค่าโดเมนหลังบ้านที่ ADMIN_HOST ใน .env
+ * ไม่ตั้ง = เปิดได้ทุกโดเมน (สะดวกตอน dev บน localhost)
+ */
+export function proxy(request: NextRequest) {
+  const adminHost = process.env.ADMIN_HOST?.trim();
+  if (!adminHost) {
+    return NextResponse.next();
+  }
+
+  const host = request.headers.get("host")?.split(":")[0].toLowerCase() ?? "";
+  const allowed = host === adminHost.toLowerCase() || host === "localhost" || host === "127.0.0.1";
+
+  if (!allowed) {
+    return new NextResponse(null, { status: 404 });
+  }
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/admin/:path*", "/api/auth/:path*", "/api/admin/:path*"],
+};

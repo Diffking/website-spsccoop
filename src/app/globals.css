@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+/* ================= ธีมสีสหกรณ์ออมทรัพย์สาธารณสุขสงขลา (อิงจาก mockup) ================= */
+@theme {
+  --font-sans: var(--font-sarabun), ui-sans-serif, system-ui, sans-serif;
+
+  /* น้ำเงินหลัก (แถบเมนู/หัวข้อ) */
+  --color-brand-50: #eaf4fc;
+  --color-brand-100: #cfe6f8;
+  --color-brand-200: #a3d0f1;
+  --color-brand-300: #5fb0e6;
+  --color-brand-400: #2f95dc;
+  --color-brand-500: #1c7fca;
+  --color-brand-600: #1568b0;
+  --color-brand-700: #0f5390;
+  --color-brand-800: #0c3f6f;
+  --color-brand-900: #0a2f52;
+
+  /* ฟ้าอมเขียว (พื้นหลัง section อ่อน) */
+  --color-sky-soft: #e8f5fc;
+
+  /* ส้ม (แบนเนอร์/สวัสดิการ) */
+  --color-accent-orange: #ff7a00;
+  --color-accent-orange-dark: #f45d00;
+
+  /* เขียว (เงินให้กู้) */
+  --color-accent-green: #17a589;
+  --color-accent-green-dark: #0f8a72;
+
+  /* เหลืองป้าย badge */
+  --color-accent-amber: #f5b100;
+
+  /* แดง (ประกาศด่วน/วันหยุด) */
+  --color-accent-red: #e23744;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #ffffff;
+  color: #1f2937;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* วิ่งข้อความประกาศด่วน */
+@keyframes ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+.animate-ticker {
+  animation: ticker 30s linear infinite;
+}
+.ticker-pause:hover .animate-ticker {
+  animation-play-state: paused;
+}
+
+/* เนื้อหาที่พิมพ์จากหลังบ้าน (HTML) — จัดรูปแบบพื้นฐานให้อ่านง่าย */
+.prose-page h2 { font-size: 1.25rem; font-weight: 700; color: #1f2937; margin: 1.25rem 0 .5rem; }
+.prose-page h3 { font-size: 1.05rem; font-weight: 600; color: #374151; margin: 1rem 0 .4rem; }
+.prose-page p { margin: .6rem 0; line-height: 1.85; color: #374151; }
+.prose-page ul, .prose-page ol { margin: .6rem 0 .6rem 1.5rem; line-height: 1.85; }
+.prose-page ul { list-style: disc; }
+.prose-page ol { list-style: decimal; }
+.prose-page a { color: #1d4ed8; text-decoration: underline; }
+.prose-page img { max-width: 100%; height: auto; border-radius: .5rem; margin: .75rem 0; }
+.prose-page table { width: 100%; border-collapse: collapse; margin: .75rem 0; font-size: .95rem; }
+.prose-page th, .prose-page td { border: 1px solid #e5e7eb; padding: .5rem .75rem; text-align: left; }
+.prose-page th { background: #f9fafb; font-weight: 600; }
