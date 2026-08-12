@@ -14,6 +14,7 @@ import {
   ImagePlus,
   Sparkles,
   Images,
+  GripVertical,
 } from "lucide-react";
 
 export type SlideRow = {
@@ -75,6 +76,22 @@ export default function SlidesManager({
   const [endsAt, setEndsAt] = useState("");
   const [busy, setBusy] = useState<null | "upload" | "ai" | "save" | "row">(null);
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+
+  /**
+   * ลำดับที่กำลังโชว์อยู่ — ลากแล้วสลับในนี้ก่อนเพื่อให้เห็นผลทันที ค่อยส่งไปบันทึก
+   * ถ้าฝั่งเซิร์ฟเวอร์ส่งข้อมูลชุดใหม่มา (แก้ช่องอื่น เพิ่ม ลบ) ให้ยึดของเซิร์ฟเวอร์เสมอ
+   */
+  const [list, setList] = useState(items);
+  const [fromServer, setFromServer] = useState(() => JSON.stringify(items));
+  const incoming = JSON.stringify(items);
+  if (incoming !== fromServer) {
+    setFromServer(incoming);
+    setList(items);
+  }
+
+  const [dragId, setDragId] = useState<string | null>(null);
+  /** id ของแถวที่กดค้างอยู่ที่จุดจับ — แถวจะลากได้เฉพาะตอนนี้ ไม่งั้นเลือกข้อความในแถวไม่ได้ */
+  const [handleOn, setHandleOn] = useState<string | null>(null);
 
   /** อัปรูปขึ้นเซิร์ฟเวอร์ และถ้าอยู่โหมด AI ก็ให้ AI อ่านรูปเดียวกันนั้นต่อเลย */
   async function handleFile(file: File) {
@@ -166,6 +183,38 @@ export default function SlidesManager({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+
+  /** ย้ายแถวไปอยู่ตำแหน่งใหม่ในรายการที่โชว์อยู่ (ยังไม่บันทึก) */
+  function moveTo(id: string, toIndex: number) {
+    setList((current) => {
+      const from = current.findIndex((s) => s.id === id);
+      if (from === -1 || from === toIndex) return current;
+      const next = [...current];
+      const [moved] = next.splice(from, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }
+
+  /** บันทึกลำดับที่ลากไว้ — ล้มเหลวเมื่อไหร่ถอยกลับไปใช้ลำดับจากเซิร์ฟเวอร์ */
+  async function saveOrder(next: SlideRow[]) {
+    setBusy("row");
+    const response = await fetch("/api/admin/slides/", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order: next.map((s) => s.id) }),
+    });
+    const data = await response.json().catch(() => ({}));
+    setBusy(null);
+
+    if (!response.ok) {
+      setList(items);
+      setStatus({ kind: "error", text: data.error ?? "จัดลำดับไม่สำเร็จ" });
+      return;
+    }
+    setStatus({ kind: "ok", text: "จัดลำดับใหม่แล้ว" });
+    router.refresh();
+  }
 
   return (
     <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
@@ -304,14 +353,19 @@ export default function SlidesManager({
       </div>
 
       {/* รายการสไลด์ */}
-      {items.length === 0 ? (
+      {list.length === 0 ? (
         <p className="mt-4 rounded-xl bg-gray-50 py-8 text-center text-sm text-gray-400">
           ยังไม่มีสไลด์ — หน้าเว็บจะใช้ภาพชุดเดิมที่ติดมากับโค้ดไปก่อน
         </p>
       ) : (
-        <ul className="mt-4 divide-y divide-gray-100">
+        <>
+          <p className="mt-4 flex items-center gap-1.5 text-xs text-gray-500">
+            <GripVertical className="h-3.5 w-3.5 text-gray-400" />
+            ลากที่จุดจับเพื่อสลับลำดับ — บนสุดคือสไลด์ที่ขึ้นก่อน (บนมือถือใช้ปุ่มลูกศรแทน)
+          </p>
+          <ul className="mt-2 divide-y divide-gray-100">
           <AnimatePresence initial={false}>
-            {items.map((slide, i) => (
+            {list.map((slide, i) => (
               <motion.li
                 key={slide.id}
                 layout
@@ -321,7 +375,40 @@ export default function SlidesManager({
                 transition={{ duration: 0.25, ease: "easeOut" }}
                 className="py-3"
               >
+                {/* ตัวลาก: วางไว้ชั้นในเพราะ motion.li มี prop ชื่อ onDrag* ของตัวเองอยู่แล้ว */}
+                <div
+                  draggable={handleOn === slide.id}
+                  onDragStart={(e) => {
+                    setDragId(slide.id);
+                    // Firefox ไม่เริ่มลากถ้าไม่ได้ตั้ง dataTransfer
+                    e.dataTransfer.setData("text/plain", slide.id);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    if (dragId && dragId !== slide.id) moveTo(dragId, i);
+                  }}
+                  onDragEnd={() => {
+                    setDragId(null);
+                    setHandleOn(null);
+                    // ลากแล้วลำดับไม่เปลี่ยนก็ไม่ต้องยิงไปบันทึก
+                    const changed = list.some((s, idx) => s.id !== items[idx]?.id);
+                    if (changed) void saveOrder(list);
+                  }}
+                  className={`transition ${dragId === slide.id ? "opacity-40" : ""}`}
+                >
                 <div className="flex items-center gap-3">
+                  <span
+                    onMouseDown={() => setHandleOn(slide.id)}
+                    onMouseUp={() => setHandleOn(null)}
+                    onTouchStart={() => setHandleOn(slide.id)}
+                    onTouchEnd={() => setHandleOn(null)}
+                    title="ลากเพื่อสลับลำดับ"
+                    aria-hidden="true"
+                    className="-ml-1 shrink-0 cursor-grab rounded-lg p-1 text-gray-300 transition hover:text-gray-500 active:cursor-grabbing"
+                  >
+                    <GripVertical className="h-4 w-4" />
+                  </span>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={slide.imageUrl}
@@ -364,7 +451,7 @@ export default function SlidesManager({
                   </button>
                   <button
                     onClick={() => patch(slide.id, { move: "down" })}
-                    disabled={busy !== null || i === items.length - 1}
+                    disabled={busy !== null || i === list.length - 1}
                     title="เลื่อนลง"
                     className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30"
                   >
@@ -409,10 +496,12 @@ export default function SlidesManager({
                     />
                   </label>
                 </div>
+                </div>
               </motion.li>
             ))}
           </AnimatePresence>
-        </ul>
+          </ul>
+        </>
       )}
     </section>
   );
