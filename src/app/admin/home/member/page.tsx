@@ -7,7 +7,8 @@ export default async function Page() {
   const user = await currentUser();
   if (!user) redirect("/admin/");
 
-  const [features, links] = await Promise.all([
+  const [cards, features, links] = await Promise.all([
+    getItemsForAdmin("recommends"),
     getItemsForAdmin("memberFeatures"),
     getItemsForAdmin("memberLinks"),
   ]);
@@ -15,9 +16,19 @@ export default async function Page() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
       <h1 className="mb-1 text-xl font-bold text-gray-800">สำหรับสมาชิก</h1>
-      <p className="mb-5 text-sm text-gray-500">การ์ดบริการย่อยและปุ่มลิงก์ในส่วนสำหรับสมาชิก</p>
+      <p className="mb-5 text-sm text-gray-500">
+        ทั้งบล็อกนี้บนหน้าแรก — การ์ดใหญ่ การ์ดบริการย่อย และปุ่มลิงก์
+      </p>
 
-      <h2 className="mb-2 text-sm font-semibold text-brand-700">การ์ดบริการ</h2>
+      <h2 className="mb-2 text-sm font-semibold text-brand-700">การ์ดใหญ่ 3 ใบ</h2>
+      <HomeItemsManager
+        section="recommends"
+        items={cards}
+        fields={["subtitle", "href", "theme"]}
+        titleLabel="หัวข้อการ์ด"
+      />
+
+      <h2 className="mb-2 mt-8 text-sm font-semibold text-brand-700">การ์ดบริการย่อย</h2>
       <HomeItemsManager
         section="memberFeatures"
         items={features}

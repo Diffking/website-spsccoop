@@ -5,8 +5,9 @@ import Link from "next/link";
 import { FileText, CalendarDays, ChevronLeft, ChevronRight, UserRound } from "lucide-react";
 import Reveal from "@/components/ui/Reveal";
 import SectionHeading from "@/components/ui/SectionHeading";
-import { committees } from "@/data/home";
+import MaybeLink from "@/components/ui/MaybeLink";
 import type { AnnouncementItem } from "@/lib/content";
+import type { Item } from "@/lib/homeItems";
 
 const TABS = ["ประกาศ", "จดหมายข่าว", "รายงานผลดำเนินงาน"];
 const PER_PAGE = 5;
@@ -32,7 +33,7 @@ function AnnouncementList({ items }: { items: AnnouncementItem[] }) {
         <ul className="flex-1 divide-y divide-gray-100">
           {shown.map((a) => (
             <li key={a.id}>
-              <Link href={a.href} className="group flex items-start gap-3 py-3 transition hover:bg-brand-50/60 rounded-lg px-2 -mx-2">
+              <MaybeLink href={a.href} className="group flex items-start gap-3 py-3 transition hover:bg-brand-50/60 rounded-lg px-2 -mx-2">
                 <FileText className="mt-0.5 h-5 w-5 shrink-0 text-brand-400" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-gray-700 group-hover:text-brand-700">
@@ -42,7 +43,7 @@ function AnnouncementList({ items }: { items: AnnouncementItem[] }) {
                     <CalendarDays className="h-3.5 w-3.5" /> {a.date}
                   </p>
                 </div>
-              </Link>
+              </MaybeLink>
             </li>
           ))}
         </ul>
@@ -82,24 +83,33 @@ function AnnouncementList({ items }: { items: AnnouncementItem[] }) {
   );
 }
 
-function CommitteeCard() {
+function CommitteeCard({ members }: { members: Item[] }) {
   const [i, setI] = useState(0);
-  const n = committees.length;
-  const c = committees[i];
+  const n = members.length;
+  const c = members[Math.min(i, Math.max(0, n - 1))];
+
+  if (n === 0) return null;
+
   return (
     <div className="flex h-full flex-col rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-black/5">
       <p className="text-sm font-semibold text-brand-700">คณะกรรมการชุดที่ 46</p>
-      <div className="mt-4 grid min-h-48 w-full flex-1 place-items-center rounded-xl bg-gradient-to-b from-brand-100 to-brand-50">
-        <UserRound className="h-16 w-16 text-brand-300" />
+      <div className="mt-4 grid min-h-48 w-full flex-1 place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-brand-100 to-brand-50">
+        {c.imageUrl ? (
+          // รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={c.imageUrl} alt={c.title} className="h-48 w-full object-cover" />
+        ) : (
+          <UserRound className="h-16 w-16 text-brand-300" />
+        )}
       </div>
-      <p className="mt-4 text-base font-semibold text-gray-700">{c.name}</p>
-      <p className="text-sm text-gray-400">{c.role}</p>
+      <p className="mt-4 text-base font-semibold text-gray-700">{c.title}</p>
+      <p className="text-sm text-gray-400">{c.subtitle}</p>
       <div className="mt-4 flex items-center justify-center gap-3">
         <button onClick={() => setI((v) => (v - 1 + n) % n)} className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 hover:bg-gray-50">
           <ChevronLeft className="h-4 w-4" />
         </button>
         <div className="flex gap-1.5">
-          {committees.map((_, idx) => (
+          {members.map((_, idx) => (
             <span key={idx} className={`h-2 rounded-full transition-all ${idx === i ? "w-5 bg-brand-500" : "w-2 bg-gray-300"}`} />
           ))}
         </div>
@@ -119,7 +129,13 @@ function CommitteeCard() {
   );
 }
 
-export default function NewsSection({ announcements }: { announcements: AnnouncementItem[] }) {
+export default function NewsSection({
+  announcements,
+  committees,
+}: {
+  announcements: AnnouncementItem[];
+  committees: Item[];
+}) {
   const [tab, setTab] = useState(TABS[0]);
   return (
     <section className="bg-white py-12">
@@ -145,7 +161,7 @@ export default function NewsSection({ announcements }: { announcements: Announce
             <AnnouncementList items={announcements} />
           </Reveal>
           <Reveal delay={0.1} className="h-full">
-            <CommitteeCard />
+            <CommitteeCard members={committees} />
           </Reveal>
         </div>
       </div>

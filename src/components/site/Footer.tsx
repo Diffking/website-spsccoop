@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { MapPin, Phone, Mail, Clock, Users, ExternalLink } from "lucide-react";
-import { footerLinks, site } from "@/data/home";
+import { site } from "@/data/home";
+import { getItems } from "@/lib/homeItems";
 import { getSiteInfo } from "@/lib/settings";
 
 function FacebookIcon({ className }: { className?: string }) {
@@ -13,7 +13,7 @@ function FacebookIcon({ className }: { className?: string }) {
 
 // ที่อยู่/เบอร์/เวลาทำการ มาจากตาราง Setting ที่แก้ได้ที่ /admin/home
 export default async function Footer() {
-  const info = await getSiteInfo();
+  const [info, agencyLinks] = await Promise.all([getSiteInfo(), getItems("footerLinks")]);
   return (
     <footer className="mt-auto bg-brand-800 text-white">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-4">
@@ -29,13 +29,17 @@ export default async function Footer() {
               <p className="text-xs text-white/70">จำนวนผู้เยี่ยมชมภายในปีบัญชี</p>
             </div>
           </div>
-          <Link
-            href="#"
-            aria-label="Facebook"
-            className="mt-4 inline-grid h-9 w-9 place-items-center rounded-full bg-white/10 hover:bg-white/20"
-          >
-            <FacebookIcon className="h-4 w-4" />
-          </Link>
+          {info.facebook && (
+            <a
+              href={info.facebook}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Facebook"
+              className="mt-4 inline-grid h-9 w-9 place-items-center rounded-full bg-white/10 hover:bg-white/20"
+            >
+              <FacebookIcon className="h-4 w-4" />
+            </a>
+          )}
         </div>
 
         {/* ติดต่อ */}
@@ -61,11 +65,22 @@ export default async function Footer() {
         <div>
           <p className="mb-3 text-sm font-semibold text-white/80">หน่วยงานสนับสนุนกำกับดูแล</p>
           <ul className="space-y-2 text-sm text-white/80">
-            {footerLinks.map((l) => (
-              <li key={l.label}>
-                <a href={l.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:text-white">
-                  <ExternalLink className="h-3.5 w-3.5" /> {l.label}
-                </a>
+            {agencyLinks.map((l) => (
+              <li key={l.id}>
+                {l.href && l.href !== "#" ? (
+                  <a
+                    href={l.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 hover:text-white"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" /> {l.title}
+                  </a>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5">
+                    <ExternalLink className="h-3.5 w-3.5" /> {l.title}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

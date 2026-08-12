@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { CalendarX, Bus, FolderKanban, MapPin, Clock, ChevronLeft, ChevronRight, RotateCcw, CalendarDays } from "lucide-react";
 import SectionHeading from "@/components/ui/SectionHeading";
-import { calendarEvents, type CalendarEvent } from "@/data/home";
+import type { CalendarEvent } from "@/data/home";
 import { useIsClient } from "@/lib/useIsClient";
 
 const TYPE = {
@@ -96,8 +96,14 @@ function DayCard({
   );
 }
 
-// holidays = วันหยุดสหกรณ์จากฐานข้อมูล (แก้ที่ /admin/holidays) รวมกับกิจกรรมที่ยังฮาร์ดโค้ดไว้
-export default function CoopCalendar({ holidays = [] }: { holidays?: CalendarEvent[] }) {
+// events = กิจกรรมสหกรณ์ (แก้ที่ /admin/home/calendar) · holidays = วันหยุด (แก้ที่ /admin/holidays)
+export default function CoopCalendar({
+  holidays = [],
+  events = [],
+}: {
+  holidays?: CalendarEvent[];
+  events?: CalendarEvent[];
+}) {
   const isClient = useIsClient();
   // null = ยังไม่ได้เลื่อนเอง ให้ยึดวันนี้เป็นศูนย์กลาง
   const [center, setCenter] = useState<number | null>(null);
@@ -132,7 +138,7 @@ export default function CoopCalendar({ holidays = [] }: { holidays?: CalendarEve
   const today = now.getDate();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const active = center ?? today;
-  const events = [...calendarEvents, ...holidays];
+  const allEvents = [...events, ...holidays];
 
   const go = (step: number) => {
     setDir(step);
@@ -183,7 +189,7 @@ export default function CoopCalendar({ holidays = [] }: { holidays?: CalendarEve
               className="grid grid-cols-[1fr_1.2fr_1fr] items-stretch gap-2 md:gap-4"
             >
               {cols.map((d, i) => (
-                <DayCard key={i} day={d} year={year} month={month} today={today} focus={i === 1} events={events} />
+                <DayCard key={i} day={d} year={year} month={month} today={today} focus={i === 1} events={allEvents} />
               ))}
             </motion.div>
           </div>

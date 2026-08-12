@@ -13,6 +13,8 @@ export type SiteInfo = {
   email: string;
   officeHours: string;
   memberCount: string;
+  /** ลิงก์เพจเฟซบุ๊ก — เว้นว่าง = ไม่แสดงปุ่มที่ท้ายเว็บ */
+  facebook?: string;
 };
 
 export type InterestRates = {
@@ -28,6 +30,7 @@ export const DEFAULT_SITE_INFO: SiteInfo = {
   email: "spsccoop229@gmail.com",
   officeHours: "จันทร์ – ศุกร์ 08:30 – 16:30 น.",
   memberCount: "220,031",
+  facebook: "",
 };
 
 export const DEFAULT_RATES: InterestRates = {

@@ -15,6 +15,7 @@ import BackToTop from "@/components/ui/BackToTop";
 import { site } from "@/data/home";
 import { getRates, getSiteInfo, getSplash } from "@/lib/settings";
 import { getAnnouncements, getHolidayEvents, getSlides } from "@/lib/content";
+import { getCalendarEvents, getItems } from "@/lib/homeItems";
 import { pageMetadata } from "@/lib/seo";
 
 // อ่านที่อยู่/ดอกเบี้ยจากฐานทุกครั้งที่มีคนเข้า — แก้ในหลังบ้านแล้วเห็นผลทันทีไม่ต้อง deploy
@@ -25,14 +26,44 @@ export const dynamic = "force-dynamic";
 export const generateMetadata = () => pageMetadata("/");
 
 export default async function Home() {
-  const [info, rates, announcements, splash, holidays, slides] = await Promise.all([
+  const [
+    info,
+    rates,
+    announcements,
+    splash,
+    holidays,
+    slides,
+    committees,
+    services,
+    recommends,
+    memberFeatures,
+    memberLinks,
+    officers,
+    events,
+  ] = await Promise.all([
     getSiteInfo(),
     getRates(),
     getAnnouncements(),
     getSplash(),
     getHolidayEvents(),
     getSlides(),
+    getItems("committees"),
+    getItems("services"),
+    getItems("recommends"),
+    getItems("memberFeatures"),
+    getItems("memberLinks"),
+    getItems("officers"),
+    getCalendarEvents(),
   ]);
+
+  // ปฏิทินรับ place/time เป็น optional ส่วนฐานเก็บเป็น null — แปลงก่อนส่งเข้า
+  const calendar = events.map((e) => ({
+    day: e.day,
+    type: e.type,
+    title: e.title,
+    place: e.place ?? undefined,
+    time: e.time ?? undefined,
+  }));
 
   // JSON-LD structured data สำหรับ SEO หน้า Home
   const jsonLd = {
@@ -62,12 +93,12 @@ export default async function Home() {
       <main>
         <Hero rates={rates} slides={slides} />
         <NewsTicker />
-        <NewsSection announcements={announcements} />
-        <Services />
-        <Recommend />
-        <MemberCorner />
-        <CoopCalendar holidays={holidays} />
-        <OfficerService />
+        <NewsSection announcements={announcements} committees={committees} />
+        <Services items={services} />
+        <Recommend cards={recommends} features={memberFeatures} />
+        <MemberCorner links={memberLinks} />
+        <CoopCalendar holidays={holidays} events={calendar} />
+        <OfficerService items={officers} />
       </main>
       <BackToTop />
       <Footer />

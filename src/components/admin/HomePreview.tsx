@@ -13,11 +13,15 @@ import { Monitor, Smartphone, RotateCw, ExternalLink, Pencil } from "lucide-reac
  */
 
 const PARTS: { href: string; label: string }[] = [
-  { href: "/admin/home/slides", label: "แบนเนอร์สไลด์" },
-  { href: "/admin/home/ticker", label: "ข่าววิ่ง" },
-  { href: "/admin/home/announcements", label: "ประกาศสหกรณ์" },
-  { href: "/admin/home/info", label: "ข้อมูลสหกรณ์" },
+  { href: "/admin/home/slides", label: "สไลด์" },
   { href: "/admin/home/rates", label: "อัตราดอกเบี้ย" },
+  { href: "/admin/home/ticker", label: "ข่าววิ่ง" },
+  { href: "/admin/home/announcements", label: "ประกาศ / จดหมายข่าว" },
+  { href: "/admin/home/committees", label: "คณะกรรมการดำเนินการ" },
+  { href: "/admin/home/services", label: "บริการ" },
+  { href: "/admin/home/member", label: "สำหรับสมาชิก" },
+  { href: "/admin/home/calendar", label: "ปฏิทินสหกรณ์" },
+  { href: "/admin/home/officers", label: "สำนักงานบริการสมาชิก" },
 ];
 
 export default function HomePreview() {

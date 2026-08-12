@@ -1,9 +1,9 @@
-import Link from "next/link";
 import Reveal from "@/components/ui/Reveal";
 import Icon from "@/components/ui/Icon";
-import { memberLinks } from "@/data/home";
+import MaybeLink from "@/components/ui/MaybeLink";
+import type { Item } from "@/lib/homeItems";
 
-export default function MemberCorner() {
+export default function MemberCorner({ links }: { links: Item[] }) {
   return (
     <section className="bg-white pb-12">
       <div className="mx-auto max-w-6xl px-4">
@@ -16,17 +16,17 @@ export default function MemberCorner() {
               </p>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              {memberLinks.map((m) => (
-                <Link
-                  key={m.label}
+              {links.map((m) => (
+                <MaybeLink
+                  key={m.id}
                   href={m.href}
                   className="flex flex-col items-center gap-2 rounded-xl bg-white/15 px-4 py-3 text-center text-xs font-medium backdrop-blur transition hover:bg-white/25"
                 >
                   <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-brand-600">
-                    <Icon name={m.icon} className="h-5 w-5" />
+                    <Icon name={m.icon ?? "BookOpen"} className="h-5 w-5" />
                   </span>
-                  {m.label}
-                </Link>
+                  {m.title}
+                </MaybeLink>
               ))}
             </div>
           </div>

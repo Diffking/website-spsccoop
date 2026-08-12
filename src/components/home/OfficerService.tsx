@@ -5,8 +5,8 @@ import {
 } from "lucide-react";
 import Reveal from "@/components/ui/Reveal";
 import SectionHeading from "@/components/ui/SectionHeading";
-import { officerServices } from "@/data/home";
 import officerBuilding from "@/data/asset/officer.png";
+import type { Item } from "@/lib/homeItems";
 
 const OFFICE_ICON: Record<string, LucideIcon> = {
   head: Building2,
@@ -28,7 +28,7 @@ const THEME: Record<string, { iconBg: string; link: string; bar: string }> = {
   van: { iconBg: "bg-orange-50 text-orange-600", link: "text-orange-600", bar: "bg-orange-500" },
 };
 
-export default function OfficerService() {
+export default function OfficerService({ items }: { items: Item[] }) {
   return (
     <section className="bg-sky-soft py-12">
       <div className="mx-auto max-w-6xl px-4">
@@ -38,19 +38,21 @@ export default function OfficerService() {
           subtitle="ให้บริการสมาชิก 3 จุด — สำนักงานใหญ่ · สาขา รพ.สงขลา · รถตู้โมบาย"
         />
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {officerServices.map((s, i) => {
-            const t = THEME[s.officeIcon] ?? THEME.head;
-            const OfficeIcon = OFFICE_ICON[s.officeIcon] ?? Building2;
-            const img = OFFICE_IMAGE[s.officeIcon] ?? null;
+          {items.map((s, i) => {
+            const kind = s.icon ?? "head";
+            const t = THEME[kind] ?? THEME.head;
+            const OfficeIcon = OFFICE_ICON[kind] ?? Building2;
+            // รูปจากหลังบ้านมาก่อน ถ้าไม่มีค่อยใช้ภาพที่ติดมากับโค้ด
+            const img: string | StaticImageData | null = s.imageUrl ?? OFFICE_IMAGE[kind] ?? null;
             return (
-              <Reveal key={s.office} delay={i * 0.06}>
+              <Reveal key={s.id} delay={i * 0.06}>
                 <article className="group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-black/5 transition duration-300 hover:-translate-y-1.5 hover:shadow-xl">
                   {/* ภาพห้องการเงิน — สาขา/รถตู้ยังเว้นว่างไว้ */}
                   <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
                     {img ? (
                       <Image
                         src={img}
-                        alt={s.office}
+                        alt={s.title}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         className="object-cover transition duration-500 group-hover:scale-105"
@@ -69,9 +71,9 @@ export default function OfficerService() {
                       <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${t.iconBg}`}>
                         <OfficeIcon className="h-5 w-5" />
                       </span>
-                      <h3 className="font-bold text-gray-800">{s.office}</h3>
+                      <h3 className="font-bold text-gray-800">{s.title}</h3>
                     </div>
-                    <p className="mt-3 flex-1 text-sm leading-relaxed text-gray-500">{s.desc}</p>
+                    <p className="mt-3 flex-1 text-sm leading-relaxed text-gray-500">{s.subtitle}</p>
                     <span className={`mt-4 inline-flex items-center gap-1 text-sm font-medium ${t.link}`}>
                       ดูรายละเอียด
                       <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
