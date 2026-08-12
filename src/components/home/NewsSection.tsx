@@ -6,6 +6,7 @@ import { FileText, CalendarDays, ChevronLeft, ChevronRight, UserRound } from "lu
 import Reveal from "@/components/ui/Reveal";
 import SectionHeading from "@/components/ui/SectionHeading";
 import MaybeLink from "@/components/ui/MaybeLink";
+import TabBar from "@/components/ui/TabBar";
 import type { AnnouncementItem } from "@/lib/content";
 import type { Item } from "@/lib/homeItems";
 import { KINDS, KIND_HEADING, KIND_LABEL, announcementLine, type Kind } from "@/lib/announcementKinds";
@@ -150,26 +151,13 @@ export default function NewsSection({
       <div className="mx-auto max-w-6xl px-4">
         <SectionHeading title="ประกาศ / จดหมายข่าว" subtitle="ประกาศและข่าวสารต่างๆ ของดูแลสมาชิกสหกรณ์ด้วยใจ" />
 
-        <div className="mb-6 flex flex-wrap justify-start gap-2">
-          {KINDS.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${
-                tab === t ? "bg-brand-500 text-white shadow" : "bg-brand-50 text-brand-600 hover:bg-brand-100"
-              }`}
-            >
-              {KIND_LABEL[t]}
-              <span
-                className={`rounded-full px-1.5 text-xs tabular-nums ${
-                  tab === t ? "bg-white/25" : "bg-white/70 text-brand-500"
-                }`}
-              >
-                {byKind[t].length}
-              </span>
-            </button>
-          ))}
-        </div>
+        <TabBar
+          className="mb-6"
+          layoutId="home-news-tab"
+          value={tab}
+          onChange={setTab}
+          items={KINDS.map((t) => ({ value: t, label: KIND_LABEL[t], count: byKind[t].length }))}
+        />
 
         <div className="grid items-stretch gap-6 lg:grid-cols-[1.7fr_1fr]">
           <Reveal className="h-full">

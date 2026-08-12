@@ -15,6 +15,7 @@ import {
   FileText,
   ExternalLink,
 } from "lucide-react";
+import TabBar from "@/components/ui/TabBar";
 import {
   KINDS,
   KIND_FOLDER,
@@ -355,31 +356,22 @@ export default function AnnouncementsManager({
       </p>
 
       {/* แท็บกรอง — ตัวเลขคือจำนวนที่มีในหมวดนั้น */}
-      <div className="mt-3 flex flex-wrap gap-2">
-        {KINDS.map((k) => (
-          <button
-            key={k}
-            onClick={() => {
-              setTab(k);
-              setEditingId("");
-              setAdding(false);
-              setForm({ ...empty, kind: k });
-            }}
-            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${
-              tab === k ? "bg-brand-500 text-white shadow" : "bg-brand-50 text-brand-600 hover:bg-brand-100"
-            }`}
-          >
-            {KIND_LABEL[k]}
-            <span
-              className={`rounded-full px-1.5 text-xs tabular-nums ${
-                tab === k ? "bg-white/25" : "bg-white/70 text-brand-500"
-              }`}
-            >
-              {items.filter((i) => i.kind === k).length}
-            </span>
-          </button>
-        ))}
-      </div>
+      <TabBar
+        className="mt-3"
+        layoutId="admin-announcement-tab"
+        value={tab}
+        onChange={(k) => {
+          setTab(k);
+          setEditingId("");
+          setAdding(false);
+          setForm({ ...empty, kind: k });
+        }}
+        items={KINDS.map((k) => ({
+          value: k,
+          label: KIND_LABEL[k],
+          count: items.filter((i) => i.kind === k).length,
+        }))}
+      />
 
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
