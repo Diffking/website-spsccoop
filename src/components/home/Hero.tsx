@@ -212,8 +212,9 @@ function RateCard({ rates }: { rates: InterestRates }) {
 
       <p className="mt-4 text-xs text-gray-400">อัตราดอกเบี้ย (ต่อปี)</p>
       <ul className="mt-2 flex-1 divide-y divide-gray-100">
-        {rows.map((r) => (
-          <li key={r.label} className="flex items-center justify-between py-2.5">
+        {rows.map((r, i) => (
+          // ชื่อรายการซ้ำกันได้ (เจ้าหน้าที่พิมพ์เอง) จึงผูก key กับลำดับด้วย
+          <li key={`${r.label}-${i}`} className="flex items-center justify-between py-2.5">
             <span className="text-sm text-gray-600">{r.label}</span>
             <span className={`text-lg font-bold ${valueColor}`}>
               {r.rate} <span className="text-sm font-medium text-gray-400">%</span>
