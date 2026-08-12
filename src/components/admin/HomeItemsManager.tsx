@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Loader2,
   ImagePlus,
+  GripVertical,
 } from "lucide-react";
 import type { Item, Section } from "@/lib/homeItems";
 import UploadProgress from "@/components/admin/UploadProgress";
@@ -59,6 +60,52 @@ export default function HomeItemsManager({
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * ลำดับที่กำลังโชว์ — ลากแล้วสลับในนี้ก่อนให้เห็นผลทันที ปล่อยแล้วค่อยบันทึก
+   * ฝั่งเซิร์ฟเวอร์ส่งชุดใหม่มาเมื่อไหร่ (เพิ่ม ลบ แก้ช่องอื่น) ให้ยึดของเซิร์ฟเวอร์เสมอ
+   */
+  const [list, setList] = useState(items);
+  const [fromServer, setFromServer] = useState(() => JSON.stringify(items));
+  const incoming = JSON.stringify(items);
+  if (incoming !== fromServer) {
+    setFromServer(incoming);
+    setList(items);
+  }
+  const [dragId, setDragId] = useState<string | null>(null);
+  /** id ของแถวที่กดค้างที่จุดจับ — ลากได้เฉพาะตอนนี้ ไม่งั้นแก้ช่องข้อความในแถวไม่ได้ */
+  const [handleOn, setHandleOn] = useState<string | null>(null);
+
+  function moveTo(id: string, toIndex: number) {
+    setList((current) => {
+      const from = current.findIndex((x) => x.id === id);
+      if (from === -1 || from === toIndex) return current;
+      const next = [...current];
+      const [moved] = next.splice(from, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }
+
+  /** บันทึกลำดับที่ลากไว้ — ล้มเหลวเมื่อไหร่ถอยกลับไปใช้ลำดับจากฐาน */
+  async function saveOrder(next: Item[]) {
+    setBusy(true);
+    const response = await fetch("/api/admin/home-items/", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ section, order: next.map((x) => x.id) }),
+    });
+    const data = await response.json().catch(() => ({}));
+    setBusy(false);
+
+    if (!response.ok) {
+      setList(items);
+      setError(data.error ?? "จัดลำดับไม่สำเร็จ");
+      return;
+    }
+    setError(null);
+    router.refresh();
+  }
 
   const set = (key: string, value: string) => setDraft((prev) => ({ ...prev, [key]: value }));
 
@@ -216,14 +263,21 @@ export default function HomeItemsManager({
           รายการทั้งหมด <span className="text-sm font-normal text-gray-400">({items.length})</span>
         </h2>
 
-        {items.length === 0 ? (
+        {list.length === 0 ? (
           <p className="mt-4 rounded-xl bg-gray-50 py-8 text-center text-sm text-gray-400">
             ยังไม่มีรายการ
           </p>
         ) : (
-          <ul className="mt-3 space-y-3">
+          <>
+          {list.length > 1 && (
+            <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
+              <GripVertical className="h-3.5 w-3.5 text-gray-400" />
+              ลากที่จุดจับเพื่อจัดลำดับ — บนสุดขึ้นก่อนบนหน้าเว็บ
+            </p>
+          )}
+          <ul className="mt-2 space-y-3">
             <AnimatePresence initial={false}>
-              {items.map((item, i) => (
+              {list.map((item, i) => (
                 <motion.li
                   key={item.id}
                   layout
@@ -231,11 +285,41 @@ export default function HomeItemsManager({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.22, ease: "easeOut" }}
-                  className={`rounded-xl border p-3 ${
+                  draggable={handleOn === item.id}
+                  onDragStart={(e) => {
+                    setDragId(item.id);
+                    (e as unknown as React.DragEvent).dataTransfer?.setData("text/plain", item.id);
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    if (dragId && dragId !== item.id) moveTo(dragId, i);
+                  }}
+                  onDragEnd={() => {
+                    setDragId(null);
+                    setHandleOn(null);
+                    const before = items.map((x) => x.id).join();
+                    const after = list.map((x) => x.id).join();
+                    if (before !== after) void saveOrder(list);
+                  }}
+                  className={`rounded-xl border p-3 transition ${
                     item.published ? "border-gray-200" : "border-gray-200 bg-gray-50/70"
-                  }`}
+                  } ${dragId === item.id ? "opacity-40" : ""}`}
                 >
                   <div className="flex items-center gap-2">
+                    <span
+                      onMouseDown={() => setHandleOn(item.id)}
+                      onMouseUp={() => setHandleOn(null)}
+                      onTouchStart={() => setHandleOn(item.id)}
+                      onTouchEnd={() => setHandleOn(null)}
+                      title="ลากเพื่อจัดลำดับ"
+                      aria-hidden="true"
+                      className="-ml-1 shrink-0 cursor-grab rounded text-gray-300 transition hover:text-gray-500 active:cursor-grabbing"
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </span>
+                    <span className="w-5 shrink-0 text-right text-xs tabular-nums text-gray-400">
+                      {i + 1}
+                    </span>
                     {item.imageUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -264,7 +348,7 @@ export default function HomeItemsManager({
                     </button>
                     <button
                       onClick={() => patch(item.id, { move: "down" })}
-                      disabled={busy || i === items.length - 1}
+                      disabled={busy || i === list.length - 1}
                       title="เลื่อนลง"
                       className="shrink-0 rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30"
                     >
@@ -331,6 +415,7 @@ export default function HomeItemsManager({
               ))}
             </AnimatePresence>
           </ul>
+          </>
         )}
 
         <p className="mt-3 text-xs text-gray-400">
