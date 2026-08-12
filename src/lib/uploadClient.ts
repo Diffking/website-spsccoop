@@ -8,7 +8,7 @@
  * จึงแยกเป็นสองช่วง: "upload" (มีเปอร์เซ็นต์) แล้วต่อด้วย "process" (รอผล)
  */
 
-export type UploadPhase = "upload" | "process" | "done" | "error";
+export type UploadPhase = "upload" | "process" | "ai" | "done" | "error";
 
 export type UploadResult<T> =
   | { ok: true; data: T }

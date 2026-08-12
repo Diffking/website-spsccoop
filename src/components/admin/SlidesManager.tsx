@@ -150,12 +150,14 @@ export default function SlidesManager({
 
     // ให้เซิร์ฟเวอร์ไปหยิบไฟล์ที่เพิ่งอัปเอง จะได้ไม่ต้องส่งซ้ำรอบสอง
     setBusy("ai");
+    setProgress((p) => ({ ...p, phase: "ai" }));
     const read = new FormData();
     read.append("url", uploadData.url);
     read.append("target", "slide");
     const response = await fetch("/api/admin/ai/read-image/", { method: "POST", body: read });
     const data = await response.json().catch(() => ({}));
     setBusy(null);
+    setProgress((p) => ({ ...p, phase: "done" }));
 
     if (!response.ok) {
       setStatus({ kind: "error", text: data.error ?? "AI อ่านภาพไม่สำเร็จ" });
@@ -319,6 +321,7 @@ export default function SlidesManager({
           phase={progress.phase}
           percent={progress.percent}
           fileName={progress.name}
+          showAi={aiReady}
           message={progress.phase === "done" ? imageNote : ""}
         />
 

@@ -191,17 +191,22 @@ export default function AnnouncementsManager({
     // ส่งแค่ URL ของไฟล์ที่เพิ่งอัปไป ให้เซิร์ฟเวอร์ไปหยิบเอง
     // ไม่ต้องส่งไฟล์เดิมซ้ำรอบสอง (รายงานกิจการหลายสิบ MB ส่งสองรอบคือรอสองเท่า)
     setUploading("ai");
+    setProgress((p) => ({ ...p, phase: "ai" }));
     const read = new FormData();
     read.append("url", uploadData.url);
     read.append("target", "announcement");
+    read.append("kind", form.kind);
     const response = await fetch("/api/admin/ai/read-image/", { method: "POST", body: read });
     const data = await response.json().catch(() => ({}));
     setUploading("");
 
     if (!response.ok) {
+      // อ่านไม่ได้ไม่ใช่เรื่องใหญ่ ไฟล์แนบไปเรียบร้อยแล้ว เหลือแค่กรอกช่องเอง
+      setProgress((p) => ({ ...p, phase: "done" }));
       setError(data.error ?? "AI อ่านไฟล์ไม่สำเร็จ — กรอกเองได้");
       return;
     }
+    setProgress((p) => ({ ...p, phase: "done" }));
     const draft = data.data as { number?: string; title?: string; publishedAt?: string } | undefined;
     setForm((f) => ({
       ...f,
@@ -392,6 +397,7 @@ export default function AnnouncementsManager({
           phase={progress.phase}
           percent={progress.percent}
           fileName={progress.name}
+          showAi={aiReady}
           message={progress.phase === "done" ? note : ""}
         />
 

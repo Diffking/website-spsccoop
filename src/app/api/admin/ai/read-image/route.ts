@@ -51,6 +51,8 @@ export async function POST(request: Request) {
   const file = form?.get("file");
   const target = String(form?.get("target") ?? "");
   const url = String(form?.get("url") ?? "").trim();
+  // หมวดของเอกสาร — ใช้เลือกกติกาเลขที่ (รายงานกิจการใช้ RS-63)
+  const kind = String(form?.get("kind") ?? "ANNOUNCEMENT");
 
   if (!TARGETS.includes(target as Target)) {
     return NextResponse.json({ error: "ไม่รู้จักชนิดข้อมูลที่จะให้อ่าน" }, { status: 400 });
@@ -58,7 +60,10 @@ export async function POST(request: Request) {
 
   // แบบที่หนึ่ง: บอก URL ของไฟล์ที่อัปเก็บไว้แล้ว
   if (url) {
-    const media = await db.media.findUnique({ where: { url }, select: { mimeType: true } });
+    const media = await db.media.findUnique({
+      where: { url },
+      select: { mimeType: true, originalName: true },
+    });
     if (!media || !MEDIA_TYPES.includes(media.mimeType as MediaType)) {
       return NextResponse.json({ error: "ไม่รู้จักไฟล์นี้" }, { status: 400 });
     }
@@ -72,6 +77,8 @@ export async function POST(request: Request) {
       Buffer.from(await fetched.arrayBuffer()),
       media.mimeType as MediaType,
       target as Target,
+      kind,
+      media.originalName,
     );
   }
 
@@ -95,10 +102,22 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  return await read(Buffer.from(await file.arrayBuffer()), file.type as MediaType, target as Target);
+  return await read(
+    Buffer.from(await file.arrayBuffer()),
+    file.type as MediaType,
+    target as Target,
+    kind,
+    file.name,
+  );
 }
 
-async function read(raw: Buffer, mediaType: MediaType, target: Target) {
+async function read(
+  raw: Buffer,
+  mediaType: MediaType,
+  target: Target,
+  kind = "ANNOUNCEMENT",
+  fileName = "",
+) {
   // หัวเรื่อง/เลขที่/วันที่ อยู่หน้าแรกเสมอ — รายงานกิจการเป็นร้อยหน้า
   // ถ้าส่งทั้งเล่มไปให้ AI อ่านจะรอนานมากและเปลืองค่าเรียกใช้เปล่า ๆ
   const trimmed =
@@ -111,7 +130,17 @@ async function read(raw: Buffer, mediaType: MediaType, target: Target) {
         ? await readSlideFromImage(base64, mediaType)
         : target === "rates"
           ? await readRatesFromImage(base64, mediaType)
-          : await readAnnouncementFromFile(base64, mediaType);
+          : await readAnnouncementFromFile(base64, mediaType, kind, fileName);
+
+    // รายงานกิจการมักตั้งชื่อไฟล์เป็น RS_63 อยู่แล้ว — ถ้า AI ไม่ได้เลขที่มา เอาจากชื่อไฟล์ให้เลย
+    // (แน่นอนกว่าปล่อยให้ตีความเอง และเจ้าหน้าที่ยังแก้ได้ก่อนบันทึกอยู่ดี)
+    if (target === "announcement" && kind === "REPORT") {
+      const draft = data as { number?: string };
+      if (!draft.number?.trim()) {
+        const year = fileName.match(/RS[\s_-]?(\d{2})/i)?.[1];
+        if (year) draft.number = `RS-${year}`;
+      }
+    }
     return NextResponse.json({ data });
   } catch (error) {
     console.error("AI อ่านไฟล์ไม่สำเร็จ:", error);
