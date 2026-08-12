@@ -27,8 +27,12 @@ export default function Recommend({ cards, features }: { cards: Item[]; features
               >
                 <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-white/10 transition group-hover:scale-125" />
                 <div className="relative">
-                  <h3 className="text-2xl font-bold">{r.title}</h3>
-                  <p className="mt-1 text-sm text-white/85">{r.subtitle}</p>
+                  <h3 className="line-clamp-1 text-2xl font-bold" title={r.title}>
+                    {r.title}
+                  </h3>
+                  <p className="mt-1 line-clamp-2 text-sm text-white/85" title={r.subtitle ?? ""}>
+                    {r.subtitle}
+                  </p>
                 </div>
                 {r.href && r.href !== "#" && (
                   <span className="relative inline-flex items-center gap-1 text-sm font-medium">
@@ -52,8 +56,15 @@ export default function Recommend({ cards, features }: { cards: Item[]; features
                   <Icon name={f.icon ?? "Users"} className="h-6 w-6" />
                 </span>
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-gray-800 group-hover:text-brand-700">{f.title}</h3>
-                  <p className="text-sm text-gray-500">{f.subtitle}</p>
+                  <h3
+                    title={f.title}
+                    className="line-clamp-1 font-semibold text-gray-800 group-hover:text-brand-700"
+                  >
+                    {f.title}
+                  </h3>
+                  <p className="line-clamp-2 text-sm text-gray-500" title={f.subtitle ?? ""}>
+                    {f.subtitle}
+                  </p>
                 </div>
                 <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-brand-400 transition group-hover:translate-x-1" />
               </MaybeLink>

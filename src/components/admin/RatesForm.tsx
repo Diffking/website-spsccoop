@@ -54,7 +54,8 @@ export default function RatesForm({
       setStatus({ kind: "error", text: "AI ไม่พบตารางอัตราดอกเบี้ยในภาพนี้" });
       return;
     }
-    setRates({ deposit: draft.deposit ?? [], loan: draft.loan ?? [] });
+    // AI ให้มาแค่ตาราง ค่าการแสดงผลที่ตั้งไว้ต้องคงเดิม
+    setRates((prev) => ({ ...prev, deposit: draft.deposit ?? [], loan: draft.loan ?? [] }));
     setStatus({ kind: "ok", text: "AI อ่านให้แล้ว — ตรวจตัวเลขทุกช่องก่อนกดบันทึก" });
   }
 
@@ -110,6 +111,8 @@ export default function RatesForm({
     const cleaned: InterestRates = {
       deposit: rates.deposit.map((r) => ({ label: r.label.trim(), rate: r.rate.trim() })),
       loan: rates.loan.map((r) => ({ label: r.label.trim(), rate: r.rate.trim() })),
+      perPage: rates.perPage ?? 5,
+      autoSeconds: rates.autoSeconds ?? 5,
     };
 
     const response = await fetch("/api/admin/home/", {
@@ -247,6 +250,50 @@ export default function RatesForm({
             </button>
           </div>
         ))}
+
+        <div className="mt-5 rounded-xl bg-gray-50 p-3">
+          <p className="text-sm font-medium text-gray-700">การแสดงผลบนหน้าแรก</p>
+          <p className="mt-0.5 text-xs text-gray-500">
+            การ์ดโชว์ทีละหน้าแล้วเลื่อนเองวนไปเรื่อย ๆ ทั้งเงินฝากและเงินกู้
+          </p>
+
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-sm text-gray-600">แสดงทีละกี่รายการ</span>
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={rates.perPage ?? 5}
+                onChange={(e) =>
+                  setRates((prev) => ({ ...prev, perPage: Number(e.target.value) }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500"
+              />
+              <span className="mt-1 block text-xs text-gray-400">
+                เงินฝาก {Math.ceil(rates.deposit.length / Math.max(1, rates.perPage ?? 5))} หน้า ·
+                เงินกู้ {Math.ceil(rates.loan.length / Math.max(1, rates.perPage ?? 5))} หน้า
+              </span>
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm text-gray-600">เลื่อนหน้าเองทุกกี่วินาที</span>
+              <input
+                type="number"
+                min={0}
+                max={60}
+                value={rates.autoSeconds ?? 5}
+                onChange={(e) =>
+                  setRates((prev) => ({ ...prev, autoSeconds: Number(e.target.value) }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500"
+              />
+              <span className="mt-1 block text-xs text-gray-400">
+                0 = ไม่เลื่อนเอง · เอาเมาส์ชี้ค้างไว้จะหยุดให้อ่าน
+              </span>
+            </label>
+          </div>
+        </div>
 
         <p className="mt-4 text-xs text-gray-400">
           ลบหรือแก้แล้วยังไม่ถูกใจ กด “ยกเลิก” เพื่อย้อนกลับไปชุดที่บันทึกไว้ล่าสุด —

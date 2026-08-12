@@ -41,7 +41,7 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
       ) : (
         <ul className="flex-1 divide-y divide-gray-100">
           {shown.map((a) => (
-            <li key={a.id}>
+            <li key={a.id} className="min-h-[4.25rem]">
               <MaybeLink
                 href={readerHref(a.kind, a.id, a.href)}
                 className="group flex items-start gap-3 py-3 transition hover:bg-brand-50/60 rounded-lg px-2 -mx-2"
@@ -51,8 +51,11 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
                 ) : (
                   <FileText className="mt-0.5 h-5 w-5 shrink-0 text-brand-400" />
                 )}
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-gray-700 group-hover:text-brand-700">
+                <div className="min-w-0 flex-1">
+                  <p
+                    title={announcementLine(a.kind, a.number, a.title)}
+                    className="truncate text-sm font-medium text-gray-700 group-hover:text-brand-700"
+                  >
                     {a.badge && (
                       <span className="mr-1.5 inline-block rounded-full bg-accent-red px-2 py-0.5 align-middle text-[11px] font-bold leading-none text-white">
                         {a.badge}
@@ -130,8 +133,12 @@ function CommitteeCard({ members }: { members: Item[] }) {
           <UserRound className="h-16 w-16 text-brand-300" />
         )}
       </div>
-      <p className="mt-4 text-base font-semibold text-gray-700">{c.title}</p>
-      <p className="text-sm text-gray-400">{c.subtitle}</p>
+      <p className="mt-4 line-clamp-1 text-base font-semibold text-gray-700" title={c.title}>
+        {c.title}
+      </p>
+      <p className="line-clamp-1 text-sm text-gray-400" title={c.subtitle ?? ""}>
+        {c.subtitle}
+      </p>
       <div className="mt-4 flex items-center justify-center gap-3">
         <button onClick={() => setI((v) => (v - 1 + n) % n)} className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 hover:bg-gray-50">
           <ChevronLeft className="h-4 w-4" />
@@ -182,11 +189,12 @@ export default function NewsSection({
         />
 
         <div className="grid items-stretch gap-6 lg:grid-cols-[1.7fr_1fr]">
-          <Reveal className="h-full">
+          {/* min-w-0 = ห้ามช่องกริดกว้างตามเนื้อหา ไม่งั้นประกาศชื่อยาวจะดันการ์ดกว้างไม่เท่ากันทุกแท็บ */}
+          <Reveal className="h-full min-w-0">
             {/* key={tab} ให้เริ่มที่หน้า 1 ใหม่ทุกครั้งที่สลับแท็บ */}
             <AnnouncementList key={tab} items={byKind[tab]} kind={tab} />
           </Reveal>
-          <Reveal delay={0.1} className="h-full">
+          <Reveal delay={0.1} className="h-full min-w-0">
             <CommitteeCard members={committees} />
           </Reveal>
         </div>

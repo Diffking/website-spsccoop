@@ -35,7 +35,16 @@ export async function PUT(request: Request) {
     if (bad) {
       return NextResponse.json({ error: "อัตราดอกเบี้ยต้องเป็นตัวเลข และชื่อรายการห้ามว่าง" }, { status: 400 });
     }
-    await saveSetting("interestRates", r);
+    const num = (value: unknown, min: number, max: number, fallback: number) => {
+      const n = Math.trunc(Number(value));
+      return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+    };
+    await saveSetting("interestRates", {
+      deposit: r.deposit ?? [],
+      loan: r.loan ?? [],
+      perPage: num(r.perPage, 1, 20, 5),
+      autoSeconds: num(r.autoSeconds, 0, 60, 5),
+    } satisfies InterestRates);
   }
 
   if (body.ticker) {

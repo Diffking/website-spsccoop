@@ -24,6 +24,21 @@ const LEVELS = [
   { preset: "/screen", dpi: 72, label: "72 dpi" },
 ] as const;
 
+/**
+ * ไฟล์ยิ่งใหญ่ยิ่งต้องเริ่มที่ระดับหยาบ ไม่งั้นต้องบีบหลายรอบจนหมดเวลา
+ * (Cloudflare ตัดสายที่ 100 วินาที รายงานกิจการเป็นร้อยหน้าบีบสี่รอบไม่ทันแน่)
+ */
+function startLevel(bytes: number): number {
+  const mb = bytes / 1024 / 1024;
+  if (mb > 40) return 3;
+  if (mb > 25) return 2;
+  if (mb > 12) return 1;
+  return 0;
+}
+
+/** เวลามากสุดที่ยอมใช้บีบทั้งหมด — หมดเวลาแล้วเอาผลดีที่สุดที่ได้ */
+const BUDGET_MS = 45_000;
+
 export type CompressResult = {
   bytes: Buffer<ArrayBuffer>;
   /** บีบแล้วจริงไหม */
@@ -60,8 +75,13 @@ export async function compressPdf(
   try {
     await writeFile(source, input);
     let best = untouched;
+    const deadline = Date.now() + BUDGET_MS;
 
-    for (const level of LEVELS) {
+    for (const level of LEVELS.slice(startLevel(input.byteLength))) {
+      if (Date.now() > deadline) {
+        console.warn("บีบ PDF ใช้เวลานานเกินงบ หยุดแล้วใช้ผลที่ดีที่สุดเท่าที่ได้");
+        break;
+      }
       const out = path.join(dir, `out-${level.dpi}.pdf`);
       try {
         await run(
@@ -84,7 +104,7 @@ export async function compressPdf(
             `-sOutputFile=${out}`,
             source,
           ],
-          { timeout: 120_000, maxBuffer: 8 * 1024 * 1024 },
+          { timeout: Math.max(5_000, deadline - Date.now()), maxBuffer: 8 * 1024 * 1024 },
         );
 
         const result = await readFile(out);
@@ -99,6 +119,45 @@ export async function compressPdf(
     }
 
     return best;
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+/**
+ * ตัดเอาเฉพาะ n หน้าแรกของ PDF
+ *
+ * ใช้ก่อนส่งให้ AI อ่าน — หัวเรื่องอยู่หน้าแรกเสมอ ส่งรายงานกิจการทั้งเล่มไปให้อ่าน
+ * ทั้งช้าและเปลืองค่าเรียกใช้เปล่า ๆ · ตัดไม่ได้ก็คืนไฟล์เดิมไป
+ */
+export async function firstPages(input: Buffer<ArrayBuffer>, n: number): Promise<Buffer<ArrayBuffer>> {
+  if (!(await hasGhostscript())) return input;
+
+  const dir = await mkdtemp(path.join(tmpdir(), "coop-pdf-head-"));
+  const source = path.join(dir, "in.pdf");
+  const out = path.join(dir, "head.pdf");
+
+  try {
+    await writeFile(source, input);
+    await run(
+      "gs",
+      [
+        "-sDEVICE=pdfwrite",
+        "-dNOPAUSE",
+        "-dQUIET",
+        "-dBATCH",
+        "-dFirstPage=1",
+        `-dLastPage=${n}`,
+        `-sOutputFile=${out}`,
+        source,
+      ],
+      { timeout: 30_000, maxBuffer: 8 * 1024 * 1024 },
+    );
+    const head = await readFile(out);
+    return head.byteLength > 0 ? (head as Buffer<ArrayBuffer>) : input;
+  } catch (error) {
+    console.error("ตัดหน้าแรกของ PDF ไม่สำเร็จ ส่งทั้งไฟล์ให้ AI แทน:", error);
+    return input;
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => {});
   }

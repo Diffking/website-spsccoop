@@ -20,6 +20,10 @@ export type SiteInfo = {
 export type InterestRates = {
   deposit: { label: string; rate: string }[];
   loan: { label: string; rate: string }[];
+  /** การ์ดหน้าแรกแสดงทีละกี่รายการ — เกินกว่านี้ตัดเป็นหน้าถัดไป */
+  perPage?: number;
+  /** วินาทีต่อหนึ่งหน้าก่อนเลื่อนเอง · 0 = ไม่เลื่อนเอง */
+  autoSeconds?: number;
 };
 
 /** ข่าววิ่งใต้แบนเนอร์ — ปกติดึงประกาศล่าสุดมาเองไม่ต้องมาพิมพ์ซ้ำ */
@@ -63,6 +67,8 @@ export const DEFAULT_RATES: InterestRates = {
     { label: "เงินกู้ฉุกเฉิน", rate: "5.75" },
     { label: "เงินกู้พิเศษ", rate: "5.50" },
   ],
+  perPage: 5,
+  autoSeconds: 5,
 };
 
 export async function getSetting<T>(key: string, fallback: T): Promise<T> {

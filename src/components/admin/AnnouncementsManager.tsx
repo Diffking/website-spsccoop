@@ -49,9 +49,6 @@ const empty = {
   badge: "",
 };
 
-/** เพดานไฟล์ที่ส่งให้ AI อ่าน — ใหญ่กว่านี้ฝั่งผู้ให้บริการ AI ไม่รับ */
-const AI_MAX_BYTES = 20 * 1024 * 1024;
-
 /** คำที่ใช้บ่อย — กดแล้วเติมให้ ไม่ได้บังคับ พิมพ์เองก็ได้ */
 const BADGE_PRESETS = ["ด่วน", "ใหม่", "สำคัญ", "ขยายเวลา", "แก้ไข"];
 
@@ -186,18 +183,16 @@ export default function AnnouncementsManager({
         : `แนบไฟล์แล้ว · ${(uploadData.storedBytes / 1024).toFixed(0)} KB`,
     );
 
-    // ไฟล์ก้อนใหญ่มากส่งให้ AI อ่านไม่ไหว ข้ามไปเลยดีกว่าปล่อยให้รอแล้วพัง
-    if (!aiReady || file.size > AI_MAX_BYTES) {
+    if (!aiReady) {
       setUploading("");
-      if (aiReady && file.size > AI_MAX_BYTES) {
-        setNote((n) => `${n} · ไฟล์ใหญ่เกินให้ AI อ่าน กรอกเลขที่/ชื่อเรื่อง/วันที่เอง`);
-      }
       return;
     }
 
+    // ส่งแค่ URL ของไฟล์ที่เพิ่งอัปไป ให้เซิร์ฟเวอร์ไปหยิบเอง
+    // ไม่ต้องส่งไฟล์เดิมซ้ำรอบสอง (รายงานกิจการหลายสิบ MB ส่งสองรอบคือรอสองเท่า)
     setUploading("ai");
     const read = new FormData();
-    read.append("file", file);
+    read.append("url", uploadData.url);
     read.append("target", "announcement");
     const response = await fetch("/api/admin/ai/read-image/", { method: "POST", body: read });
     const data = await response.json().catch(() => ({}));

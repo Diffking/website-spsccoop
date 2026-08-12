@@ -71,9 +71,16 @@ export default function OfficerService({ items }: { items: Item[] }) {
                       <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${t.iconBg}`}>
                         <OfficeIcon className="h-5 w-5" />
                       </span>
-                      <h3 className="font-bold text-gray-800">{s.title}</h3>
+                      <h3 className="line-clamp-1 font-bold text-gray-800" title={s.title}>
+                        {s.title}
+                      </h3>
                     </div>
-                    <p className="mt-3 flex-1 text-sm leading-relaxed text-gray-500">{s.subtitle}</p>
+                    <p
+                      title={s.subtitle ?? ""}
+                      className="mt-3 line-clamp-3 min-h-[4.5rem] flex-1 text-sm leading-relaxed text-gray-500"
+                    >
+                      {s.subtitle}
+                    </p>
                     <span className={`mt-4 inline-flex items-center gap-1 text-sm font-medium ${t.link}`}>
                       ดูรายละเอียด
                       <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />

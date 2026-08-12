@@ -148,9 +148,10 @@ export default function SlidesManager({
       return;
     }
 
+    // ให้เซิร์ฟเวอร์ไปหยิบไฟล์ที่เพิ่งอัปเอง จะได้ไม่ต้องส่งซ้ำรอบสอง
     setBusy("ai");
     const read = new FormData();
-    read.append("file", file);
+    read.append("url", uploadData.url);
     read.append("target", "slide");
     const response = await fetch("/api/admin/ai/read-image/", { method: "POST", body: read });
     const data = await response.json().catch(() => ({}));

@@ -25,7 +25,9 @@ export default function MemberCorner({ links }: { links: Item[] }) {
                   <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-brand-600">
                     <Icon name={m.icon ?? "BookOpen"} className="h-5 w-5" />
                   </span>
-                  {m.title}
+                  <span className="line-clamp-2" title={m.title}>
+                    {m.title}
+                  </span>
                 </MaybeLink>
               ))}
             </div>

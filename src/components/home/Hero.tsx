@@ -188,22 +188,63 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
   );
 }
 
+/**
+ * การ์ดอัตราดอกเบี้ย — แสดงทีละหน้าแล้วเลื่อนเองวนไปเรื่อย ๆ
+ *
+ * รายการดอกเบี้ยมีได้ไม่จำกัด ถ้าโชว์ทั้งหมดการ์ดจะยืดจนหน้าแรกเสียทรง
+ * จึงตัดเป็นหน้า ๆ ละ perPage แล้วไล่ไปทีละหน้า หมดเงินฝากต่อด้วยเงินกู้แล้ววนกลับ
+ * ความสูงคงที่ตาม perPage ไม่ว่าหน้านั้นจะมีกี่แถว การ์ดจึงไม่กระตุกตอนเปลี่ยนหน้า
+ */
 function RateCard({ rates }: { rates: InterestRates }) {
-  const [tab, setTab] = useState<"deposit" | "loan">("deposit");
-  const rows = rates[tab];
-  const isDeposit = tab === "deposit";
+  const perPage = Math.max(1, Math.min(20, rates.perPage ?? 5));
+  const autoSeconds = rates.autoSeconds ?? 5;
+
+  // ตัดเป็นหน้า ๆ เรียงเงินฝากก่อนแล้วต่อด้วยเงินกู้ — ลำดับนี้คือลำดับที่จะเลื่อนไป
+  const pages = (["deposit", "loan"] as const).flatMap((group) => {
+    const rows = rates[group];
+    if (rows.length === 0) return [];
+    return Array.from({ length: Math.ceil(rows.length / perPage) }, (_, i) => ({
+      group,
+      rows: rows.slice(i * perPage, i * perPage + perPage),
+    }));
+  });
+
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const current = pages[Math.min(index, Math.max(0, pages.length - 1))];
+
+  // เลื่อนเอง — หยุดเมื่อเอาเมาส์ชี้ค้างไว้ จะได้อ่านทัน
+  useEffect(() => {
+    if (paused || autoSeconds <= 0 || pages.length <= 1) return;
+    const timer = setInterval(() => setIndex((i) => (i + 1) % pages.length), autoSeconds * 1000);
+    return () => clearInterval(timer);
+  }, [paused, autoSeconds, pages.length]);
+
+  if (!current) return null;
+
+  const isDeposit = current.group === "deposit";
   const valueColor = isDeposit ? "text-emerald-600" : "text-orange-600";
+  /** กดแท็บ = กระโดดไปหน้าแรกของกลุ่มนั้น */
+  const jumpTo = (group: "deposit" | "loan") => {
+    const target = pages.findIndex((p) => p.group === group);
+    if (target !== -1) setIndex(target);
+  };
+
   return (
-    <div className="flex h-full flex-col rounded-2xl bg-white p-5 shadow-lg ring-1 ring-black/5">
+    <div
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      className="flex h-full flex-col rounded-2xl bg-white p-5 shadow-lg ring-1 ring-black/5"
+    >
       <div className="grid grid-cols-2 gap-1 rounded-full bg-gray-100 p-1 text-sm font-semibold">
         <button
-          onClick={() => setTab("deposit")}
+          onClick={() => jumpTo("deposit")}
           className={`rounded-full py-1.5 transition ${isDeposit ? "bg-emerald-500 text-white shadow" : "text-emerald-700 hover:text-emerald-800"}`}
         >
           เงินฝาก
         </button>
         <button
-          onClick={() => setTab("loan")}
+          onClick={() => jumpTo("loan")}
           className={`rounded-full py-1.5 transition ${!isDeposit ? "bg-orange-500 text-white shadow" : "text-orange-700 hover:text-orange-800"}`}
         >
           เงินกู้
@@ -211,17 +252,42 @@ function RateCard({ rates }: { rates: InterestRates }) {
       </div>
 
       <p className="mt-4 text-xs text-gray-400">อัตราดอกเบี้ย (ต่อปี)</p>
-      <ul className="mt-2 flex-1 divide-y divide-gray-100">
-        {rows.map((r, i) => (
+
+      {/* ความสูงล็อกตาม perPage — แถวละ 46px จะได้ไม่ขยับตอนหน้าสุดท้ายมีไม่ครบ */}
+      <ul
+        style={{ minHeight: perPage * 46 }}
+        className="mt-2 flex-1 divide-y divide-gray-100"
+      >
+        {current.rows.map((r, i) => (
           // ชื่อรายการซ้ำกันได้ (เจ้าหน้าที่พิมพ์เอง) จึงผูก key กับลำดับด้วย
-          <li key={`${r.label}-${i}`} className="flex items-center justify-between py-2.5">
-            <span className="text-sm text-gray-600">{r.label}</span>
-            <span className={`text-lg font-bold ${valueColor}`}>
+          <li key={`${r.label}-${i}`} className="flex items-center justify-between gap-3 py-2.5">
+            <span className="min-w-0 flex-1 truncate text-sm text-gray-600" title={r.label}>
+              {r.label}
+            </span>
+            <span className={`shrink-0 text-lg font-bold ${valueColor}`}>
               {r.rate} <span className="text-sm font-medium text-gray-400">%</span>
             </span>
           </li>
         ))}
       </ul>
+
+      {pages.length > 1 && (
+        <div className="mt-2 flex items-center justify-center gap-1.5">
+          {pages.map((page, i) => (
+            <button
+              key={i}
+              onClick={() => setIndex(i)}
+              aria-label={`ไปหน้าที่ ${i + 1}`}
+              className={`h-1.5 rounded-full transition-all ${
+                i === index
+                  ? `w-5 ${page.group === "deposit" ? "bg-emerald-500" : "bg-orange-500"}`
+                  : "w-1.5 bg-gray-300"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+
       <p className="mt-2 text-[11px] text-gray-400">* อัตราอาจเปลี่ยนแปลงตามประกาศสหกรณ์</p>
     </div>
   );
