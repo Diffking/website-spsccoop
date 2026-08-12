@@ -69,6 +69,7 @@ export default function SlidesManager({
   const fileInput = useRef<HTMLInputElement>(null);
 
   const [imageUrl, setImageUrl] = useState("");
+  const [imageNote, setImageNote] = useState("");
   const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
   const [href, setHref] = useState("");
@@ -109,6 +110,11 @@ export default function SlidesManager({
       return;
     }
     setImageUrl(uploadData.url);
+    setImageNote(
+      uploadData.width
+        ? `ย่อเหลือ ${uploadData.width}×${uploadData.height} px · ${(uploadData.storedBytes / 1024).toFixed(0)} KB (จาก ${(uploadData.originalBytes / 1024 / 1024).toFixed(1)} MB)`
+        : "",
+    );
 
     // ไม่มีคีย์ AI ก็จบแค่อัปรูป — ที่เหลือพิมพ์เอง
     if (!aiReady) {
@@ -161,6 +167,7 @@ export default function SlidesManager({
       return;
     }
     setImageUrl("");
+    setImageNote("");
     setTitle("");
     setCaption("");
     setHref("");
@@ -274,12 +281,15 @@ export default function SlidesManager({
         </div>
 
         {imageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={imageUrl}
-            alt=""
-            className="mt-3 h-32 w-auto rounded-lg bg-gray-50 object-contain ring-1 ring-gray-200"
-          />
+          <div className="mt-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageUrl}
+              alt=""
+              className="h-32 w-auto rounded-lg bg-gray-50 object-contain ring-1 ring-gray-200"
+            />
+            {imageNote && <p className="mt-1 text-[11px] text-gray-400">{imageNote}</p>}
+          </div>
         )}
 
         <div className="mt-3 space-y-2.5">
