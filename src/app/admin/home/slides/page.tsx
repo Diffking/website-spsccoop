@@ -12,7 +12,7 @@ export default async function AdminSlidesPage() {
 
   const slides = await db.slide.findMany({ orderBy: { sortOrder: "asc" } });
 
-  const storage = storageTarget();
+  const storage = storageTarget("banner_slide");
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">

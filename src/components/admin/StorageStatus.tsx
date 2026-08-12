@@ -3,13 +3,20 @@
 import { useState } from "react";
 import { HardDrive, Server, Loader2, PlugZap } from "lucide-react";
 
-/** แถบบอกว่ารูปที่อัปจะไปเก็บที่ไหน + ปุ่มทดสอบการเชื่อมต่อ FTP */
+/**
+ * แถบบอกว่าไฟล์ที่อัปจะไปเก็บที่ไหน + ปุ่มทดสอบการเชื่อมต่อ FTP
+ *
+ * folders = โฟลเดอร์ที่หน้านั้นใช้จริง (หน้าประกาศใช้สามโฟลเดอร์ หน้าสไลด์ใช้โฟลเดอร์เดียว)
+ * แสดงให้ครบ จะได้รู้ว่าไฟล์ของแต่ละหมวดไปอยู่ตรงไหนเวลาเข้าไปดูใน FTP ตรง ๆ
+ */
 export default function StorageStatus({
   kind,
   label,
+  folders = [],
 }: {
   kind: "ftp" | "local";
   label: string;
+  folders?: { name: string; label: string }[];
 }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
@@ -35,7 +42,7 @@ export default function StorageStatus({
         </span>
 
         <span className="min-w-0 flex-1">
-          <span className="block text-xs text-gray-500">รูปที่อัปจะไปเก็บที่</span>
+          <span className="block text-xs text-gray-500">ไฟล์ที่อัปจะไปเก็บที่</span>
           <span className="block truncate text-sm font-medium text-gray-800">{label}</span>
         </span>
 
@@ -50,6 +57,19 @@ export default function StorageStatus({
           </button>
         )}
       </div>
+
+      {kind === "ftp" && folders.length > 0 && (
+        <ul className="mt-2 space-y-1 border-t border-gray-100 pt-2">
+          {folders.map((folder) => (
+            <li key={folder.name} className="flex flex-wrap items-baseline gap-x-2 text-xs">
+              <span className="w-24 shrink-0 text-gray-500">{folder.label}</span>
+              <code className="min-w-0 break-all font-mono text-gray-700">
+                {label.replace(/\/$/, "")}/{folder.name}/
+              </code>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {kind === "local" && (
         <p className="mt-2 text-xs leading-relaxed text-gray-500">

@@ -40,11 +40,15 @@ const SECURE = process.env.FTP_SECURE?.trim().toLowerCase() === "true";
 
 export const FTP_READY = Boolean(HOST && USER && PASSWORD && BASE_DIR && BASE_URL);
 
-/** ที่เก็บไฟล์ตอนนี้ — ใช้บอกสถานะในหลังบ้าน */
-export const storageTarget = (folder: Folder = DEFAULT_FOLDER): { kind: "ftp" | "local"; label: string } =>
-  FTP_READY
-    ? { kind: "ftp", label: `${BASE_URL.replace(/\/$/, "")}/${folder}` }
-    : { kind: "local", label: "เก็บในเครื่องนี้ (/uploads)" };
+/**
+ * ที่เก็บไฟล์ตอนนี้ — ใช้บอกสถานะในหลังบ้าน
+ * ไม่ระบุโฟลเดอร์ = คืนรากของ assets (หน้าที่ใช้หลายโฟลเดอร์จะไปไล่แสดงย่อยเอง)
+ */
+export const storageTarget = (folder?: Folder): { kind: "ftp" | "local"; label: string } => {
+  if (!FTP_READY) return { kind: "local", label: "เก็บในเครื่องนี้ (/uploads)" };
+  const root = BASE_URL.replace(/\/$/, "");
+  return { kind: "ftp", label: folder ? `${root}/${folder}` : root };
+};
 
 /**
  * อัปไฟล์ขึ้น FTP — คืน URL สาธารณะถ้าสำเร็จ, คืน null ถ้ายังไม่ได้ตั้งค่าหรือส่งไม่สำเร็จ
