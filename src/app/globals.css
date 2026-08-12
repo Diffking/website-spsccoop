@@ -61,6 +61,19 @@ body {
   animation-play-state: paused;
 }
 
+/* ป้าย "New" บนข่าววิ่ง — จาง ๆ ไม่ดับสนิท เพราะกระพริบดับ-ติดอ่านยากและแสบตา */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.animate-blink {
+  animation: blink 1.1s ease-in-out infinite;
+}
+/* ผู้ใช้ที่ตั้งเครื่องให้ลดการเคลื่อนไหว (เวียนหัว/ไวต่อแสงกะพริบ) ให้ป้ายนิ่งไปเลย */
+@media (prefers-reduced-motion: reduce) {
+  .animate-blink { animation: none; }
+}
+
 /* เนื้อหาที่พิมพ์จากหลังบ้าน (HTML) — จัดรูปแบบพื้นฐานให้อ่านง่าย */
 .prose-page h2 { font-size: 1.25rem; font-weight: 700; color: #1f2937; margin: 1.25rem 0 .5rem; }
 .prose-page h3 { font-size: 1.05rem; font-weight: 600; color: #374151; margin: 1rem 0 .4rem; }

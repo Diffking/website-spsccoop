@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getTickerSettings } from "@/lib/settings";
 import type { CalendarEvent } from "@/data/home";
 
 /**
@@ -35,6 +36,44 @@ export async function getTickerItems(): Promise<string[]> {
     console.error("อ่านข่าววิ่งไม่ได้:", error);
     return [];
   }
+}
+
+export type TickerEntry = {
+  text: string;
+  /** ไฟล์ประกาศ ถ้ามี — กดจากข่าววิ่งไปอ่านฉบับเต็มได้เลย */
+  href: string | null;
+  /** คำบนป้ายหน้าข้อความ เช่น New — null = ไม่ติดป้าย */
+  badge: string | null;
+};
+
+/**
+ * ข้อความที่จะวิ่งจริง = ประกาศล่าสุดที่ดึงมาเอง + ข้อความที่พิมพ์เพิ่มไว้เอง (ถ้ามี)
+ *
+ * เอาประกาศขึ้นก่อนเพราะป้าย "New" ติดให้ n รายการแรก ซึ่งต้องหมายถึงประกาศที่ใหม่ที่สุด
+ * ไม่ใช่ข้อความประจำที่ปักไว้นาน ๆ
+ */
+export async function getTickerEntries(): Promise<TickerEntry[]> {
+  const settings = await getTickerSettings();
+
+  const auto = settings.auto
+    ? (await getAnnouncements(Math.max(1, Math.min(30, settings.limit)))).map((a) => ({
+        text: `ประกาศที่ ${a.number} ${a.title}`,
+        href: a.href && a.href !== "#" ? a.href : null,
+        badge: null as string | null,
+      }))
+    : [];
+
+  const manual = (await getTickerItems()).map((text) => ({
+    text,
+    href: null,
+    badge: null as string | null,
+  }));
+
+  const entries = [...auto, ...manual];
+  const label = settings.badgeText.trim();
+  if (!label || settings.badgeCount <= 0) return entries;
+
+  return entries.map((entry, i) => (i < settings.badgeCount ? { ...entry, badge: label } : entry));
 }
 
 /**

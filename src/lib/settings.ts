@@ -22,6 +22,20 @@ export type InterestRates = {
   loan: { label: string; rate: string }[];
 };
 
+/** ข่าววิ่งใต้แบนเนอร์ — ปกติดึงประกาศล่าสุดมาเองไม่ต้องมาพิมพ์ซ้ำ */
+export type TickerSettings = {
+  /** ดึงประกาศ/จดหมายข่าว/รายงานผลดำเนินงาน ล่าสุดมาวิ่งอัตโนมัติ */
+  auto: boolean;
+  /** ดึงมากี่รายการ */
+  limit: number;
+  /** คำบนป้าย เช่น New · ใหม่ · ด่วน — เว้นว่าง = ไม่ติดป้าย */
+  badgeText: string;
+  /** ติดป้ายให้กี่รายการแรก · 0 = ไม่ติดเลย */
+  badgeCount: number;
+  /** ให้ป้ายกระพริบ */
+  badgeBlink: boolean;
+};
+
 // ค่าตั้งต้น = ค่าที่ใช้จริงตอนนี้ เผื่อฐานยังไม่มีแถวนี้หรือฐานล่ม จะได้แสดงของถูก
 export const DEFAULT_SITE_INFO: SiteInfo = {
   address: "229 หมู่ 6 ถนน ลพบุรีราเมศวร์ ตำบลน้ำน้อย อำเภอหาดใหญ่ สงขลา 90110",
@@ -66,8 +80,22 @@ export async function saveSetting(key: string, value: unknown): Promise<void> {
   });
 }
 
+export const DEFAULT_TICKER: TickerSettings = {
+  auto: true,
+  limit: 10,
+  badgeText: "New",
+  badgeCount: 3,
+  badgeBlink: true,
+};
+
 export const getSiteInfo = () => getSetting<SiteInfo>("siteInfo", DEFAULT_SITE_INFO);
 export const getRates = () => getSetting<InterestRates>("interestRates", DEFAULT_RATES);
+
+/** ค่าที่บันทึกไว้อาจเก่ากว่าโครงปัจจุบัน เติมค่าที่ขาดจากค่าตั้งต้นให้เสมอ */
+export async function getTickerSettings(): Promise<TickerSettings> {
+  const saved = await getSetting<Partial<TickerSettings>>("ticker", DEFAULT_TICKER);
+  return { ...DEFAULT_TICKER, ...saved };
+}
 
 /**
  * หน้า splash วันสำคัญ — ค่าตั้งต้นคือ src/content/splash.json ที่ติดมากับโค้ด

@@ -46,8 +46,10 @@ export default function TickerManager({ items }: { items: TickerRow[] }) {
 
   return (
     <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-      <h2 className="font-semibold text-gray-800">ข่าววิ่ง</h2>
-      <p className="mt-0.5 text-xs text-gray-500">ข้อความที่วิ่งอยู่แถบบนสุดของหน้าแรก</p>
+      <h2 className="font-semibold text-gray-800">ข้อความเพิ่มเติม</h2>
+      <p className="mt-0.5 text-xs text-gray-500">
+        วิ่งต่อท้ายประกาศที่ระบบดึงมาให้อัตโนมัติ
+      </p>
 
       <form onSubmit={add} className="mt-3 flex gap-2">
         <input
