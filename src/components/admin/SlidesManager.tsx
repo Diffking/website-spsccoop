@@ -41,10 +41,21 @@ const readable = (value: string) => {
   return Number.isNaN(d.getTime()) ? value : thaiDate.format(d);
 };
 
+const thaiToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+
+/** ตอนนี้สไลด์นี้ขึ้นบนหน้าเว็บจริงไหม — เงื่อนไขเดียวกับที่ getSlides() ใช้กรอง */
+function isLive(slide: SlideRow): boolean {
+  if (!slide.published) return false;
+  const today = thaiToday();
+  if (slide.startsAt && today < slide.startsAt) return false;
+  if (slide.endsAt && today > slide.endsAt) return false;
+  return true;
+}
+
 /** สถานะการเผยแพร่ตามช่วงวันที่ — เทียบกับวันนี้ตามเวลาไทย */
 function scheduleState(slide: SlideRow): { label: string; tone: string } | null {
   if (!slide.published) return null;
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+  const today = thaiToday();
 
   if (slide.startsAt && today < slide.startsAt) {
     return { label: `รอถึง ${readable(slide.startsAt)}`, tone: "bg-amber-50 text-amber-700 ring-amber-200" };
@@ -190,6 +201,13 @@ export default function SlidesManager({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+
+  /**
+   * เลขลำดับที่จะขึ้นบนหน้าเว็บ — นับเฉพาะตัวที่แสดงอยู่จริง
+   * ตัวที่ถูกซ่อน/ยังไม่ถึงวัน/หมดอายุ ได้ null เพราะคนเข้าเว็บไม่เห็นมันเลย นับไปก็ทำให้เข้าใจผิด
+   */
+  let live = 0;
+  const positions = list.map((slide) => (isLive(slide) ? ++live : null));
 
   /** ย้ายแถวไปอยู่ตำแหน่งใหม่ในรายการที่โชว์อยู่ (ยังไม่บันทึก) */
   function moveTo(id: string, toIndex: number) {
@@ -369,10 +387,25 @@ export default function SlidesManager({
         </p>
       ) : (
         <>
-          <p className="mt-4 flex items-center gap-1.5 text-xs text-gray-500">
-            <GripVertical className="h-3.5 w-3.5 text-gray-400" />
-            ลากที่จุดจับเพื่อสลับลำดับ — บนสุดคือสไลด์ที่ขึ้นก่อน (บนมือถือใช้ปุ่มลูกศรแทน)
-          </p>
+          <div className="mt-4 rounded-xl bg-brand-50/60 px-3 py-2 text-xs text-gray-600">
+            <p className="flex items-center gap-1.5">
+              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand-600 text-[11px] font-bold text-white">
+                1
+              </span>
+              เลขคือลำดับที่ขึ้นบนหน้าเว็บ — <strong className="font-semibold">1 คือสไลด์แรกที่คนเห็น</strong>{" "}
+              แล้วไล่ไปเรื่อย ๆ
+            </p>
+            <p className="mt-1.5 flex items-center gap-1.5">
+              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-gray-200 text-[11px] font-bold text-gray-400">
+                –
+              </span>
+              ขีดคือยังไม่ขึ้น (ถูกซ่อน · ยังไม่ถึงวันเริ่ม · หรือหมดอายุแล้ว) จึงไม่นับลำดับ
+            </p>
+            <p className="mt-1.5 flex items-center gap-1.5">
+              <GripVertical className="h-4 w-4 shrink-0 text-gray-400" />
+              ลากที่จุดจับเพื่อสลับลำดับ (บนมือถือใช้ปุ่มลูกศรแทน)
+            </p>
+          </div>
           <ul className="mt-2 divide-y divide-gray-100">
           <AnimatePresence initial={false}>
             {list.map((slide, i) => (
@@ -419,6 +452,22 @@ export default function SlidesManager({
                   >
                     <GripVertical className="h-4 w-4" />
                   </span>
+
+                  <span
+                    title={
+                      positions[i]
+                        ? `ขึ้นเป็นลำดับที่ ${positions[i]} บนหน้าเว็บ`
+                        : "ยังไม่ขึ้นบนหน้าเว็บ จึงไม่นับลำดับ"
+                    }
+                    className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${
+                      positions[i]
+                        ? "bg-brand-600 text-white"
+                        : "bg-gray-200 text-gray-400"
+                    }`}
+                  >
+                    {positions[i] ?? "–"}
+                  </span>
+
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={slide.imageUrl}
