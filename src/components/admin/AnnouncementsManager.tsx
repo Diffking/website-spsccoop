@@ -17,6 +17,8 @@ import {
   GripVertical,
 } from "lucide-react";
 import TabBar from "@/components/ui/TabBar";
+import UploadProgress from "@/components/admin/UploadProgress";
+import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
 import {
   KINDS,
   KIND_FOLDER,
@@ -72,6 +74,9 @@ export default function AnnouncementsManager({
   const filePicker = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState<"" | "upload" | "ai">("");
   const [note, setNote] = useState("");
+  const [progress, setProgress] = useState<{ phase: UploadPhase | null; percent: number; name: string }>(
+    { phase: null, percent: 0, name: "" },
+  );
 
   /**
    * ลำดับที่กำลังโชว์ — ลากแล้วสลับในนี้ก่อนให้เห็นผลทันที ปล่อยแล้วค่อยบันทึก
@@ -151,19 +156,27 @@ export default function AnnouncementsManager({
     setError("");
     setNote("");
     setUploading("upload");
+    setProgress({ phase: "upload", percent: 0, name: file.name });
 
     const upload = new FormData();
     upload.append("file", file);
     // แยกโฟลเดอร์ตามหมวด จะได้หาไฟล์เจอเวลาเข้าไปดูใน FTP ตรง ๆ
     upload.append("folder", KIND_FOLDER[form.kind]);
-    const uploaded = await fetch("/api/admin/upload/", { method: "POST", body: upload });
-    const uploadData = await uploaded.json().catch(() => ({}));
+    const result = await uploadWithProgress<{
+      url: string;
+      note: string;
+      originalBytes: number;
+      storedBytes: number;
+    }>("/api/admin/upload/", upload, (percent, phase) =>
+      setProgress((p) => ({ ...p, percent, phase })),
+    );
 
-    if (!uploaded.ok) {
+    if (!result.ok) {
       setUploading("");
-      setError(uploadData.error ?? "อัปโหลดไม่สำเร็จ");
+      setError(result.error);
       return;
     }
+    const uploadData = result.data;
     setForm((f) => ({ ...f, fileUrl: uploadData.url }));
 
     const mb = (n: number) => (n / 1024 / 1024).toFixed(1);
@@ -219,6 +232,7 @@ export default function AnnouncementsManager({
       setForm(empty);
       setAdding(false);
       setNote("");
+      setProgress({ phase: null, percent: 0, name: "" });
       router.refresh();
     }
     setBusy("");
@@ -379,7 +393,16 @@ export default function AnnouncementsManager({
           </span>
         </div>
 
-        {note && <p className="mt-2 text-xs text-emerald-600">{note}</p>}
+        <UploadProgress
+          phase={progress.phase}
+          percent={progress.percent}
+          fileName={progress.name}
+          message={progress.phase === "done" ? note : ""}
+        />
+
+        {note && progress.phase !== "done" && (
+          <p className="mt-2 text-xs text-emerald-600">{note}</p>
+        )}
 
         {form.fileUrl && (
           <p className="mt-2 flex items-center gap-1.5 text-xs text-gray-500">

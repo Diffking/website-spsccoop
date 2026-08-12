@@ -3,12 +3,17 @@
 import { useRef, useState } from "react";
 import { ImagePlus, Loader2, Save, X } from "lucide-react";
 import type { SiteBrand } from "@/lib/nav";
+import UploadProgress from "@/components/admin/UploadProgress";
+import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
 
 /** ชื่อเว็บและโลโก้ที่ขึ้นบนแถบบนสุดของทุกหน้า */
 export default function BrandForm({ initial }: { initial: SiteBrand }) {
   const [brand, setBrand] = useState<SiteBrand>(initial);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<{ phase: UploadPhase | null; percent: number; name: string }>(
+    { phase: null, percent: 0, name: "" },
+  );
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const filePicker = useRef<HTMLInputElement>(null);
 
@@ -17,17 +22,20 @@ export default function BrandForm({ initial }: { initial: SiteBrand }) {
   async function upload(file: File) {
     setUploading(true);
     setStatus(null);
+    setProgress({ phase: "upload", percent: 0, name: file.name });
+
     const form = new FormData();
     form.append("file", file);
-    const response = await fetch("/api/admin/upload/", { method: "POST", body: form });
-    const data = await response.json().catch(() => ({}));
+    const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", form, (percent, phase) =>
+      setProgress((p) => ({ ...p, percent, phase })),
+    );
     setUploading(false);
 
-    if (!response.ok) {
-      setStatus({ kind: "error", text: data.error ?? "อัปโหลดไม่สำเร็จ" });
+    if (!result.ok) {
+      setStatus({ kind: "error", text: result.error });
       return;
     }
-    set("logoUrl", data.url);
+    set("logoUrl", result.data.url);
   }
 
   async function save() {
@@ -115,6 +123,8 @@ export default function BrandForm({ initial }: { initial: SiteBrand }) {
           )}
         </div>
       </div>
+
+      <UploadProgress phase={progress.phase} percent={progress.percent} fileName={progress.name} />
 
       <div className="mt-5 flex items-center gap-3">
         <button

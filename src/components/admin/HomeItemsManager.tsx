@@ -14,6 +14,8 @@ import {
   ImagePlus,
 } from "lucide-react";
 import type { Item, Section } from "@/lib/homeItems";
+import UploadProgress from "@/components/admin/UploadProgress";
+import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
 
 /**
  * ตัวจัดการรายการของหน้าแรก ใช้ตัวเดียวกับทุกส่วน — บอกว่าส่วนนี้ใช้ช่องไหนบ้าง
@@ -48,6 +50,9 @@ export default function HomeItemsManager({
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploadingFor, setUploadingFor] = useState<string | "new" | null>(null);
+  const [progress, setProgress] = useState<{ phase: UploadPhase | null; percent: number; name: string }>(
+    { phase: null, percent: 0, name: "" },
+  );
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,18 +82,23 @@ export default function HomeItemsManager({
 
   async function upload(file: File, forId: string | "new") {
     setUploadingFor(forId);
+    setProgress({ phase: "upload", percent: 0, name: file.name });
+
     const form = new FormData();
     form.append("file", file);
-    const response = await fetch("/api/admin/upload/", { method: "POST", body: form });
-    const data = await response.json().catch(() => ({}));
+    const result = await uploadWithProgress<{ url: string }>(
+      "/api/admin/upload/",
+      form,
+      (percent, phase) => setProgress((p) => ({ ...p, percent, phase })),
+    );
     setUploadingFor(null);
 
-    if (!response.ok) {
-      setError(data.error ?? "อัปโหลดไม่สำเร็จ");
+    if (!result.ok) {
+      setError(result.error);
       return;
     }
-    if (forId === "new") set("imageUrl", data.url);
-    else await patch(forId, { imageUrl: data.url });
+    if (forId === "new") set("imageUrl", result.data.url);
+    else await patch(forId, { imageUrl: result.data.url });
   }
 
   async function add() {
@@ -191,6 +201,9 @@ export default function HomeItemsManager({
           </button>
           {error && <span className="text-sm text-red-500">{error}</span>}
         </div>
+
+        {/* ใช้กล่องเดียวกันทั้งรูปใหม่และรูปที่แก้ในรายการ — อัปได้ทีละไฟล์อยู่แล้ว */}
+        <UploadProgress phase={progress.phase} percent={progress.percent} fileName={progress.name} />
       </section>
 
       {/* รายการที่มี */}

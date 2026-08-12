@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import UploadProgress from "@/components/admin/UploadProgress";
+import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Plus,
@@ -87,6 +89,9 @@ export default function SlidesManager({
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
   const [busy, setBusy] = useState<null | "upload" | "ai" | "save" | "row">(null);
+  const [progress, setProgress] = useState<{ phase: UploadPhase | null; percent: number; name: string }>(
+    { phase: null, percent: 0, name: "" },
+  );
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
   /**
@@ -109,18 +114,27 @@ export default function SlidesManager({
   async function handleFile(file: File) {
     setStatus(null);
     setBusy("upload");
+    setProgress({ phase: "upload", percent: 0, name: file.name });
 
     const upload = new FormData();
     upload.append("file", file);
     upload.append("folder", "banner_slide");
-    const uploaded = await fetch("/api/admin/upload/", { method: "POST", body: upload });
-    const uploadData = await uploaded.json().catch(() => ({}));
+    const result = await uploadWithProgress<{
+      url: string;
+      width: number;
+      height: number;
+      originalBytes: number;
+      storedBytes: number;
+    }>("/api/admin/upload/", upload, (percent, phase) =>
+      setProgress((p) => ({ ...p, percent, phase })),
+    );
 
-    if (!uploaded.ok) {
+    if (!result.ok) {
       setBusy(null);
-      setStatus({ kind: "error", text: uploadData.error ?? "อัปโหลดไม่สำเร็จ" });
+      setStatus({ kind: "error", text: result.error });
       return;
     }
+    const uploadData = result.data;
     setImageUrl(uploadData.url);
     setImageNote(
       uploadData.width
@@ -180,6 +194,7 @@ export default function SlidesManager({
     }
     setImageUrl("");
     setImageNote("");
+    setProgress({ phase: null, percent: 0, name: "" });
     setTitle("");
     setCaption("");
     setHref("");
@@ -298,6 +313,13 @@ export default function SlidesManager({
               : "ยังไม่ได้ตั้งค่าคีย์ AI จึงต้องพิมพ์เอง (ใส่ OPENROUTER_API_KEY ใน .env แล้วรีสตาร์ต)"}
           </span>
         </div>
+
+        <UploadProgress
+          phase={progress.phase}
+          percent={progress.percent}
+          fileName={progress.name}
+          message={progress.phase === "done" ? imageNote : ""}
+        />
 
         {imageUrl && (
           <div className="mt-3">
