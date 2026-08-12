@@ -46,20 +46,32 @@ model Session {
 }
 
 /// ประกาศสหกรณ์ — การ์ด "ประกาศ" หน้าแรก
+/// หมวดของเอกสารที่ขึ้นการ์ดหน้าแรก — คนละแท็บกัน
+enum AnnouncementKind {
+  /// ประกาศสหกรณ์
+  ANNOUNCEMENT
+  /// จดหมายข่าว
+  NEWSLETTER
+  /// รายงานกิจการประจำปี
+  REPORT
+}
+
 model Announcement {
-  id          String    @id @default(cuid())
+  id          String           @id @default(cuid())
   /// เลขที่ประกาศ เช่น "19/2569"
   number      String
   title       String
+  /// แท็บที่จะไปโผล่บนหน้าแรก
+  kind        AnnouncementKind @default(ANNOUNCEMENT)
   /// วันที่ของประกาศเอง (ไม่ใช่วันที่บันทึก)
   publishedAt DateTime
   /// ไฟล์แนบ/ลิงก์ปลายทาง — ว่างได้ถ้ายังไม่มีไฟล์
   fileUrl     String?
-  published   Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  published   Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
-  @@index([published, publishedAt])
+  @@index([published, kind, publishedAt])
 }
 
 /// ข่าววิ่งบนแถบด้านบน — สั้นๆ ไม่มีไฟล์แนบ

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/apiAuth";
+import { isKind, type Kind } from "@/lib/announcementKinds";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -15,9 +16,11 @@ export async function PATCH(request: Request, { params }: Params) {
     publishedAt?: string;
     fileUrl?: string;
     published?: boolean;
+    kind?: string;
   };
 
   const data: {
+    kind?: Kind;
     number?: string;
     title?: string;
     publishedAt?: Date;
@@ -32,6 +35,10 @@ export async function PATCH(request: Request, { params }: Params) {
   if (typeof body.title === "string") {
     if (!body.title.trim()) return NextResponse.json({ error: "ชื่อเรื่องห้ามว่าง" }, { status: 400 });
     data.title = body.title.trim();
+  }
+  if (body.kind !== undefined) {
+    if (!isKind(body.kind)) return NextResponse.json({ error: "หมวดไม่ถูกต้อง" }, { status: 400 });
+    data.kind = body.kind;
   }
   if (typeof body.publishedAt === "string") {
     const date = new Date(body.publishedAt);

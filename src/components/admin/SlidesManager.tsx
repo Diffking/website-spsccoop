@@ -112,6 +112,7 @@ export default function SlidesManager({
 
     const upload = new FormData();
     upload.append("file", file);
+    upload.append("folder", "banner_slide");
     const uploaded = await fetch("/api/admin/upload/", { method: "POST", body: upload });
     const uploadData = await uploaded.json().catch(() => ({}));
 

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { getTickerSettings } from "@/lib/settings";
+import { KIND_PREFIX, type Kind } from "@/lib/announcementKinds";
 import type { CalendarEvent } from "@/data/home";
 
 /**
@@ -13,6 +14,7 @@ export type AnnouncementItem = {
   id: string;
   number: string;
   title: string;
+  kind: Kind;
   /** วันที่แบบไทยพร้อมแสดงผล เช่น "30 มิ.ย. 2569" — แปลงฝั่งเซิร์ฟเวอร์กัน hydration ไม่ตรง */
   date: string;
   href: string;
@@ -57,7 +59,7 @@ export async function getTickerEntries(): Promise<TickerEntry[]> {
 
   const auto = settings.auto
     ? (await getAnnouncements(Math.max(1, Math.min(30, settings.limit)))).map((a) => ({
-        text: `ประกาศที่ ${a.number} ${a.title}`,
+        text: `${KIND_PREFIX[a.kind]} ${a.number} ${a.title}`,
         href: a.href && a.href !== "#" ? a.href : null,
         badge: null as string | null,
       }))
@@ -144,10 +146,11 @@ export async function getSlides(): Promise<SlideItem[]> {
   }
 }
 
-export async function getAnnouncements(take = 20): Promise<AnnouncementItem[]> {
+/** ไม่ระบุ kind = เอาทุกหมวดปนกัน (ข่าววิ่งใช้แบบนั้น) */
+export async function getAnnouncements(take = 20, kind?: Kind): Promise<AnnouncementItem[]> {
   try {
     const rows = await db.announcement.findMany({
-      where: { published: true },
+      where: { published: true, ...(kind ? { kind } : {}) },
       orderBy: { publishedAt: "desc" },
       take,
     });
@@ -155,6 +158,7 @@ export async function getAnnouncements(take = 20): Promise<AnnouncementItem[]> {
       id: r.id,
       number: r.number,
       title: r.title,
+      kind: r.kind as Kind,
       date: thaiDate.format(r.publishedAt),
       // ยังไม่มีหน้ารายละเอียดประกาศ — ถ้าไม่มีไฟล์แนบก็ยังไม่ต้องลิงก์ไปไหน
       href: r.fileUrl ?? "#",

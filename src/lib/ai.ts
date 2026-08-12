@@ -29,7 +29,20 @@ export type RatesDraft = {
   loan: { label: string; rate: string }[];
 };
 
-export type MediaType = "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+export type MediaType =
+  | "image/jpeg"
+  | "image/png"
+  | "image/webp"
+  | "image/gif"
+  | "application/pdf";
+
+export type AnnouncementDraft = {
+  /** เลขที่ประกาศ เช่น "19/2569" — "" ถ้าในเอกสารไม่ได้ระบุ */
+  number: string;
+  title: string;
+  /** "YYYY-MM-DD" หรือ "" */
+  publishedAt: string;
+};
 
 class AiNotConfigured extends Error {
   constructor() {
@@ -61,6 +74,15 @@ async function readImage<T>(
 ): Promise<T> {
   if (!AI_READY) throw new AiNotConfigured();
 
+  // PDF ส่งเป็นบล็อก file ส่วนรูปส่งเป็น image_url — รุ่นที่ใช้อ่าน PDF ได้เองไม่ต้องแปลงเป็นภาพก่อน
+  const attachment =
+    mediaType === "application/pdf"
+      ? {
+          type: "file",
+          file: { filename: "document.pdf", file_data: `data:${mediaType};base64,${base64}` },
+        }
+      : { type: "image_url", image_url: { url: `data:${mediaType};base64,${base64}` } };
+
   const response = await fetch(API_URL, {
     method: "POST",
     headers: {
@@ -77,10 +99,7 @@ async function readImage<T>(
       messages: [
         {
           role: "user",
-          content: [
-            { type: "text", text: instruction },
-            { type: "image_url", image_url: { url: `data:${mediaType};base64,${base64}` } },
-          ],
+          content: [{ type: "text", text: instruction }, attachment],
         },
       ],
       response_format: {
@@ -189,5 +208,44 @@ export function readRatesFromImage(base64: string, mediaType: MediaType) {
       "ช่อง rate ใส่เฉพาะตัวเลขไม่ต้องมีเครื่องหมาย % เอาเฉพาะรายการที่อยู่ในภาพจริง ห้ามเดาตัวเลขที่อ่านไม่ออก",
     "rates_draft",
     RATES_SCHEMA,
+  );
+}
+
+const ANNOUNCEMENT_SCHEMA = {
+  type: "object",
+  properties: {
+    number: {
+      type: "string",
+      description:
+        'เลขที่เอกสารพร้อมปี พ.ศ. ตามที่เขียนในเอกสาร เช่น "19/2569" — ถ้าไม่ได้ระบุให้ตอบ ""',
+    },
+    title: {
+      type: "string",
+      description:
+        'ชื่อเรื่องของเอกสาร ไม่ต้องมีคำว่า "เรื่อง" นำหน้า — ถ้าเอกสารไม่ได้เขียนหัวเรื่องไว้ตรง ๆ ' +
+        "ให้สรุปสาระสำคัญเป็นประโยคเดียวไม่เกิน 120 ตัวอักษร ช่องนี้ห้ามว่าง",
+    },
+    publishedAt: {
+      type: "string",
+      description:
+        'วันที่ของเอกสารในรูปแบบ YYYY-MM-DD (ค.ศ.) เช่น 2026-06-30 — ถ้าไม่ได้ระบุให้ตอบ ""',
+    },
+  },
+  required: ["number", "title", "publishedAt"],
+  additionalProperties: false,
+};
+
+export function readAnnouncementFromFile(base64: string, mediaType: MediaType) {
+  return readImage<AnnouncementDraft>(
+    base64,
+    mediaType,
+    "นี่คือประกาศ จดหมายข่าว หรือรายงานกิจการของสหกรณ์ออมทรัพย์ " +
+      "อ่านเอกสารแล้วบอกเลขที่ ชื่อเรื่อง และวันที่ของเอกสาร ตอบเป็นภาษาไทยตามที่เขียนไว้จริง " +
+      "เลขที่ให้คงปี พ.ศ. ไว้ตามเอกสาร เช่น 19/2569 " +
+      "ส่วนช่องวันที่ให้แปลงเป็น ค.ศ. (ลบ 543) และแปลงชื่อเดือนไทยเป็นตัวเลข เช่น 30 มิถุนายน 2569 = 2026-06-30 " +
+      'เลขที่กับวันที่ ถ้าเอกสารไม่ได้ระบุให้ตอบเป็นข้อความว่าง "" ห้ามเดาเองเด็ดขาด ' +
+      "ส่วนชื่อเรื่องต้องมีเสมอ ถ้าเอกสารไม่ได้เขียนหัวเรื่องไว้ ให้สรุปเนื้อหาที่อ่านได้เป็นชื่อเรื่องสั้น ๆ",
+    "announcement_draft",
+    ANNOUNCEMENT_SCHEMA,
   );
 }

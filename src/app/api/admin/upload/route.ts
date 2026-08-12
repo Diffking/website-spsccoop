@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { requireUser } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
-import { uploadToFtp } from "@/lib/ftp";
+import { DEFAULT_FOLDER, isFolder, uploadToFtp } from "@/lib/ftp";
 import { MAX_EDGE, shrink } from "@/lib/image";
 
 /**
@@ -18,11 +18,14 @@ import { MAX_EDGE, shrink } from "@/lib/image";
  */
 
 const MAX_BYTES = 8 * 1024 * 1024;
+// PDF ใหญ่กว่ารูปได้ ประกาศสแกนหลายหน้าเกิน 8 MB บ่อย
+const MAX_PDF_BYTES = 25 * 1024 * 1024;
 const EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
   "image/gif": "gif",
+  "application/pdf": "pdf",
 };
 
 export async function POST(request: Request) {
@@ -31,6 +34,9 @@ export async function POST(request: Request) {
 
   const form = await request.formData().catch(() => null);
   const file = form?.get("file");
+  // โฟลเดอร์ปลายทางฝั่ง FTP — ส่งค่าแปลกมาก็ตกไปที่โฟลเดอร์เริ่มต้น
+  const folderInput = form?.get("folder");
+  const folder = isFolder(folderInput) ? folderInput : DEFAULT_FOLDER;
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "ไม่พบไฟล์" }, { status: 400 });
@@ -39,12 +45,18 @@ export async function POST(request: Request) {
   const extension = EXTENSIONS[file.type];
   if (!extension) {
     return NextResponse.json(
-      { error: "รองรับเฉพาะไฟล์ภาพ JPG, PNG, WEBP หรือ GIF" },
+      { error: "รองรับเฉพาะไฟล์ภาพ JPG, PNG, WEBP, GIF หรือไฟล์ PDF" },
       { status: 400 },
     );
   }
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: "ไฟล์ใหญ่เกิน 8 MB" }, { status: 400 });
+
+  const isPdf = file.type === "application/pdf";
+  const limit = isPdf ? MAX_PDF_BYTES : MAX_BYTES;
+  if (file.size > limit) {
+    return NextResponse.json(
+      { error: `ไฟล์ใหญ่เกิน ${Math.round(limit / 1024 / 1024)} MB` },
+      { status: 400 },
+    );
   }
 
   const name = `${randomUUID()}.${extension}`;
@@ -52,13 +64,16 @@ export async function POST(request: Request) {
 
   let bytes = original;
   let size = { width: 0, height: 0 };
-  try {
-    const shrunk = await shrink(original, file.type);
-    bytes = shrunk.bytes;
-    size = { width: shrunk.width, height: shrunk.height };
-  } catch (error) {
-    // ย่อไม่ได้ (ไฟล์เพี้ยน/รูปแบบแปลก) ก็เก็บต้นฉบับไปก่อน ดีกว่าอัปไม่ขึ้นเลย
-    console.error("ย่อรูปไม่สำเร็จ เก็บต้นฉบับแทน:", error);
+  // PDF เก็บทั้งไฟล์ตามเดิม ไม่มีอะไรให้ย่อ
+  if (!isPdf) {
+    try {
+      const shrunk = await shrink(original, file.type);
+      bytes = shrunk.bytes;
+      size = { width: shrunk.width, height: shrunk.height };
+    } catch (error) {
+      // ย่อไม่ได้ (ไฟล์เพี้ยน/รูปแบบแปลก) ก็เก็บต้นฉบับไปก่อน ดีกว่าอัปไม่ขึ้นเลย
+      console.error("ย่อรูปไม่สำเร็จ เก็บต้นฉบับแทน:", error);
+    }
   }
 
   // เก็บไว้ในเครื่องเสมอ — กันไว้เผื่อโฮสต์ FTP เปลี่ยน/หมดอายุ ภาพยังอยู่ครบในมือเรา
@@ -67,7 +82,7 @@ export async function POST(request: Request) {
   await writeFile(path.join(directory, name), bytes);
 
   // ตั้งค่า FTP ครบ = ใช้ URL จากโดเมนนั้น ถ้าส่งไม่สำเร็จก็ถอยมาใช้ไฟล์ในเครื่อง
-  const remote = await uploadToFtp(bytes, name);
+  const remote = await uploadToFtp(bytes, name, folder);
   const url = remote ?? `/uploads/${name}`;
   await db.media.create({
     data: {

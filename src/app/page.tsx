@@ -43,7 +43,8 @@ export default async function Home() {
   ] = await Promise.all([
     getSiteInfo(),
     getRates(),
-    getAnnouncements(),
+    // ดึงเผื่อทั้ง 3 แท็บ (ประกาศ · จดหมายข่าว · รายงานกิจการ) แล้วค่อยแยกฝั่ง client
+    getAnnouncements(60),
     getSplash(),
     getHolidayEvents(),
     getSlides(),

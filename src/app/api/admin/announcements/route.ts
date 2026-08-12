@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/apiAuth";
+import { isKind } from "@/lib/announcementKinds";
 
 export async function POST(request: Request) {
   const auth = await requireUser();
@@ -11,6 +12,7 @@ export async function POST(request: Request) {
     title?: string;
     publishedAt?: string;
     fileUrl?: string;
+    kind?: string;
   };
 
   const number = body.number?.trim() ?? "";
@@ -25,7 +27,14 @@ export async function POST(request: Request) {
   }
 
   const item = await db.announcement.create({
-    data: { number, title, publishedAt, fileUrl: body.fileUrl?.trim() || null },
+    data: {
+      number,
+      title,
+      publishedAt,
+      fileUrl: body.fileUrl?.trim() || null,
+      // ไม่ส่งมา/ส่งค่าแปลก = ประกาศ ตามเดิม
+      kind: isKind(body.kind) ? body.kind : "ANNOUNCEMENT",
+    },
   });
   return NextResponse.json({ item }, { status: 201 });
 }

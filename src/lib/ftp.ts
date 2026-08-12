@@ -9,7 +9,25 @@ import { Client } from "basic-ftp";
  *
  * ไฟล์จะถูกเก็บไว้ทั้งสองที่เสมอ: uploads/ ของเราไว้กันโฮสต์เปลี่ยน/หมดอายุ
  * ส่วน URL ที่บันทึกลงฐานจะชี้ไปที่ FTP เมื่อส่งขึ้นสำเร็จ
+ *
+ * FTP_BASE_DIR/ASSETS_BASE_URL ชี้ที่ "โฟลเดอร์ assets" แล้วแยกโฟลเดอร์ย่อยตามชนิดของไฟล์
+ * (ดู FOLDERS ด้านล่าง) — แยกไว้จะได้หาไฟล์เจอเวลาเข้าไปดูใน FTP ตรง ๆ
  */
+
+/** โฟลเดอร์ย่อยใน assets/ — ค่าที่รับได้มีเท่านี้ กันคนยิง API ใส่ path แปลก ๆ */
+export const FOLDERS = {
+  banner_slide: "แบนเนอร์สไลด์",
+  Declar: "ประกาศ",
+  mailnew: "จดหมายข่าว",
+  resultreport: "รายงานกิจการ",
+} as const;
+
+export type Folder = keyof typeof FOLDERS;
+
+export const DEFAULT_FOLDER: Folder = "banner_slide";
+
+export const isFolder = (value: unknown): value is Folder =>
+  typeof value === "string" && Object.hasOwn(FOLDERS, value);
 
 const HOST = process.env.FTP_HOST?.trim() ?? "";
 const USER = process.env.FTP_USER?.trim() ?? "";
@@ -22,17 +40,21 @@ const SECURE = process.env.FTP_SECURE?.trim().toLowerCase() === "true";
 
 export const FTP_READY = Boolean(HOST && USER && PASSWORD && BASE_DIR && BASE_URL);
 
-/** ที่เก็บรูปตอนนี้ — ใช้บอกสถานะในหลังบ้าน */
-export const storageTarget = (): { kind: "ftp" | "local"; label: string } =>
+/** ที่เก็บไฟล์ตอนนี้ — ใช้บอกสถานะในหลังบ้าน */
+export const storageTarget = (folder: Folder = DEFAULT_FOLDER): { kind: "ftp" | "local"; label: string } =>
   FTP_READY
-    ? { kind: "ftp", label: BASE_URL }
+    ? { kind: "ftp", label: `${BASE_URL.replace(/\/$/, "")}/${folder}` }
     : { kind: "local", label: "เก็บในเครื่องนี้ (/uploads)" };
 
 /**
  * อัปไฟล์ขึ้น FTP — คืน URL สาธารณะถ้าสำเร็จ, คืน null ถ้ายังไม่ได้ตั้งค่าหรือส่งไม่สำเร็จ
  * จงใจไม่ throw เพราะการอัปรูปในหลังบ้านต้องไม่พังตามแค่เพราะ FTP ล่ม
  */
-export async function uploadToFtp(data: Buffer, filename: string): Promise<string | null> {
+export async function uploadToFtp(
+  data: Buffer,
+  filename: string,
+  folder: Folder = DEFAULT_FOLDER,
+): Promise<string | null> {
   if (!FTP_READY) return null;
 
   const client = new Client(20_000);
@@ -46,10 +68,10 @@ export async function uploadToFtp(data: Buffer, filename: string): Promise<strin
     });
 
     // สร้างโฟลเดอร์ปลายทางให้เองถ้ายังไม่มี แล้วเข้าไปอยู่ในนั้น
-    await client.ensureDir(BASE_DIR);
+    await client.ensureDir(`${BASE_DIR.replace(/\/$/, "")}/${folder}`);
     await client.uploadFrom(Readable.from(data), filename);
 
-    return `${BASE_URL.replace(/\/$/, "")}/${filename}`;
+    return `${BASE_URL.replace(/\/$/, "")}/${folder}/${filename}`;
   } catch (error) {
     console.error("ส่งไฟล์ขึ้น FTP ไม่สำเร็จ ใช้ไฟล์ในเครื่องแทน:", error);
     return null;
@@ -67,9 +89,13 @@ export async function testFtp(): Promise<{ ok: boolean; message: string }> {
   const client = new Client(15_000);
   try {
     await client.access({ host: HOST, port: PORT, user: USER, password: PASSWORD, secure: SECURE });
-    await client.ensureDir(BASE_DIR);
-    const list = await client.list();
-    return { ok: true, message: `เชื่อมต่อได้ — มีไฟล์ในโฟลเดอร์นี้ ${list.length} รายการ` };
+    // เข้าไปดูทีละโฟลเดอร์ย่อย สร้างให้เองถ้ายังไม่มี จะได้รู้ตั้งแต่ตอนทดสอบว่าเขียนได้จริง
+    const counts: string[] = [];
+    for (const folder of Object.keys(FOLDERS) as Folder[]) {
+      await client.ensureDir(`${BASE_DIR.replace(/\/$/, "")}/${folder}`);
+      counts.push(`${folder} ${(await client.list()).length}`);
+    }
+    return { ok: true, message: `เชื่อมต่อได้ — จำนวนไฟล์: ${counts.join(" · ")}` };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "เชื่อมต่อไม่สำเร็จ" };
   } finally {

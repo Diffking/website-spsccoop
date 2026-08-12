@@ -8,11 +8,11 @@ import SectionHeading from "@/components/ui/SectionHeading";
 import MaybeLink from "@/components/ui/MaybeLink";
 import type { AnnouncementItem } from "@/lib/content";
 import type { Item } from "@/lib/homeItems";
+import { KINDS, KIND_HEADING, KIND_LABEL, KIND_PREFIX, type Kind } from "@/lib/announcementKinds";
 
-const TABS = ["ประกาศ", "จดหมายข่าว", "รายงานผลดำเนินงาน"];
 const PER_PAGE = 5;
 
-function AnnouncementList({ items }: { items: AnnouncementItem[] }) {
+function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Kind }) {
   const [page, setPage] = useState(0);
   const pageCount = Math.max(1, Math.ceil(items.length / PER_PAGE));
   // กันหน้าค้างเกินขอบเวลาประกาศถูกลบจนเหลือน้อยลง
@@ -22,12 +22,12 @@ function AnnouncementList({ items }: { items: AnnouncementItem[] }) {
   return (
     <div className="flex h-full flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
       <p className="mb-3 border-b border-gray-100 pb-2 text-sm font-semibold text-brand-700">
-        ประกาศ · ปีบัญชี 2569
+        {KIND_HEADING[kind]}
       </p>
 
       {items.length === 0 ? (
         <p className="flex-1 grid place-items-center py-10 text-center text-sm text-gray-400">
-          ยังไม่มีประกาศ
+          ยังไม่มี{KIND_LABEL[kind]}
         </p>
       ) : (
         <ul className="flex-1 divide-y divide-gray-100">
@@ -37,7 +37,7 @@ function AnnouncementList({ items }: { items: AnnouncementItem[] }) {
                 <FileText className="mt-0.5 h-5 w-5 shrink-0 text-brand-400" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-gray-700 group-hover:text-brand-700">
-                    ประกาศที่ {a.number} {a.title}
+                    {KIND_PREFIX[a.kind]} {a.number} {a.title}
                   </p>
                   <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
                     <CalendarDays className="h-3.5 w-3.5" /> {a.date}
@@ -54,7 +54,7 @@ function AnnouncementList({ items }: { items: AnnouncementItem[] }) {
           <button
             onClick={() => setPage(current - 1)}
             disabled={current === 0}
-            aria-label="ประกาศหน้าก่อนหน้า"
+            aria-label="หน้าก่อนหน้า"
             className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 transition hover:bg-gray-50 disabled:opacity-30"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -63,7 +63,7 @@ function AnnouncementList({ items }: { items: AnnouncementItem[] }) {
           <button
             onClick={() => setPage(current + 1)}
             disabled={current >= pageCount - 1}
-            aria-label="ประกาศหน้าถัดไป"
+            aria-label="หน้าถัดไป"
             className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 transition hover:bg-gray-50 disabled:opacity-30"
           >
             <ChevronRight className="h-4 w-4" />
@@ -136,29 +136,40 @@ export default function NewsSection({
   announcements: AnnouncementItem[];
   committees: Item[];
 }) {
-  const [tab, setTab] = useState(TABS[0]);
+  const [tab, setTab] = useState<Kind>(KINDS[0]);
+  // แยกครั้งเดียวแล้วใช้ทุกแท็บ ไม่ต้องกรองใหม่ทุกครั้งที่กดสลับ
+  const byKind = { ANNOUNCEMENT: [], NEWSLETTER: [], REPORT: [] } as Record<Kind, AnnouncementItem[]>;
+  for (const a of announcements) byKind[a.kind]?.push(a);
   return (
     <section className="bg-white py-12">
       <div className="mx-auto max-w-6xl px-4">
         <SectionHeading title="ประกาศ / จดหมายข่าว" subtitle="ประกาศและข่าวสารต่างๆ ของดูแลสมาชิกสหกรณ์ด้วยใจ" />
 
         <div className="mb-6 flex flex-wrap justify-start gap-2">
-          {TABS.map((t) => (
+          {KINDS.map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 tab === t ? "bg-brand-500 text-white shadow" : "bg-brand-50 text-brand-600 hover:bg-brand-100"
               }`}
             >
-              {t}
+              {KIND_LABEL[t]}
+              <span
+                className={`rounded-full px-1.5 text-xs tabular-nums ${
+                  tab === t ? "bg-white/25" : "bg-white/70 text-brand-500"
+                }`}
+              >
+                {byKind[t].length}
+              </span>
             </button>
           ))}
         </div>
 
         <div className="grid items-stretch gap-6 lg:grid-cols-[1.7fr_1fr]">
           <Reveal className="h-full">
-            <AnnouncementList items={announcements} />
+            {/* key={tab} ให้เริ่มที่หน้า 1 ใหม่ทุกครั้งที่สลับแท็บ */}
+            <AnnouncementList key={tab} items={byKind[tab]} kind={tab} />
           </Reveal>
           <Reveal delay={0.1} className="h-full">
             <CommitteeCard members={committees} />
