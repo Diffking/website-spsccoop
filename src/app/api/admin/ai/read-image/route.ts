@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   if (!(file instanceof File)) {
     // เหมือนกับ /api/admin/upload — อ่าน body ไม่ได้มักแปลว่าไฟล์ใหญ่เกิน ไม่ใช่ไม่ได้เลือกไฟล์
     return NextResponse.json(
-      { error: "อ่านไฟล์ไม่ได้ — ไฟล์อาจใหญ่เกินไป (PDF ไม่เกิน 25 MB · รูปไม่เกิน 8 MB)" },
+      { error: "อ่านไฟล์ไม่ได้ — ไฟล์อาจใหญ่เกินไป" },
       { status: 400 },
     );
   }

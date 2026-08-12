@@ -47,6 +47,9 @@ const empty = {
   badge: "",
 };
 
+/** เพดานไฟล์ที่ส่งให้ AI อ่าน — ใหญ่กว่านี้ฝั่งผู้ให้บริการ AI ไม่รับ */
+const AI_MAX_BYTES = 20 * 1024 * 1024;
+
 /** คำที่ใช้บ่อย — กดแล้วเติมให้ ไม่ได้บังคับ พิมพ์เองก็ได้ */
 const BADGE_PRESETS = ["ด่วน", "ใหม่", "สำคัญ", "ขยายเวลา", "แก้ไข"];
 
@@ -162,10 +165,20 @@ export default function AnnouncementsManager({
       return;
     }
     setForm((f) => ({ ...f, fileUrl: uploadData.url }));
-    setNote(`แนบไฟล์แล้ว · ${(uploadData.storedBytes / 1024).toFixed(0)} KB`);
 
-    if (!aiReady) {
+    const mb = (n: number) => (n / 1024 / 1024).toFixed(1);
+    setNote(
+      uploadData.note
+        ? `แนบไฟล์แล้ว · ${uploadData.note} จาก ${mb(uploadData.originalBytes)} MB เหลือ ${mb(uploadData.storedBytes)} MB`
+        : `แนบไฟล์แล้ว · ${(uploadData.storedBytes / 1024).toFixed(0)} KB`,
+    );
+
+    // ไฟล์ก้อนใหญ่มากส่งให้ AI อ่านไม่ไหว ข้ามไปเลยดีกว่าปล่อยให้รอแล้วพัง
+    if (!aiReady || file.size > AI_MAX_BYTES) {
       setUploading("");
+      if (aiReady && file.size > AI_MAX_BYTES) {
+        setNote((n) => `${n} · ไฟล์ใหญ่เกินให้ AI อ่าน กรอกเลขที่/ชื่อเรื่อง/วันที่เอง`);
+      }
       return;
     }
 
@@ -240,22 +253,28 @@ export default function AnnouncementsManager({
 
   const fields = (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1.5">
-        {KINDS.map((k) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => setForm((f) => ({ ...f, kind: k }))}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-              form.kind === k
-                ? "bg-brand-600 text-white shadow"
-                : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50"
-            }`}
+      {editingId ? (
+        <label className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+          หมวด
+          <select
+            value={form.kind}
+            onChange={(e) => setForm({ ...form, kind: e.target.value as Kind })}
+            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm text-gray-700 outline-none focus:border-brand-500"
           >
-            {KIND_LABEL[k]}
-          </button>
-        ))}
-      </div>
+            {KINDS.map((k) => (
+              <option key={k} value={k}>
+                {KIND_LABEL[k]}
+              </option>
+            ))}
+          </select>
+          <span className="text-gray-400">เปลี่ยนได้ถ้าใส่ผิดหมวด</span>
+        </label>
+      ) : (
+        <p className="text-xs text-gray-500">
+          กำลังเพิ่มใน <span className="font-semibold text-brand-700">{KIND_LABEL[form.kind]}</span>{" "}
+          <span className="text-gray-400">— เปลี่ยนหมวดได้ที่แท็บด้านบน</span>
+        </p>
+      )}
       <div className="flex gap-2">
         <input
           value={form.number}

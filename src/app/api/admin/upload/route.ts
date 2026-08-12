@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
 import { DEFAULT_FOLDER, isFolder, uploadToFtp } from "@/lib/ftp";
 import { MAX_EDGE, shrink } from "@/lib/image";
+import { compressPdf } from "@/lib/pdf";
 
 /**
  * อัปโหลดรูปจากหลังบ้าน → public/uploads (mount เป็น volume ไว้แล้ว ไม่หายตอน build ใหม่)
@@ -14,12 +15,15 @@ import { MAX_EDGE, shrink } from "@/lib/image";
  * เหมือนที่เคยเจอ และ (2) กันชื่อซ้ำและกัน path traversal จากชื่อไฟล์ที่ส่งมา
  *
  * รูปถูกย่อให้ด้านยาวสุดไม่เกิน 600px ก่อนเก็บ (ดู src/lib/image.ts)
- * ที่เก็บ = ไฟล์ที่ย่อแล้ว ส่วนต้นฉบับไม่ได้เก็บไว้
+ * PDF ที่หนักเกินเกณฑ์ถูกบีบด้วย Ghostscript ก่อนเก็บ (ดู src/lib/pdf.ts)
+ * ที่เก็บ = ไฟล์ที่ย่อ/บีบแล้ว ส่วนต้นฉบับไม่ได้เก็บไว้
  */
 
 const MAX_BYTES = 8 * 1024 * 1024;
-// PDF ใหญ่กว่ารูปได้ ประกาศสแกนหลายหน้าเกิน 8 MB บ่อย
-const MAX_PDF_BYTES = 25 * 1024 * 1024;
+// รับ PDF ก้อนใหญ่ได้ แล้วค่อยบีบให้เล็กลงเอง — ไม่ปฏิเสธไฟล์ที่เจ้าหน้าที่อุตส่าห์สแกนมา
+const MAX_PDF_BYTES = 60 * 1024 * 1024;
+// ขนาดที่อยากได้หลังบีบ เกินจากนี้ก็ยังเก็บให้ แค่บีบเท่าที่บีบได้
+const PDF_TARGET_BYTES = 6 * 1024 * 1024;
 const EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -42,7 +46,7 @@ export async function POST(request: Request) {
     // อ่าน body ไม่ได้มักแปลว่าไฟล์ใหญ่เกินเพดานที่ตั้งไว้ ไม่ใช่ว่าไม่ได้เลือกไฟล์
     // (ดู middlewareClientMaxBodySize ใน next.config.ts) บอกให้ตรงเหตุจะได้ไม่งงว่าเลือกแล้วทำไมไม่เจอ
     return NextResponse.json(
-      { error: "อ่านไฟล์ไม่ได้ — ไฟล์อาจใหญ่เกินไป (PDF ไม่เกิน 25 MB · รูปไม่เกิน 8 MB)" },
+      { error: "อ่านไฟล์ไม่ได้ — ไฟล์อาจใหญ่เกินไป (PDF ไม่เกิน 60 MB · รูปไม่เกิน 8 MB)" },
       { status: 400 },
     );
   }
@@ -69,8 +73,18 @@ export async function POST(request: Request) {
 
   let bytes = original;
   let size = { width: 0, height: 0 };
-  // PDF เก็บทั้งไฟล์ตามเดิม ไม่มีอะไรให้ย่อ
-  if (!isPdf) {
+  let note = "";
+
+  if (isPdf) {
+    try {
+      const squeezed = await compressPdf(original, PDF_TARGET_BYTES);
+      bytes = squeezed.bytes;
+      if (squeezed.compressed) note = `บีบไฟล์ที่ ${squeezed.level}`;
+    } catch (error) {
+      // บีบไม่สำเร็จก็เก็บต้นฉบับ ดีกว่าอัปไม่ขึ้นเลย
+      console.error("บีบ PDF ไม่สำเร็จ เก็บต้นฉบับแทน:", error);
+    }
+  } else {
     try {
       const shrunk = await shrink(original, file.type);
       bytes = shrunk.bytes;
@@ -109,6 +123,7 @@ export async function POST(request: Request) {
       maxEdge: MAX_EDGE,
       originalBytes: original.byteLength,
       storedBytes: bytes.byteLength,
+      note,
     },
     { status: 201 },
   );
