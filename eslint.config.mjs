@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // ไฟล์ของ pdf.js ที่ก๊อปมาตอน build — โค้ดคนอื่น ไม่ต้องตรวจ
+    "public/pdf.worker.min.mjs",
+    "public/pdfjs/**",
   ]),
 ]);
 

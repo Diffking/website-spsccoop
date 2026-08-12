@@ -51,6 +51,7 @@ export async function PUT(request: Request) {
       badgeText: (t.badgeText ?? DEFAULT_TICKER.badgeText).trim().slice(0, 12),
       badgeCount: clamp(t.badgeCount, 0, 30, DEFAULT_TICKER.badgeCount),
       badgeBlink: t.badgeBlink ?? DEFAULT_TICKER.badgeBlink,
+      secondsPerItem: clamp(t.secondsPerItem, 3, 30, DEFAULT_TICKER.secondsPerItem),
     } satisfies TickerSettings);
   }
 

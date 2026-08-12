@@ -54,7 +54,11 @@ export default async function NewsTicker() {
           <Megaphone className="h-3.5 w-3.5" /> ประกาศล่าสุด
         </span>
         <div className="ticker-pause relative flex-1 overflow-hidden">
-          <div className="animate-ticker flex w-max gap-10 whitespace-nowrap text-sm text-gray-600">
+          {/* วิ่งครบรอบใน (จำนวนรายการ × วินาทีต่อรายการ) — ตั้งค่าได้ที่ /admin/home/ticker */}
+          <div
+            style={{ animationDuration: `${entries.length * settings.secondsPerItem}s` }}
+            className="animate-ticker flex w-max gap-10 whitespace-nowrap text-sm text-gray-600"
+          >
             {entries.map((entry, i) => (
               <Item key={`a-${i}`} entry={entry} blink={settings.badgeBlink} />
             ))}

@@ -34,6 +34,11 @@ export type TickerSettings = {
   badgeCount: number;
   /** ให้ป้ายกระพริบ */
   badgeBlink: boolean;
+  /**
+   * ความเร็วข่าววิ่ง — วินาทีต่อหนึ่งรายการ (ยิ่งมากยิ่งช้า)
+   * คิดต่อรายการ ไม่ใช่ต่อรอบ ไม่งั้นวันไหนมีประกาศเยอะข้อความจะวิ่งเร็วขึ้นเองจนอ่านไม่ทัน
+   */
+  secondsPerItem: number;
 };
 
 // ค่าตั้งต้น = ค่าที่ใช้จริงตอนนี้ เผื่อฐานยังไม่มีแถวนี้หรือฐานล่ม จะได้แสดงของถูก
@@ -86,6 +91,7 @@ export const DEFAULT_TICKER: TickerSettings = {
   badgeText: "New",
   badgeCount: 3,
   badgeBlink: true,
+  secondsPerItem: 9,
 };
 
 export const getSiteInfo = () => getSetting<SiteInfo>("siteInfo", DEFAULT_SITE_INFO);

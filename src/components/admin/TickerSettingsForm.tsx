@@ -143,6 +143,95 @@ export default function TickerSettingsForm({
         </label>
       </div>
 
+      {/* ความเร็ว */}
+      <div className="mt-4 rounded-xl bg-gray-50 p-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <span className="text-sm text-gray-700">ความเร็วที่วิ่ง</span>
+          <span className="text-xs text-gray-500">
+            {form.secondsPerItem} วินาทีต่อ 1 รายการ
+            {preview.length > 0 && (
+              <> · วิ่งครบรอบใน {form.secondsPerItem * preview.length} วินาที</>
+            )}
+          </span>
+        </div>
+
+        <input
+          type="range"
+          min={3}
+          max={30}
+          step={1}
+          value={form.secondsPerItem}
+          onChange={(e) => set("secondsPerItem", Number(e.target.value))}
+          aria-label="ความเร็วข่าววิ่ง"
+          className="mt-2 w-full accent-brand-600"
+        />
+        <div className="flex justify-between text-[11px] text-gray-400">
+          <span>เร็ว</span>
+          <span>ช้า</span>
+        </div>
+
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {(
+            [
+              [5, "เร็ว"],
+              [9, "ปกติ"],
+              [14, "ช้า"],
+              [20, "ช้ามาก"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => set("secondsPerItem", value)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                form.secondsPerItem === value
+                  ? "bg-brand-600 text-white"
+                  : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <p className="mt-2 text-xs text-gray-400">
+          คิดต่อรายการ ไม่ใช่ต่อรอบ — วันไหนมีประกาศเยอะข้อความจะได้ไม่วิ่งเร็วขึ้นเองจนอ่านไม่ทัน
+        </p>
+      </div>
+
+      {/* ตัวอย่างของจริง — ใช้คลาสและความเร็วเดียวกับหน้าเว็บ */}
+      {preview.length > 0 && (
+        <div className="mt-4 rounded-xl border-y border-brand-100 bg-white p-3 ring-1 ring-black/5">
+          <p className="mb-2 text-[11px] text-gray-400">ตัวอย่างที่วิ่งจริง (เอาเมาส์ชี้เพื่อหยุด)</p>
+          <div className="ticker-pause relative overflow-hidden">
+            <div
+              key={`${form.secondsPerItem}-${form.badgeText}-${form.badgeCount}-${form.badgeBlink}`}
+              style={{ animationDuration: `${preview.length * form.secondsPerItem}s` }}
+              className="animate-ticker flex w-max gap-10 whitespace-nowrap text-sm text-gray-600"
+            >
+              {[0, 1].map((copy) =>
+                preview.map((entry, i) => (
+                  <span key={`${copy}-${i}`} className="flex items-center gap-2">
+                    {i < form.badgeCount && form.badgeText.trim() ? (
+                      <span
+                        className={`rounded-full bg-accent-red px-2 py-0.5 text-[11px] font-bold uppercase leading-none text-white ${
+                          form.badgeBlink ? "animate-blink" : ""
+                        }`}
+                      >
+                        {form.badgeText}
+                      </span>
+                    ) : (
+                      <span className="text-accent-red">•</span>
+                    )}
+                    {entry.text}
+                  </span>
+                )),
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ตัวอย่างป้าย — ใช้คลาสเดียวกับของจริงบนหน้าเว็บ */}
       <div className="mt-4 rounded-xl bg-gray-900 px-4 py-3">
         <p className="mb-2 text-[11px] text-gray-400">ตัวอย่างป้าย</p>
