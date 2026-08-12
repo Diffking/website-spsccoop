@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
+import { COMMITTEE_PHOTO_SCALES } from "@/lib/committee";
 import {
   saveSetting,
   DEFAULT_TICKER,
@@ -18,6 +19,7 @@ export async function PUT(request: Request) {
     interestRates?: InterestRates;
     ticker?: Partial<TickerSettings>;
     committeeSet?: number;
+    committeePhotoScale?: number;
   };
 
   if (body.siteInfo) {
@@ -71,6 +73,17 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "ชุดที่ต้องเป็นตัวเลข 1-999" }, { status: 400 });
     }
     await saveSetting("committeeSet", set);
+  }
+
+  if (body.committeePhotoScale !== undefined) {
+    const scale = Math.trunc(Number(body.committeePhotoScale));
+    if (!(COMMITTEE_PHOTO_SCALES as readonly number[]).includes(scale)) {
+      return NextResponse.json(
+        { error: `ขนาดรูปเลือกได้เฉพาะ ${COMMITTEE_PHOTO_SCALES.join(", ")}%` },
+        { status: 400 },
+      );
+    }
+    await saveSetting("committeePhotoScale", scale);
   }
 
   return NextResponse.json({ ok: true });

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, RotateCcw, Save, Users } from "lucide-react";
+import { COMMITTEE_PHOTO_BASE, COMMITTEE_PHOTO_SCALES } from "@/lib/committee";
 
 /**
  * ชุดคณะกรรมการดำเนินการที่กำลังทำหน้าที่อยู่
@@ -13,19 +14,24 @@ import { Loader2, RotateCcw, Save, Users } from "lucide-react";
  */
 export default function CommitteeSetForm({
   initial,
+  initialScale,
   storageBase,
 }: {
   initial: number;
+  /** ขนาดรูปบนการ์ดหน้าแรก คิดเป็น % ของกรอบเต็ม */
+  initialScale: number;
   /** รากของที่เก็บไฟล์ เช่น https://beta.spsccoop.com/assets — ว่าง = เก็บในเครื่อง */
   storageBase: string;
 }) {
   const router = useRouter();
   const [set, setSet] = useState(initial);
   const [saved, setSaved] = useState(initial);
+  const [scale, setScale] = useState(initialScale);
+  const [savedScale, setSavedScale] = useState(initialScale);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
-  const dirty = set !== saved;
+  const dirty = set !== saved || scale !== savedScale;
 
   async function save() {
     setBusy(true);
@@ -34,7 +40,7 @@ export default function CommitteeSetForm({
     const response = await fetch("/api/admin/home/", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ committeeSet: set }),
+      body: JSON.stringify({ committeeSet: set, committeePhotoScale: scale }),
     });
     const data = await response.json().catch(() => ({}));
     setBusy(false);
@@ -44,7 +50,8 @@ export default function CommitteeSetForm({
       return;
     }
     setSaved(set);
-    setStatus({ kind: "ok", text: "บันทึกแล้ว — รูปที่อัปหลังจากนี้จะลงโฟลเดอร์ของชุดใหม่" });
+    setSavedScale(scale);
+    setStatus({ kind: "ok", text: "บันทึกแล้ว — หน้าแรกเปลี่ยนตามทันที" });
     router.refresh();
   }
 
@@ -89,6 +96,48 @@ export default function CommitteeSetForm({
         </div>
       </div>
 
+      {/* ขนาดรูปบนการ์ดหน้าแรก */}
+      <div className="mt-4 rounded-xl bg-gray-50 p-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <span className="text-sm text-gray-700">ขนาดรูปบนการ์ดหน้าแรก</span>
+          <span className="text-xs text-gray-500">
+            {Math.round((COMMITTEE_PHOTO_BASE.width * scale) / 100)}×
+            {Math.round((COMMITTEE_PHOTO_BASE.height * scale) / 100)} px
+          </span>
+        </div>
+
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {COMMITTEE_PHOTO_SCALES.map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setScale(value)}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+                scale === value
+                  ? "bg-brand-600 text-white shadow"
+                  : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              {value}%
+            </button>
+          ))}
+        </div>
+
+        {/* กรอบตัวอย่างขนาดจริง จะได้เห็นก่อนว่าใหญ่แค่ไหนบนหน้าเว็บ */}
+        <div className="mt-3 flex items-end gap-3">
+          <div
+            style={{
+              width: (COMMITTEE_PHOTO_BASE.width * scale) / 100,
+              height: (COMMITTEE_PHOTO_BASE.height * scale) / 100,
+            }}
+            className="grid shrink-0 place-items-center rounded-xl bg-gradient-to-b from-brand-100 to-brand-50 ring-1 ring-black/5"
+          >
+            <Users className="h-6 w-6 text-brand-300" />
+          </div>
+          <p className="pb-1 text-xs text-gray-400">กรอบนี้คือขนาดจริงที่จะขึ้นบนหน้าแรก</p>
+        </div>
+      </div>
+
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <button
           onClick={save}
@@ -102,6 +151,7 @@ export default function CommitteeSetForm({
           <button
             onClick={() => {
               setSet(saved);
+              setScale(savedScale);
               setStatus(null);
             }}
             className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-sm text-gray-600 shadow-sm ring-1 ring-black/5 transition hover:text-gray-800"

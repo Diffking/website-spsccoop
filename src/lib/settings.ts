@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { DEFAULT_COMMITTEE_PHOTO_SCALE } from "@/lib/committee";
 import { splashContent as DEFAULT_SPLASH, type SplashContent } from "@/content/splash";
 
 /**
@@ -103,6 +104,10 @@ export const DEFAULT_TICKER: TickerSettings = {
 /** ชุดคณะกรรมการดำเนินการที่กำลังทำหน้าที่อยู่ — ใช้ทั้งหัวการ์ดหน้าแรกและชื่อโฟลเดอร์รูป */
 export const DEFAULT_COMMITTEE_SET = 45;
 export const getCommitteeSet = () => getSetting<number>("committeeSet", DEFAULT_COMMITTEE_SET);
+
+/** ขนาดรูปกรรมการบนการ์ดหน้าแรก (%) — ค่าคงที่อยู่ที่ src/lib/committee.ts เพราะฝั่ง client ก็ใช้ */
+export const getCommitteePhotoScale = () =>
+  getSetting<number>("committeePhotoScale", DEFAULT_COMMITTEE_PHOTO_SCALE);
 
 export const getSiteInfo = () => getSetting<SiteInfo>("siteInfo", DEFAULT_SITE_INFO);
 export const getRates = () => getSetting<InterestRates>("interestRates", DEFAULT_RATES);

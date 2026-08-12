@@ -7,6 +7,7 @@ import Reveal from "@/components/ui/Reveal";
 import SectionHeading from "@/components/ui/SectionHeading";
 import MaybeLink from "@/components/ui/MaybeLink";
 import TabBar from "@/components/ui/TabBar";
+import { COMMITTEE_PHOTO_BASE } from "@/lib/committee";
 import type { AnnouncementItem } from "@/lib/content";
 import type { Item } from "@/lib/homeItems";
 import {
@@ -114,7 +115,16 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
   );
 }
 
-function CommitteeCard({ members, set }: { members: Item[]; set: number }) {
+function CommitteeCard({
+  members,
+  set,
+  photoScale,
+}: {
+  members: Item[];
+  set: number;
+  /** % ของกรอบเต็ม 220x300 — เลือกได้ที่ /admin/home/committees */
+  photoScale: number;
+}) {
   const [i, setI] = useState(0);
   const n = members.length;
   const c = members[Math.min(i, Math.max(0, n - 1))];
@@ -127,18 +137,24 @@ function CommitteeCard({ members, set }: { members: Item[]; set: number }) {
       {/*
         object-contain ไม่ใช่ object-cover — รูปกรรมการเป็นภาพคนถ่ายติดหัวไหล่
         ถ้าครอบให้เต็มกรอบจะโดนตัดหัวตัดตา ยอมมีขอบว่างข้างรูปดีกว่าเห็นหน้าไม่ครบ
-        กรอบสูงคงที่ การ์ดจึงไม่ขยับตามสัดส่วนรูปที่แต่ละคนอัปมาไม่เท่ากัน
+        กรอบขนาดคงที่ การ์ดจึงไม่ขยับตามสัดส่วนรูปที่แต่ละคนอัปมาไม่เท่ากัน
       */}
-      <div className="mt-4 grid h-56 w-full flex-1 place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-brand-100 to-brand-50">
+      <div
+        style={{
+          width: (COMMITTEE_PHOTO_BASE.width * photoScale) / 100,
+          height: (COMMITTEE_PHOTO_BASE.height * photoScale) / 100,
+        }}
+        className="mx-auto mt-4 grid max-w-full place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-brand-100 to-brand-50"
+      >
         {c.imageUrl ? (
           // รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={c.imageUrl} alt={c.title} className="h-full w-full object-contain p-2" />
+          <img src={c.imageUrl} alt={c.title} className="h-full w-full object-contain" />
         ) : (
           <UserRound className="h-16 w-16 text-brand-300" />
         )}
       </div>
-      <p className="mt-4 line-clamp-1 text-base font-semibold text-gray-700" title={c.title}>
+      <p className="mt-4 line-clamp-1 flex-1 text-base font-semibold text-gray-700" title={c.title}>
         {c.title}
       </p>
       <p className="line-clamp-1 text-sm text-gray-400" title={c.subtitle ?? ""}>
@@ -173,10 +189,12 @@ export default function NewsSection({
   announcements,
   committees,
   committeeSet,
+  committeePhotoScale,
 }: {
   announcements: AnnouncementItem[];
   committees: Item[];
   committeeSet: number;
+  committeePhotoScale: number;
 }) {
   const [tab, setTab] = useState<Kind>(KINDS[0]);
   // แยกครั้งเดียวแล้วใช้ทุกแท็บ ไม่ต้องกรองใหม่ทุกครั้งที่กดสลับ
@@ -202,7 +220,11 @@ export default function NewsSection({
             <AnnouncementList key={tab} items={byKind[tab]} kind={tab} />
           </Reveal>
           <Reveal delay={0.1} className="h-full min-w-0">
-            <CommitteeCard members={committees} set={committeeSet} />
+            <CommitteeCard
+              members={committees}
+              set={committeeSet}
+              photoScale={committeePhotoScale}
+            />
           </Reveal>
         </div>
       </div>
