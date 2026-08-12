@@ -46,6 +46,25 @@ TypeError: Cannot convert argument to a ByteString ... value of 3626
 ชื่อไฟล์เป็น ASCII เสมอ ส่วนชื่อคน/หัวข้อภาษาไทยเก็บในโค้ด เช่น array `members` ใน
 `src/app/about/directory/board/page.tsx` ที่จับคู่ `committee-01.png` → ชื่อกรรมการ
 
+**กฎเดียวกันใช้กับค่าใน HTTP header ทุกที่** — เคยพลาดมาแล้วที่ `X-Title` ตอนเรียก OpenRouter
+ใส่ชื่อระบบเป็นภาษาไทย แล้ว `fetch` throw ทุกครั้งที่กดให้ AI อ่านภาพ
+
+## AI อ่านภาพประกาศ — เรียกผ่าน OpenRouter
+
+`src/lib/ai.ts` ยิง HTTP ตรงไปที่ `openrouter.ai/api/v1/chat/completions` (หน้าตาแบบ OpenAI)
+ไม่ได้ใช้ SDK ของเจ้าไหน คีย์อ่านจาก `OPENROUTER_API_KEY` · รุ่นเปลี่ยนได้ที่ `AI_MODEL`
+ไม่ตั้ง = `anthropic/claude-sonnet-5`
+
+รุ่นที่เลือกต้อง **อ่านภาพได้ + รองรับ structured outputs** เช็คได้ที่
+`GET /api/v1/models` ดูว่ามี `image` ใน `architecture.input_modalities` และ
+`structured_outputs` ใน `supported_parameters` ไม่งั้นจะได้ JSON โครงไม่ตรงแล้ว parse พัง
+
+ไม่มีคีย์ = `AI_READY` เป็น false ปุ่ม AI ถูกซ่อนไปเอง หลังบ้านยังใช้ได้ปกติแค่ต้องพิมพ์เอง
+**AI ไม่เคยบันทึกลงฐานเอง** — คืนค่าไปเติมในฟอร์มให้เจ้าหน้าที่ตรวจแล้วกดยืนยันเสมอ
+
+อ่านโปสเตอร์หนึ่งใบ ≈ 2,000 token ≈ 0.006 ดอลลาร์ ดูยอดคงเหลือได้ที่
+`curl -H "Authorization: Bearer $OPENROUTER_API_KEY" https://openrouter.ai/api/v1/key`
+
 ## สถิติผู้เข้าชมนับเอง ไม่ได้ใช้บริการภายนอก
 
 `src/lib/analytics.ts` + `POST /api/track` — หน้าเว็บยิงแจ้งด้วย JavaScript หลังโหลดเสร็จ
