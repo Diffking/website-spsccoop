@@ -17,6 +17,7 @@ export async function PUT(request: Request) {
     siteInfo?: SiteInfo;
     interestRates?: InterestRates;
     ticker?: Partial<TickerSettings>;
+    committeeSet?: number;
   };
 
   if (body.siteInfo) {
@@ -62,6 +63,14 @@ export async function PUT(request: Request) {
       badgeBlink: t.badgeBlink ?? DEFAULT_TICKER.badgeBlink,
       secondsPerItem: clamp(t.secondsPerItem, 3, 30, DEFAULT_TICKER.secondsPerItem),
     } satisfies TickerSettings);
+  }
+
+  if (body.committeeSet !== undefined) {
+    const set = Math.trunc(Number(body.committeeSet));
+    if (!Number.isFinite(set) || set < 1 || set > 999) {
+      return NextResponse.json({ error: "ชุดที่ต้องเป็นตัวเลข 1-999" }, { status: 400 });
+    }
+    await saveSetting("committeeSet", set);
   }
 
   return NextResponse.json({ ok: true });

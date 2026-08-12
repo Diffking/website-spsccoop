@@ -38,11 +38,14 @@ const FIELD_META: Record<Field, { label: string; hint?: string; placeholder?: st
 
 export default function HomeItemsManager({
   section,
+  folder,
   items,
   fields,
   titleLabel = "ชื่อรายการ",
 }: {
   section: Section;
+  /** โฟลเดอร์ปลายทางฝั่ง FTP — ไม่ส่ง = โฟลเดอร์เริ่มต้น */
+  folder?: string;
   items: Item[];
   fields: Field[];
   titleLabel?: string;
@@ -86,6 +89,7 @@ export default function HomeItemsManager({
 
     const form = new FormData();
     form.append("file", file);
+    if (folder) form.append("folder", folder);
     const result = await uploadWithProgress<{ url: string }>(
       "/api/admin/upload/",
       form,

@@ -100,6 +100,10 @@ export const DEFAULT_TICKER: TickerSettings = {
   secondsPerItem: 9,
 };
 
+/** ชุดคณะกรรมการดำเนินการที่กำลังทำหน้าที่อยู่ — ใช้ทั้งหัวการ์ดหน้าแรกและชื่อโฟลเดอร์รูป */
+export const DEFAULT_COMMITTEE_SET = 45;
+export const getCommitteeSet = () => getSetting<number>("committeeSet", DEFAULT_COMMITTEE_SET);
+
 export const getSiteInfo = () => getSetting<SiteInfo>("siteInfo", DEFAULT_SITE_INFO);
 export const getRates = () => getSetting<InterestRates>("interestRates", DEFAULT_RATES);
 

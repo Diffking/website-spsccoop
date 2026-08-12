@@ -13,7 +13,7 @@ import ScrollProgress from "@/components/ui/ScrollProgress";
 import PageTracker from "@/components/site/PageTracker";
 import BackToTop from "@/components/ui/BackToTop";
 import { site } from "@/data/home";
-import { getRates, getSiteInfo, getSplash } from "@/lib/settings";
+import { getCommitteeSet, getRates, getSiteInfo, getSplash } from "@/lib/settings";
 import { getAnnouncements, getHolidayEvents, getSlides } from "@/lib/content";
 import { getCalendarEvents, getItems } from "@/lib/homeItems";
 import { pageMetadata } from "@/lib/seo";
@@ -40,6 +40,7 @@ export default async function Home() {
     memberLinks,
     officers,
     events,
+    committeeSet,
   ] = await Promise.all([
     getSiteInfo(),
     getRates(),
@@ -55,6 +56,7 @@ export default async function Home() {
     getItems("memberLinks"),
     getItems("officers"),
     getCalendarEvents(),
+    getCommitteeSet(),
   ]);
 
   // ปฏิทินรับ place/time เป็น optional ส่วนฐานเก็บเป็น null — แปลงก่อนส่งเข้า
@@ -94,7 +96,7 @@ export default async function Home() {
       <main>
         <Hero rates={rates} slides={slides} />
         <NewsTicker />
-        <NewsSection announcements={announcements} committees={committees} />
+        <NewsSection announcements={announcements} committees={committees} committeeSet={committeeSet} />
         <Services items={services} />
         <Recommend cards={recommends} features={memberFeatures} />
         <MemberCorner links={memberLinks} />

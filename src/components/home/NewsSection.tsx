@@ -114,7 +114,7 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
   );
 }
 
-function CommitteeCard({ members }: { members: Item[] }) {
+function CommitteeCard({ members, set }: { members: Item[]; set: number }) {
   const [i, setI] = useState(0);
   const n = members.length;
   const c = members[Math.min(i, Math.max(0, n - 1))];
@@ -123,7 +123,7 @@ function CommitteeCard({ members }: { members: Item[] }) {
 
   return (
     <div className="flex h-full flex-col rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-black/5">
-      <p className="text-sm font-semibold text-brand-700">คณะกรรมการชุดที่ 46</p>
+      <p className="text-sm font-semibold text-brand-700">คณะกรรมการชุดที่ {set}</p>
       <div className="mt-4 grid min-h-48 w-full flex-1 place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-brand-100 to-brand-50">
         {c.imageUrl ? (
           // รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา
@@ -167,9 +167,11 @@ function CommitteeCard({ members }: { members: Item[] }) {
 export default function NewsSection({
   announcements,
   committees,
+  committeeSet,
 }: {
   announcements: AnnouncementItem[];
   committees: Item[];
+  committeeSet: number;
 }) {
   const [tab, setTab] = useState<Kind>(KINDS[0]);
   // แยกครั้งเดียวแล้วใช้ทุกแท็บ ไม่ต้องกรองใหม่ทุกครั้งที่กดสลับ
@@ -195,7 +197,7 @@ export default function NewsSection({
             <AnnouncementList key={tab} items={byKind[tab]} kind={tab} />
           </Reveal>
           <Reveal delay={0.1} className="h-full min-w-0">
-            <CommitteeCard members={committees} />
+            <CommitteeCard members={committees} set={committeeSet} />
           </Reveal>
         </div>
       </div>

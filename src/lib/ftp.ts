@@ -22,12 +22,21 @@ export const FOLDERS = {
   resultreport: "รายงานกิจการ",
 } as const;
 
-export type Folder = keyof typeof FOLDERS;
+/**
+ * รูปคณะกรรมการแยกโฟลเดอร์ตามชุด เช่น committees/set45
+ * ชุดใหม่มาก็ไม่ต้องมาแก้โค้ด และรูปชุดเก่ายังอยู่ครบไม่ปนกัน
+ */
+const COMMITTEE_FOLDER = /^committees\/set\d{1,3}$/;
+
+export const committeeFolder = (set: number) => `committees/set${Math.trunc(set)}` as Folder;
+
+export type Folder = keyof typeof FOLDERS | `committees/set${number}`;
 
 export const DEFAULT_FOLDER: Folder = "banner_slide";
 
 export const isFolder = (value: unknown): value is Folder =>
-  typeof value === "string" && Object.hasOwn(FOLDERS, value);
+  typeof value === "string" &&
+  (Object.hasOwn(FOLDERS, value) || COMMITTEE_FOLDER.test(value));
 
 const HOST = process.env.FTP_HOST?.trim() ?? "";
 const USER = process.env.FTP_USER?.trim() ?? "";
