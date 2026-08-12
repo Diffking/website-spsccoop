@@ -18,7 +18,7 @@ import { Client } from "basic-ftp";
 export const FOLDERS = {
   banner_slide: "แบนเนอร์สไลด์",
   Declar: "ประกาศ",
-  mailnew: "จดหมายข่าว",
+  newsletter: "จดหมายข่าว",
   resultreport: "รายงานกิจการ",
 } as const;
 

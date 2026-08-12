@@ -27,9 +27,9 @@ export const KIND_HEADING: Record<Kind, string> = {
 };
 
 /** โฟลเดอร์ปลายทางฝั่ง FTP ของแต่ละหมวด — ต้องตรงกับ FOLDERS ใน src/lib/ftp.ts */
-export const KIND_FOLDER: Record<Kind, "Declar" | "mailnew" | "resultreport"> = {
+export const KIND_FOLDER: Record<Kind, "Declar" | "newsletter" | "resultreport"> = {
   ANNOUNCEMENT: "Declar",
-  NEWSLETTER: "mailnew",
+  NEWSLETTER: "newsletter",
   REPORT: "resultreport",
 };
 
