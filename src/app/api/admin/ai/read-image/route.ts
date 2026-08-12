@@ -42,7 +42,11 @@ export async function POST(request: Request) {
   const target = String(form?.get("target") ?? "");
 
   if (!(file instanceof File)) {
-    return NextResponse.json({ error: "ไม่พบไฟล์ภาพ" }, { status: 400 });
+    // เหมือนกับ /api/admin/upload — อ่าน body ไม่ได้มักแปลว่าไฟล์ใหญ่เกิน ไม่ใช่ไม่ได้เลือกไฟล์
+    return NextResponse.json(
+      { error: "อ่านไฟล์ไม่ได้ — ไฟล์อาจใหญ่เกินไป (PDF ไม่เกิน 25 MB · รูปไม่เกิน 8 MB)" },
+      { status: 400 },
+    );
   }
   if (!MEDIA_TYPES.includes(file.type as MediaType)) {
     return NextResponse.json(

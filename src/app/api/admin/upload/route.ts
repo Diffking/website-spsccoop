@@ -39,7 +39,12 @@ export async function POST(request: Request) {
   const folder = isFolder(folderInput) ? folderInput : DEFAULT_FOLDER;
 
   if (!(file instanceof File)) {
-    return NextResponse.json({ error: "ไม่พบไฟล์" }, { status: 400 });
+    // อ่าน body ไม่ได้มักแปลว่าไฟล์ใหญ่เกินเพดานที่ตั้งไว้ ไม่ใช่ว่าไม่ได้เลือกไฟล์
+    // (ดู middlewareClientMaxBodySize ใน next.config.ts) บอกให้ตรงเหตุจะได้ไม่งงว่าเลือกแล้วทำไมไม่เจอ
+    return NextResponse.json(
+      { error: "อ่านไฟล์ไม่ได้ — ไฟล์อาจใหญ่เกินไป (PDF ไม่เกิน 25 MB · รูปไม่เกิน 8 MB)" },
+      { status: 400 },
+    );
   }
 
   const extension = EXTENSIONS[file.type];
