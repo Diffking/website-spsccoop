@@ -153,7 +153,8 @@ export async function getAnnouncements(take = 20, kind?: Kind): Promise<Announce
   try {
     const rows = await db.announcement.findMany({
       where: { published: true, ...(kind ? { kind } : {}) },
-      orderBy: { publishedAt: "desc" },
+      // ลำดับที่จัดเองมาก่อน · ตัวที่ยังไม่เคยจัด (0) เรียงตามวันที่ใหม่ไปเก่า
+      orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
       take,
     });
     return rows.map((r) => ({

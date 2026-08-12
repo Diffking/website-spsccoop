@@ -27,6 +27,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "วันที่ไม่ถูกต้อง" }, { status: 400 });
   }
 
+  const kind = isKind(body.kind) ? body.kind : "ANNOUNCEMENT";
+  // เอกสารใหม่ควรอยู่บนสุดของหมวดตัวเอง จึงให้ลำดับน้อยกว่าตัวที่บนสุดอยู่ตอนนี้
+  const top = await db.announcement.findFirst({
+    where: { kind },
+    orderBy: { sortOrder: "asc" },
+    select: { sortOrder: true },
+  });
+
   const item = await db.announcement.create({
     data: {
       number,
@@ -34,9 +42,45 @@ export async function POST(request: Request) {
       publishedAt,
       fileUrl: body.fileUrl?.trim() || null,
       badge: body.badge?.trim().slice(0, 16) || null,
-      // ไม่ส่งมา/ส่งค่าแปลก = ประกาศ ตามเดิม
-      kind: isKind(body.kind) ? body.kind : "ANNOUNCEMENT",
+      kind,
+      sortOrder: (top?.sortOrder ?? 0) - 1,
     },
   });
   return NextResponse.json({ item }, { status: 201 });
+}
+
+/**
+ * จัดลำดับใหม่ทั้งหมวด — รับ id เรียงตามลำดับที่ต้องการให้แสดง
+ * เขียน sortOrder ใหม่ทั้งชุดในธุรกรรมเดียว เหมือนที่ทำกับแบนเนอร์สไลด์
+ */
+export async function PUT(request: Request) {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
+
+  const body = (await request.json().catch(() => ({}))) as { kind?: unknown; order?: unknown };
+  if (!isKind(body.kind)) {
+    return NextResponse.json({ error: "ไม่รู้จักหมวดที่จะจัดลำดับ" }, { status: 400 });
+  }
+  const order = Array.isArray(body.order)
+    ? body.order.filter((v): v is string => typeof v === "string")
+    : [];
+  if (order.length === 0) {
+    return NextResponse.json({ error: "ไม่ได้ส่งลำดับมา" }, { status: 400 });
+  }
+
+  // ต้องครบทุกตัวในหมวดนั้นและไม่ซ้ำ ไม่งั้นจะมีตัวที่ sortOrder ค้างของเดิมแล้วลำดับเพี้ยน
+  const existing = await db.announcement.findMany({ where: { kind: body.kind }, select: { id: true } });
+  const ids = new Set(existing.map((a) => a.id));
+  if (new Set(order).size !== order.length || order.length !== ids.size || order.some((id) => !ids.has(id))) {
+    return NextResponse.json(
+      { error: "รายการที่ส่งมาไม่ตรงกับที่มีอยู่ ลองโหลดหน้าใหม่" },
+      { status: 409 },
+    );
+  }
+
+  await db.$transaction(
+    order.map((id, index) => db.announcement.update({ where: { id }, data: { sortOrder: index } })),
+  );
+
+  return NextResponse.json({ ok: true });
 }

@@ -2,14 +2,22 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { FileText, CalendarDays, ChevronLeft, ChevronRight, UserRound } from "lucide-react";
+import { FileText, BookOpen, CalendarDays, ChevronLeft, ChevronRight, UserRound } from "lucide-react";
 import Reveal from "@/components/ui/Reveal";
 import SectionHeading from "@/components/ui/SectionHeading";
 import MaybeLink from "@/components/ui/MaybeLink";
 import TabBar from "@/components/ui/TabBar";
 import type { AnnouncementItem } from "@/lib/content";
 import type { Item } from "@/lib/homeItems";
-import { KINDS, KIND_HEADING, KIND_LABEL, announcementLine, type Kind } from "@/lib/announcementKinds";
+import {
+  KINDS,
+  KIND_EBOOK,
+  KIND_HEADING,
+  KIND_LABEL,
+  announcementLine,
+  readerHref,
+  type Kind,
+} from "@/lib/announcementKinds";
 
 const PER_PAGE = 5;
 
@@ -34,8 +42,15 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
         <ul className="flex-1 divide-y divide-gray-100">
           {shown.map((a) => (
             <li key={a.id}>
-              <MaybeLink href={a.href} className="group flex items-start gap-3 py-3 transition hover:bg-brand-50/60 rounded-lg px-2 -mx-2">
-                <FileText className="mt-0.5 h-5 w-5 shrink-0 text-brand-400" />
+              <MaybeLink
+                href={readerHref(a.kind, a.id, a.href)}
+                className="group flex items-start gap-3 py-3 transition hover:bg-brand-50/60 rounded-lg px-2 -mx-2"
+              >
+                {KIND_EBOOK[a.kind] && a.href && a.href !== "#" ? (
+                  <BookOpen className="mt-0.5 h-5 w-5 shrink-0 text-brand-400" />
+                ) : (
+                  <FileText className="mt-0.5 h-5 w-5 shrink-0 text-brand-400" />
+                )}
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-gray-700 group-hover:text-brand-700">
                     {a.badge && (
@@ -45,8 +60,15 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
                     )}
                     {announcementLine(a.kind, a.number, a.title)}
                   </p>
-                  <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
-                    <CalendarDays className="h-3.5 w-3.5" /> {a.date}
+                  <p className="mt-0.5 flex items-center gap-2 text-xs text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <CalendarDays className="h-3.5 w-3.5" /> {a.date}
+                    </span>
+                    {KIND_EBOOK[a.kind] && a.href && a.href !== "#" && (
+                      <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-600">
+                        อ่านแบบ E-Book
+                      </span>
+                    )}
                   </p>
                 </div>
               </MaybeLink>

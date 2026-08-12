@@ -50,3 +50,7 @@ next-env.d.ts
 # รูปที่อัปตอน npm run dev (ในคอนเทนเนอร์ path นี้ถูก mount มาจาก /uploads ด้านบน)
 /public/uploads/
 /backups/
+
+# worker ของ pdf.js — ก๊อปมาตอน build (ดู scripts/copy-pdf-worker.mjs)
+public/pdf.worker.min.mjs
+public/pdfjs/

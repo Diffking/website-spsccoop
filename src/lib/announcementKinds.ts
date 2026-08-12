@@ -41,6 +41,27 @@ export const KIND_HEADING: Record<Kind, string> = {
   REPORT: "รายงานกิจการประจำปี",
 };
 
+/**
+ * หมวดไหนเปิดอ่านแบบ E-Book (พลิกหน้าในเว็บ) แทนการโหลดไฟล์ทั้งก้อน
+ *
+ * ประกาศเป็นเอกสารหน้าเดียวสองหน้า เปิดไฟล์ตรง ๆ เร็วกว่า
+ * ส่วนจดหมายข่าวกับรายงานกิจการหนาหลายสิบหน้า ไฟล์ใหญ่ ถ้าให้โหลดทั้งเล่มก่อนอ่านจะรอนาน
+ */
+export const KIND_EBOOK: Record<Kind, boolean> = {
+  ANNOUNCEMENT: false,
+  NEWSLETTER: true,
+  REPORT: true,
+};
+
+/** ปลายทางเมื่อกดอ่าน — E-Book ของเราเอง หรือไฟล์ตรง ๆ */
+export function readerHref(kind: Kind, id: string, fileUrl: string | null): string | null {
+  const file = fileUrl && fileUrl !== "#" ? fileUrl : null;
+  if (!file) return null;
+  // ไฟล์ที่ไม่ใช่ PDF (เช่นลิงก์ไปหน้าอื่น) เปิดตรง ๆ เสมอ เพราะพลิกหน้าไม่ได้
+  const isPdf = /\.pdf(\?|#|$)/i.test(file);
+  return KIND_EBOOK[kind] && isPdf ? `/ebook/${id}/` : file;
+}
+
 /** โฟลเดอร์ปลายทางฝั่ง FTP ของแต่ละหมวด — ต้องตรงกับ FOLDERS ใน src/lib/ftp.ts */
 export const KIND_FOLDER: Record<Kind, "Declar" | "newsletter" | "resultreport"> = {
   ANNOUNCEMENT: "Declar",

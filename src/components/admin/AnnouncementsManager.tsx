@@ -14,6 +14,7 @@ import {
   FileUp,
   FileText,
   ExternalLink,
+  GripVertical,
 } from "lucide-react";
 import TabBar from "@/components/ui/TabBar";
 import {
@@ -68,6 +69,54 @@ export default function AnnouncementsManager({
   const filePicker = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState<"" | "upload" | "ai">("");
   const [note, setNote] = useState("");
+
+  /**
+   * ลำดับที่กำลังโชว์ — ลากแล้วสลับในนี้ก่อนให้เห็นผลทันที ปล่อยแล้วค่อยบันทึก
+   * ฝั่งเซิร์ฟเวอร์ส่งชุดใหม่มาเมื่อไหร่ (เพิ่ม ลบ แก้ช่องอื่น) ให้ยึดของเซิร์ฟเวอร์เสมอ
+   */
+  const [list, setList] = useState(items);
+  const [fromServer, setFromServer] = useState(() => JSON.stringify(items));
+  const incoming = JSON.stringify(items);
+  if (incoming !== fromServer) {
+    setFromServer(incoming);
+    setList(items);
+  }
+  const [dragId, setDragId] = useState<string | null>(null);
+  /** id ของแถวที่กดค้างที่จุดจับ — ลากได้เฉพาะตอนนี้ ไม่งั้นกดแถวเพื่อแก้ไขไม่ได้ */
+  const [handleOn, setHandleOn] = useState<string | null>(null);
+
+  function moveTo(id: string, toIndexInTab: number) {
+    setList((current) => {
+      const inTab = current.filter((i) => i.kind === tab);
+      const from = inTab.findIndex((i) => i.id === id);
+      if (from === -1 || from === toIndexInTab) return current;
+      const reordered = [...inTab];
+      const [moved] = reordered.splice(from, 1);
+      reordered.splice(toIndexInTab, 0, moved);
+      // ประกอบกลับ: ตัวในหมวดอื่นอยู่ที่เดิม เอาเฉพาะหมวดนี้มาเรียงใหม่ตามลำดับที่ลาก
+      let next = 0;
+      return current.map((item) => (item.kind === tab ? reordered[next++] : item));
+    });
+  }
+
+  async function saveOrder(next: AnnouncementRow[]) {
+    setBusy("order");
+    const response = await fetch("/api/admin/announcements/", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: tab, order: next.filter((i) => i.kind === tab).map((i) => i.id) }),
+    });
+    const data = await response.json().catch(() => ({}));
+    setBusy("");
+
+    if (!response.ok) {
+      setList(items);
+      setError(data.error ?? "จัดลำดับไม่สำเร็จ");
+      return;
+    }
+    setError("");
+    router.refresh();
+  }
   /** แท็บที่กำลังดู — เพิ่มรายการใหม่จะเข้าหมวดนี้ให้เลย ไม่ต้องมาเลือกซ้ำ */
   const [tab, setTab] = useState<Kind>("ANNOUNCEMENT");
   const [form, setForm] = useState(empty);
@@ -187,7 +236,7 @@ export default function AnnouncementsManager({
     router.refresh();
   }
 
-  const shown = items.filter((i) => i.kind === tab);
+  const shown = list.filter((i) => i.kind === tab);
 
   const fields = (
     <div className="space-y-2">
@@ -369,7 +418,7 @@ export default function AnnouncementsManager({
         items={KINDS.map((k) => ({
           value: k,
           label: KIND_LABEL[k],
-          count: items.filter((i) => i.kind === k).length,
+          count: list.filter((i) => i.kind === k).length,
         }))}
       />
 
@@ -412,11 +461,18 @@ export default function AnnouncementsManager({
         </button>
       )}
 
-      <ul className="mt-3 divide-y divide-gray-100">
+      {shown.length > 1 && (
+        <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
+          <GripVertical className="h-3.5 w-3.5 text-gray-400" />
+          ลากที่จุดจับเพื่อจัดลำดับในหมวดนี้ — บนสุดขึ้นก่อนบนหน้าแรก
+        </p>
+      )}
+
+      <ul className="mt-2 divide-y divide-gray-100">
         {shown.length === 0 && (
           <li className="py-6 text-center text-sm text-gray-400">ยังไม่มี{KIND_LABEL[tab]}</li>
         )}
-        {shown.map((item) =>
+        {shown.map((item, index) =>
           editingId === item.id ? (
             <li key={item.id} className="py-3">
               <div className="rounded-xl bg-gray-50 p-3">
@@ -440,7 +496,43 @@ export default function AnnouncementsManager({
               </div>
             </li>
           ) : (
-            <li key={item.id} className="flex items-start gap-2 py-2.5">
+            <li
+              key={item.id}
+              draggable={handleOn === item.id}
+              onDragStart={(e) => {
+                setDragId(item.id);
+                e.dataTransfer.setData("text/plain", item.id);
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (dragId && dragId !== item.id) moveTo(dragId, index);
+              }}
+              onDragEnd={() => {
+                setDragId(null);
+                setHandleOn(null);
+                const before = items.filter((i) => i.kind === tab).map((i) => i.id).join();
+                const after = list.filter((i) => i.kind === tab).map((i) => i.id).join();
+                if (before !== after) void saveOrder(list);
+              }}
+              className={`flex items-start gap-2 py-2.5 transition ${
+                dragId === item.id ? "opacity-40" : ""
+              }`}
+            >
+              <span
+                onMouseDown={() => setHandleOn(item.id)}
+                onMouseUp={() => setHandleOn(null)}
+                onTouchStart={() => setHandleOn(item.id)}
+                onTouchEnd={() => setHandleOn(null)}
+                title="ลากเพื่อจัดลำดับ"
+                aria-hidden="true"
+                className="mt-1.5 shrink-0 cursor-grab rounded text-gray-300 transition hover:text-gray-500 active:cursor-grabbing"
+              >
+                <GripVertical className="h-4 w-4" />
+              </span>
+              <span className="mt-1 w-5 shrink-0 text-right text-xs tabular-nums text-gray-400">
+                {index + 1}
+              </span>
               <button
                 onClick={() => {
                   setEditingId(item.id);
