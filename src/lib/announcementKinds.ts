@@ -19,6 +19,21 @@ export const KIND_PREFIX: Record<Kind, string> = {
   REPORT: "รายงานกิจการ",
 };
 
+/**
+ * คำเชื่อมก่อนชื่อเรื่อง ตามที่เขียนในหัวเอกสารจริง
+ * ("ประกาศที่ 1/2569 เรื่อง ทุนการศึกษาแก่บุตรสมาชิก ประจำปี 2569")
+ * รายงานกิจการไม่มีบรรทัด "เรื่อง" จึงเว้นว่างไว้
+ */
+export const KIND_SUBJECT: Record<Kind, string> = {
+  ANNOUNCEMENT: "เรื่อง",
+  NEWSLETTER: "เรื่อง",
+  REPORT: "",
+};
+
+/** บรรทัดที่แสดงจริงทั้งหน้าเว็บและหลังบ้าน — รวมไว้ที่เดียวจะได้ไม่หลุดไม่ตรงกัน */
+export const announcementLine = (kind: Kind, number: string, title: string): string =>
+  [KIND_PREFIX[kind], number, KIND_SUBJECT[kind], title].filter(Boolean).join(" ");
+
 /** ป้ายเหนือรายการในการ์ดหน้าแรก */
 export const KIND_HEADING: Record<Kind, string> = {
   ANNOUNCEMENT: "ประกาศสหกรณ์",

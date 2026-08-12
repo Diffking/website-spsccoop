@@ -67,6 +67,8 @@ model Announcement {
   publishedAt DateTime
   /// ไฟล์แนบ/ลิงก์ปลายทาง — ว่างได้ถ้ายังไม่มีไฟล์
   fileUrl     String?
+  /// ป้ายพิเศษหน้าหัวข้อ เช่น "ด่วน" "ขยายเวลา" — ว่าง = ไม่ติดป้าย (คนละอันกับป้ายในข่าววิ่ง)
+  badge       String?
   published   Boolean          @default(true)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt

@@ -8,7 +8,7 @@ import SectionHeading from "@/components/ui/SectionHeading";
 import MaybeLink from "@/components/ui/MaybeLink";
 import type { AnnouncementItem } from "@/lib/content";
 import type { Item } from "@/lib/homeItems";
-import { KINDS, KIND_HEADING, KIND_LABEL, KIND_PREFIX, type Kind } from "@/lib/announcementKinds";
+import { KINDS, KIND_HEADING, KIND_LABEL, announcementLine, type Kind } from "@/lib/announcementKinds";
 
 const PER_PAGE = 5;
 
@@ -37,7 +37,12 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
                 <FileText className="mt-0.5 h-5 w-5 shrink-0 text-brand-400" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-gray-700 group-hover:text-brand-700">
-                    {KIND_PREFIX[a.kind]} {a.number} {a.title}
+                    {a.badge && (
+                      <span className="mr-1.5 inline-block rounded-full bg-accent-red px-2 py-0.5 align-middle text-[11px] font-bold leading-none text-white">
+                        {a.badge}
+                      </span>
+                    )}
+                    {announcementLine(a.kind, a.number, a.title)}
                   </p>
                   <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
                     <CalendarDays className="h-3.5 w-3.5" /> {a.date}

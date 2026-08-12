@@ -13,6 +13,7 @@ export async function POST(request: Request) {
     publishedAt?: string;
     fileUrl?: string;
     kind?: string;
+    badge?: string;
   };
 
   const number = body.number?.trim() ?? "";
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
       title,
       publishedAt,
       fileUrl: body.fileUrl?.trim() || null,
+      badge: body.badge?.trim().slice(0, 16) || null,
       // ไม่ส่งมา/ส่งค่าแปลก = ประกาศ ตามเดิม
       kind: isKind(body.kind) ? body.kind : "ANNOUNCEMENT",
     },

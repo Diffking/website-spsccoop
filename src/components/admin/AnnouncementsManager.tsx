@@ -15,19 +15,38 @@ import {
   FileText,
   ExternalLink,
 } from "lucide-react";
-import { KINDS, KIND_FOLDER, KIND_LABEL, KIND_PREFIX, type Kind } from "@/lib/announcementKinds";
+import {
+  KINDS,
+  KIND_FOLDER,
+  KIND_LABEL,
+  KIND_PREFIX,
+  announcementLine,
+  type Kind,
+} from "@/lib/announcementKinds";
 
 export type AnnouncementRow = {
   id: string;
   number: string;
   title: string;
   kind: Kind;
+  /** ป้ายพิเศษหน้าหัวข้อ เช่น "ด่วน" — ว่าง = ไม่ติดป้าย */
+  badge: string | null;
   publishedAt: string; // YYYY-MM-DD
   fileUrl: string | null;
   published: boolean;
 };
 
-const empty = { number: "", title: "", publishedAt: "", fileUrl: "", kind: "ANNOUNCEMENT" as Kind };
+const empty = {
+  number: "",
+  title: "",
+  publishedAt: "",
+  fileUrl: "",
+  kind: "ANNOUNCEMENT" as Kind,
+  badge: "",
+};
+
+/** คำที่ใช้บ่อย — กดแล้วเติมให้ ไม่ได้บังคับ พิมพ์เองก็ได้ */
+const BADGE_PRESETS = ["ด่วน", "ใหม่", "สำคัญ", "ขยายเวลา", "แก้ไข"];
 
 /** วันที่แบบไทย เช่น 30 มิ.ย. 2569 */
 function thaiDate(iso: string): string {
@@ -207,6 +226,50 @@ export default function AnnouncementsManager({
         placeholder={`ชื่อเรื่อง${KIND_LABEL[form.kind]}`}
         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500"
       />
+
+      <div>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={form.badge}
+            onChange={(e) => setForm({ ...form, badge: e.target.value })}
+            maxLength={16}
+            placeholder="ป้ายพิเศษ (เว้นว่าง = ไม่ติดป้าย)"
+            className="w-56 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500"
+          />
+          {form.badge.trim() ? (
+            <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+              ตัวอย่าง
+              <span className="rounded-full bg-accent-red px-2 py-0.5 text-[11px] font-bold text-white">
+                {form.badge}
+              </span>
+            </span>
+          ) : (
+            BADGE_PRESETS.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setForm({ ...form, badge: preset })}
+                className="rounded-full bg-white px-2.5 py-1 text-xs text-gray-600 ring-1 ring-gray-200 transition hover:bg-gray-50"
+              >
+                {preset}
+              </button>
+            ))
+          )}
+          {form.badge.trim() && (
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, badge: "" })}
+              className="rounded-lg p-1 text-gray-400 transition hover:text-red-500"
+              title="เอาป้ายออก"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <p className="mt-1 text-xs text-gray-400">
+          ป้ายนี้ขึ้นหน้าหัวข้อในการ์ดหน้าแรก — คนละอันกับป้ายในข่าววิ่ง
+        </p>
+      </div>
 
       <div className="rounded-xl border border-dashed border-gray-300 p-3">
         <input
@@ -396,6 +459,7 @@ export default function AnnouncementsManager({
                     publishedAt: item.publishedAt,
                     fileUrl: item.fileUrl ?? "",
                     kind: item.kind,
+                    badge: item.badge ?? "",
                   });
                 }}
                 className="min-w-0 flex-1 text-left"
@@ -405,7 +469,12 @@ export default function AnnouncementsManager({
                     item.published ? "text-gray-700" : "text-gray-400 line-through"
                   }`}
                 >
-                  {KIND_PREFIX[item.kind]} {item.number} {item.title}
+                  {item.badge && (
+                    <span className="mr-1.5 inline-block rounded-full bg-accent-red px-2 py-0.5 align-middle text-[11px] font-bold text-white">
+                      {item.badge}
+                    </span>
+                  )}
+                  {announcementLine(item.kind, item.number, item.title)}
                 </span>
                 <span className="flex items-center gap-2 text-xs text-gray-400">
                   {thaiDate(item.publishedAt)}

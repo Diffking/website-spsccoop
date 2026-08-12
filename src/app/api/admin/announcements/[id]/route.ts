@@ -17,10 +17,12 @@ export async function PATCH(request: Request, { params }: Params) {
     fileUrl?: string;
     published?: boolean;
     kind?: string;
+    badge?: string;
   };
 
   const data: {
     kind?: Kind;
+    badge?: string | null;
     number?: string;
     title?: string;
     publishedAt?: Date;
@@ -36,6 +38,8 @@ export async function PATCH(request: Request, { params }: Params) {
     if (!body.title.trim()) return NextResponse.json({ error: "ชื่อเรื่องห้ามว่าง" }, { status: 400 });
     data.title = body.title.trim();
   }
+  // ส่งค่าว่างมา = เอาป้ายออก
+  if (body.badge !== undefined) data.badge = body.badge.trim().slice(0, 16) || null;
   if (body.kind !== undefined) {
     if (!isKind(body.kind)) return NextResponse.json({ error: "หมวดไม่ถูกต้อง" }, { status: 400 });
     data.kind = body.kind;
