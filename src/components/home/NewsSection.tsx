@@ -124,11 +124,16 @@ function CommitteeCard({ members, set }: { members: Item[]; set: number }) {
   return (
     <div className="flex h-full flex-col rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-black/5">
       <p className="text-sm font-semibold text-brand-700">คณะกรรมการชุดที่ {set}</p>
-      <div className="mt-4 grid min-h-48 w-full flex-1 place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-brand-100 to-brand-50">
+      {/*
+        object-contain ไม่ใช่ object-cover — รูปกรรมการเป็นภาพคนถ่ายติดหัวไหล่
+        ถ้าครอบให้เต็มกรอบจะโดนตัดหัวตัดตา ยอมมีขอบว่างข้างรูปดีกว่าเห็นหน้าไม่ครบ
+        กรอบสูงคงที่ การ์ดจึงไม่ขยับตามสัดส่วนรูปที่แต่ละคนอัปมาไม่เท่ากัน
+      */}
+      <div className="mt-4 grid h-56 w-full flex-1 place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-brand-100 to-brand-50">
         {c.imageUrl ? (
           // รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={c.imageUrl} alt={c.title} className="h-48 w-full object-cover" />
+          <img src={c.imageUrl} alt={c.title} className="h-full w-full object-contain p-2" />
         ) : (
           <UserRound className="h-16 w-16 text-brand-300" />
         )}

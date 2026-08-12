@@ -218,7 +218,7 @@ export default function HomeItemsManager({
                   <img
                     src={draft.imageUrl}
                     alt=""
-                    className="h-10 w-14 rounded-lg bg-gray-50 object-cover ring-1 ring-gray-200"
+                    className="h-10 w-14 rounded-lg bg-gray-50 object-contain ring-1 ring-gray-200"
                   />
                 )}
               </div>
@@ -325,7 +325,7 @@ export default function HomeItemsManager({
                       <img
                         src={item.imageUrl}
                         alt=""
-                        className="h-10 w-14 shrink-0 rounded-lg bg-gray-50 object-cover ring-1 ring-gray-200"
+                        className="h-10 w-14 shrink-0 rounded-lg bg-gray-50 object-contain ring-1 ring-gray-200"
                       />
                     )}
                     <input
