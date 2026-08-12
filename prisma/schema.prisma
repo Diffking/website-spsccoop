@@ -71,6 +71,8 @@ model Announcement {
   badge       String?
   /// ลำดับที่จัดเอง ภายในหมวดเดียวกัน — น้อยมาก่อน · 0 = ยังไม่เคยจัด ให้เรียงตามวันที่
   sortOrder   Int              @default(0)
+  /// ซ่อนเลขที่บนหน้าเว็บ — รายงานกิจการที่ชื่อเรื่องบอกปีอยู่แล้ว ใส่ RS-63 ซ้ำจะรก
+  hideNumber  Boolean          @default(false)
   published   Boolean          @default(true)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt

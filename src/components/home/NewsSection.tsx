@@ -53,7 +53,7 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
                 )}
                 <div className="min-w-0 flex-1">
                   <p
-                    title={announcementLine(a.kind, a.number, a.title)}
+                    title={announcementLine(a.kind, a.number, a.title, a.hideNumber)}
                     className="truncate text-sm font-medium text-gray-700 group-hover:text-brand-700"
                   >
                     {a.badge && (
@@ -61,7 +61,7 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
                         {a.badge}
                       </span>
                     )}
-                    {announcementLine(a.kind, a.number, a.title)}
+                    {announcementLine(a.kind, a.number, a.title, a.hideNumber)}
                   </p>
                   <p className="mt-0.5 flex items-center gap-2 text-xs text-gray-400">
                     <span className="flex items-center gap-1">

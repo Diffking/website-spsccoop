@@ -14,6 +14,7 @@ export async function POST(request: Request) {
     fileUrl?: string;
     kind?: string;
     badge?: string;
+    hideNumber?: boolean;
   };
 
   const number = body.number?.trim() ?? "";
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
       publishedAt,
       fileUrl: body.fileUrl?.trim() || null,
       badge: body.badge?.trim().slice(0, 16) || null,
+      hideNumber: body.hideNumber === true,
       kind,
       sortOrder: (top?.sortOrder ?? 0) - 1,
     },

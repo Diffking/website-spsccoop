@@ -18,11 +18,13 @@ export async function PATCH(request: Request, { params }: Params) {
     published?: boolean;
     kind?: string;
     badge?: string;
+    hideNumber?: boolean;
   };
 
   const data: {
     kind?: Kind;
     badge?: string | null;
+    hideNumber?: boolean;
     number?: string;
     title?: string;
     publishedAt?: Date;
@@ -38,6 +40,7 @@ export async function PATCH(request: Request, { params }: Params) {
     if (!body.title.trim()) return NextResponse.json({ error: "ชื่อเรื่องห้ามว่าง" }, { status: 400 });
     data.title = body.title.trim();
   }
+  if (typeof body.hideNumber === "boolean") data.hideNumber = body.hideNumber;
   // ส่งค่าว่างมา = เอาป้ายออก
   if (body.badge !== undefined) data.badge = body.badge.trim().slice(0, 16) || null;
   if (body.kind !== undefined) {

@@ -49,7 +49,7 @@ export default async function EbookPage({ params }: { params: Promise<{ id: stri
             {KIND_LABEL[kind]}
           </span>
           <h1 className="mt-2 text-xl font-bold leading-snug text-gray-800 md:text-2xl">
-            {announcementLine(kind, item.number, item.title)}
+            {announcementLine(kind, item.number, item.title, item.hideNumber)}
           </h1>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-400">
             <CalendarDays className="h-4 w-4" /> {thaiDate.format(item.publishedAt)}

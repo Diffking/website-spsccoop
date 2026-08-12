@@ -17,6 +17,8 @@ export type AnnouncementItem = {
   kind: Kind;
   /** ป้ายพิเศษหน้าหัวข้อ เช่น "ด่วน" — null = ไม่ติดป้าย */
   badge: string | null;
+  /** ซ่อนเลขที่บนหน้าเว็บ */
+  hideNumber: boolean;
   /** วันที่แบบไทยพร้อมแสดงผล เช่น "30 มิ.ย. 2569" — แปลงฝั่งเซิร์ฟเวอร์กัน hydration ไม่ตรง */
   date: string;
   href: string;
@@ -61,7 +63,7 @@ export async function getTickerEntries(): Promise<TickerEntry[]> {
 
   const auto = settings.auto
     ? (await getAnnouncements(Math.max(1, Math.min(30, settings.limit)))).map((a) => ({
-        text: announcementLine(a.kind, a.number, a.title),
+        text: announcementLine(a.kind, a.number, a.title, a.hideNumber),
         href: a.href && a.href !== "#" ? a.href : null,
         badge: null as string | null,
       }))
@@ -163,6 +165,7 @@ export async function getAnnouncements(take = 20, kind?: Kind): Promise<Announce
       title: r.title,
       kind: r.kind as Kind,
       badge: r.badge?.trim() || null,
+      hideNumber: r.hideNumber,
       date: thaiDate.format(r.publishedAt),
       // ยังไม่มีหน้ารายละเอียดประกาศ — ถ้าไม่มีไฟล์แนบก็ยังไม่ต้องลิงก์ไปไหน
       href: r.fileUrl ?? "#",

@@ -20,6 +20,16 @@ export const KIND_PREFIX: Record<Kind, string> = {
 };
 
 /**
+ * คำนำหน้าตอนซ่อนเลขที่ — ต้องตัดคำว่า "ที่/ฉบับที่" ออกด้วย
+ * ไม่งั้นจะอ่านค้างเป็น "จดหมายข่าวฉบับที่ เรื่อง …" โดยไม่มีเลข
+ */
+export const KIND_PREFIX_PLAIN: Record<Kind, string> = {
+  ANNOUNCEMENT: "ประกาศ",
+  NEWSLETTER: "จดหมายข่าว",
+  REPORT: "รายงานกิจการ",
+};
+
+/**
  * คำเชื่อมก่อนชื่อเรื่อง ตามที่เขียนในหัวเอกสารจริง
  * ("ประกาศที่ 1/2569 เรื่อง ทุนการศึกษาแก่บุตรสมาชิก ประจำปี 2569")
  * รายงานกิจการไม่มีบรรทัด "เรื่อง" จึงเว้นว่างไว้
@@ -30,9 +40,24 @@ export const KIND_SUBJECT: Record<Kind, string> = {
   REPORT: "",
 };
 
-/** บรรทัดที่แสดงจริงทั้งหน้าเว็บและหลังบ้าน — รวมไว้ที่เดียวจะได้ไม่หลุดไม่ตรงกัน */
-export const announcementLine = (kind: Kind, number: string, title: string): string =>
-  [KIND_PREFIX[kind], number, KIND_SUBJECT[kind], title].filter(Boolean).join(" ");
+/**
+ * บรรทัดที่แสดงจริงทั้งหน้าเว็บและหลังบ้าน — รวมไว้ที่เดียวจะได้ไม่หลุดไม่ตรงกัน
+ * hideNumber = ซ่อนเลขที่ (รายงานกิจการที่ชื่อเรื่องบอกปีอยู่แล้ว ใส่ RS-63 ซ้ำจะรก)
+ */
+export const announcementLine = (
+  kind: Kind,
+  number: string,
+  title: string,
+  hideNumber = false,
+): string =>
+  [
+    hideNumber ? KIND_PREFIX_PLAIN[kind] : KIND_PREFIX[kind],
+    hideNumber ? "" : number,
+    KIND_SUBJECT[kind],
+    title,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
 /** ป้ายเหนือรายการในการ์ดหน้าแรก */
 export const KIND_HEADING: Record<Kind, string> = {

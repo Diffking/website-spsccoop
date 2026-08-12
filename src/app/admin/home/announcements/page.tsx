@@ -34,6 +34,7 @@ export default async function AdminAnnouncementsPage() {
           title: a.title,
           kind: a.kind as Kind,
           badge: a.badge,
+          hideNumber: a.hideNumber,
           publishedAt: a.publishedAt.toISOString().slice(0, 10),
           fileUrl: a.fileUrl,
           published: a.published,

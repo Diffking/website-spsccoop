@@ -17,6 +17,7 @@ import {
   GripVertical,
 } from "lucide-react";
 import TabBar from "@/components/ui/TabBar";
+import Toggle from "@/components/ui/Toggle";
 import UploadProgress from "@/components/admin/UploadProgress";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
 import {
@@ -35,6 +36,8 @@ export type AnnouncementRow = {
   kind: Kind;
   /** ป้ายพิเศษหน้าหัวข้อ เช่น "ด่วน" — ว่าง = ไม่ติดป้าย */
   badge: string | null;
+  /** ซ่อนเลขที่บนหน้าเว็บ */
+  hideNumber: boolean;
   publishedAt: string; // YYYY-MM-DD
   fileUrl: string | null;
   published: boolean;
@@ -47,6 +50,7 @@ const empty = {
   fileUrl: "",
   kind: "ANNOUNCEMENT" as Kind,
   badge: "",
+  hideNumber: false,
 };
 
 /** คำที่ใช้บ่อย — กดแล้วเติมให้ ไม่ได้บังคับ พิมพ์เองก็ได้ */
@@ -303,6 +307,19 @@ export default function AnnouncementsManager({
           className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500"
         />
       </div>
+      <div className="rounded-xl bg-gray-50 px-3 py-2.5">
+        <Toggle
+          checked={form.hideNumber}
+          onChange={(next) => setForm({ ...form, hideNumber: next })}
+          label="ซ่อนเลขที่บนหน้าเว็บ"
+          hint={
+            form.hideNumber
+              ? `หน้าเว็บจะขึ้นว่า “${announcementLine(form.kind, form.number || "—", form.title || "ชื่อเรื่อง", true)}”`
+              : `หน้าเว็บจะขึ้นว่า “${announcementLine(form.kind, form.number || "—", form.title || "ชื่อเรื่อง")}”`
+          }
+        />
+      </div>
+
       <input
         value={form.title}
         onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -587,6 +604,7 @@ export default function AnnouncementsManager({
                     fileUrl: item.fileUrl ?? "",
                     kind: item.kind,
                     badge: item.badge ?? "",
+                    hideNumber: item.hideNumber,
                   });
                 }}
                 className="min-w-0 flex-1 text-left"
@@ -601,7 +619,7 @@ export default function AnnouncementsManager({
                       {item.badge}
                     </span>
                   )}
-                  {announcementLine(item.kind, item.number, item.title)}
+                  {announcementLine(item.kind, item.number, item.title, item.hideNumber)}
                 </span>
                 <span className="flex items-center gap-2 text-xs text-gray-400">
                   {thaiDate(item.publishedAt)}
@@ -611,6 +629,26 @@ export default function AnnouncementsManager({
                     </span>
                   )}
                 </span>
+              </button>
+              <button
+                onClick={() => {
+                  setBusy(item.id);
+                  void send(`/api/admin/announcements/${item.id}/`, "PATCH", {
+                    hideNumber: !item.hideNumber,
+                  }).then(() => {
+                    setBusy("");
+                    router.refresh();
+                  });
+                }}
+                disabled={busy === item.id}
+                title={item.hideNumber ? "แสดงเลขที่บนหน้าเว็บ" : "ซ่อนเลขที่บนหน้าเว็บ"}
+                className={`shrink-0 rounded-lg px-2 py-1 text-[11px] font-semibold transition ${
+                  item.hideNumber
+                    ? "bg-gray-100 text-gray-400 hover:text-gray-600"
+                    : "bg-brand-50 text-brand-600 hover:bg-brand-100"
+                }`}
+              >
+                เลขที่
               </button>
               <button
                 onClick={() => toggle(item)}
