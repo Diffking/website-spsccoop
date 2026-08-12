@@ -1,6 +1,6 @@
 import { MapPin, Phone, Mail, Clock, Users, ExternalLink } from "lucide-react";
-import { site } from "@/data/home";
 import { getItems } from "@/lib/homeItems";
+import { getBrand } from "@/lib/nav";
 import { getSiteInfo } from "@/lib/settings";
 
 function FacebookIcon({ className }: { className?: string }) {
@@ -13,7 +13,11 @@ function FacebookIcon({ className }: { className?: string }) {
 
 // ที่อยู่/เบอร์/เวลาทำการ มาจากตาราง Setting ที่แก้ได้ที่ /admin/home
 export default async function Footer() {
-  const [info, agencyLinks] = await Promise.all([getSiteInfo(), getItems("footerLinks")]);
+  const [info, agencyLinks, brand] = await Promise.all([
+    getSiteInfo(),
+    getItems("footerLinks"),
+    getBrand(),
+  ]);
   return (
     <footer className="mt-auto bg-brand-800 text-white">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-4">
@@ -88,7 +92,7 @@ export default async function Footer() {
       </div>
 
       <div className="border-t border-white/10 bg-brand-900 py-4 text-center text-xs text-white/60">
-        © {new Date().getFullYear()} {site.name} · สงวนลิขสิทธิ์
+        © {new Date().getFullYear()} {brand.name} · สงวนลิขสิทธิ์
       </div>
     </footer>
   );

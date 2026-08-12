@@ -1,0 +1,24 @@
+import { redirect } from "next/navigation";
+import { currentUser } from "@/lib/auth";
+import { getBrand, getNav } from "@/lib/nav";
+import BrandForm from "@/components/admin/BrandForm";
+import NavMenuEditor from "@/components/admin/NavMenuEditor";
+
+export default async function AdminHeaderPage() {
+  const user = await currentUser();
+  if (!user) redirect("/admin/");
+
+  const [nav, brand] = await Promise.all([getNav(), getBrand()]);
+
+  return (
+    <main className="mx-auto max-w-4xl px-4 py-6">
+      <h1 className="mb-1 text-xl font-bold text-gray-800">ส่วนหัวเว็บ</h1>
+      <p className="mb-5 text-sm text-gray-500">ชื่อ โลโก้ และเมนูนำทางที่ขึ้นทุกหน้า</p>
+
+      <div className="space-y-5">
+        <BrandForm initial={brand} />
+        <NavMenuEditor initial={nav} />
+      </div>
+    </main>
+  );
+}

@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   LayoutDashboard,
   Megaphone,
+  PanelTop,
+  PanelBottom,
   Crown,
   CalendarOff,
   FileStack,
@@ -18,7 +20,16 @@ import {
 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
 
-export type MenuKey = "dashboard" | "home" | "splash" | "holidays" | "pages" | "seo" | "users";
+export type MenuKey =
+  | "dashboard"
+  | "home"
+  | "header"
+  | "footer"
+  | "splash"
+  | "holidays"
+  | "pages"
+  | "seo"
+  | "users";
 
 const ITEMS: {
   key: MenuKey;
@@ -54,6 +65,20 @@ const ITEMS: {
       { href: "/admin/home/calendar", label: "ปฏิทินสหกรณ์" },
       { href: "/admin/home/officers", label: "สำนักงานบริการสมาชิก" },
     ],
+  },
+  {
+    key: "header",
+    href: "/admin/header",
+    icon: PanelTop,
+    label: "ส่วนหัวเว็บ",
+    desc: "ชื่อ โลโก้ และเมนูนำทางที่ขึ้นทุกหน้า",
+  },
+  {
+    key: "footer",
+    href: "/admin/footer",
+    icon: PanelBottom,
+    label: "ส่วนท้ายเว็บ",
+    desc: "ข้อมูลติดต่อและลิงก์หน่วยงาน",
   },
   {
     key: "splash",
