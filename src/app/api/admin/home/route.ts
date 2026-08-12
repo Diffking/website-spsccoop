@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { COMMITTEE_PHOTO_SCALES } from "@/lib/committee";
+import { DEFAULT_HOME_SECTIONS, isHomeSectionKey } from "@/lib/homeSections";
 import {
   saveSetting,
   DEFAULT_TICKER,
@@ -20,6 +21,7 @@ export async function PUT(request: Request) {
     ticker?: Partial<TickerSettings>;
     committeeSet?: number;
     committeePhotoScale?: number;
+    homeSections?: Record<string, unknown>;
   };
 
   if (body.siteInfo) {
@@ -84,6 +86,15 @@ export async function PUT(request: Request) {
       );
     }
     await saveSetting("committeePhotoScale", scale);
+  }
+
+  if (body.homeSections) {
+    // รับเฉพาะคีย์ที่รู้จัก และบังคับเป็น boolean — กันค่าแปลกปลอมเข้าฐาน
+    const next = { ...DEFAULT_HOME_SECTIONS };
+    for (const [key, value] of Object.entries(body.homeSections)) {
+      if (isHomeSectionKey(key)) next[key] = value === true;
+    }
+    await saveSetting("homeSections", next);
   }
 
   return NextResponse.json({ ok: true });

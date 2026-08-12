@@ -13,6 +13,7 @@ import ScrollProgress from "@/components/ui/ScrollProgress";
 import PageTracker from "@/components/site/PageTracker";
 import BackToTop from "@/components/ui/BackToTop";
 import { site } from "@/data/home";
+import { getHomeSections } from "@/lib/settings";
 import {
   getCommitteePhotoScale,
   getCommitteeSet,
@@ -48,6 +49,7 @@ export default async function Home() {
     events,
     committeeSet,
     committeePhotoScale,
+    show,
   ] = await Promise.all([
     getSiteInfo(),
     getRates(),
@@ -65,6 +67,7 @@ export default async function Home() {
     getCalendarEvents(),
     getCommitteeSet(),
     getCommitteePhotoScale(),
+    getHomeSections(),
   ]);
 
   // ปฏิทินรับ place/time เป็น optional ส่วนฐานเก็บเป็น null — แปลงก่อนส่งเข้า
@@ -101,20 +104,23 @@ export default async function Home() {
       <ScrollProgress />
       <SplashGate content={splash} />
       <Header />
+      {/* เปิด/ปิดแต่ละส่วนได้ที่ /admin/home — ปิดแล้วข้อมูลยังอยู่ครบ แค่ไม่ขึ้นบนหน้าเว็บ */}
       <main>
-        <Hero rates={rates} slides={slides} />
-        <NewsTicker />
-        <NewsSection
-          announcements={announcements}
-          committees={committees}
-          committeeSet={committeeSet}
-          committeePhotoScale={committeePhotoScale}
-        />
-        <Services items={services} />
-        <Recommend cards={recommends} features={memberFeatures} />
-        <MemberCorner links={memberLinks} />
-        <CoopCalendar holidays={holidays} events={calendar} />
-        <OfficerService items={officers} />
+        {show.hero && <Hero rates={rates} slides={slides} />}
+        {show.ticker && <NewsTicker />}
+        {show.news && (
+          <NewsSection
+            announcements={announcements}
+            committees={committees}
+            committeeSet={committeeSet}
+            committeePhotoScale={committeePhotoScale}
+          />
+        )}
+        {show.services && <Services items={services} />}
+        {show.recommend && <Recommend cards={recommends} features={memberFeatures} />}
+        {show.memberCorner && <MemberCorner links={memberLinks} />}
+        {show.calendar && <CoopCalendar holidays={holidays} events={calendar} />}
+        {show.officers && <OfficerService items={officers} />}
       </main>
       <BackToTop />
       <Footer />

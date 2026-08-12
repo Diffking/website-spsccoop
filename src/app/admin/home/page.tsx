@@ -1,10 +1,14 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import HomePreview from "@/components/admin/HomePreview";
+import HomeSectionsForm from "@/components/admin/HomeSectionsForm";
+import { getHomeSections } from "@/lib/settings";
 
 export default async function AdminHomePage() {
   const user = await currentUser();
   if (!user) redirect("/admin/");
+
+  const sections = await getHomeSections();
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6">
@@ -13,7 +17,10 @@ export default async function AdminHomePage() {
         เลือกส่วนที่จะแก้จากแถบด้านบน หรือกดดูพรีวิวหน้าแรกของจริง
       </p>
 
-      <HomePreview />
+      <div className="space-y-5">
+        <HomeSectionsForm initial={sections} />
+        <HomePreview />
+      </div>
     </main>
   );
 }

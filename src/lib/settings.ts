@@ -1,5 +1,10 @@
 import { db } from "@/lib/db";
 import { DEFAULT_COMMITTEE_PHOTO_SCALE } from "@/lib/committee";
+import {
+  fillHomeSections,
+  DEFAULT_HOME_SECTIONS,
+  type HomeSections,
+} from "@/lib/homeSections";
 import { splashContent as DEFAULT_SPLASH, type SplashContent } from "@/content/splash";
 
 /**
@@ -104,6 +109,12 @@ export const DEFAULT_TICKER: TickerSettings = {
 /** ชุดคณะกรรมการดำเนินการที่กำลังทำหน้าที่อยู่ — ใช้ทั้งหัวการ์ดหน้าแรกและชื่อโฟลเดอร์รูป */
 export const DEFAULT_COMMITTEE_SET = 45;
 export const getCommitteeSet = () => getSetting<number>("committeeSet", DEFAULT_COMMITTEE_SET);
+
+/** ส่วนไหนของหน้าแรกเปิดอยู่บ้าง — เติมคีย์ที่ขาดจากค่าตั้งต้นเสมอ */
+export async function getHomeSections(): Promise<HomeSections> {
+  const saved = await getSetting<Partial<HomeSections>>("homeSections", DEFAULT_HOME_SECTIONS);
+  return fillHomeSections(saved);
+}
 
 /** ขนาดรูปกรรมการบนการ์ดหน้าแรก (%) — ค่าคงที่อยู่ที่ src/lib/committee.ts เพราะฝั่ง client ก็ใช้ */
 export const getCommitteePhotoScale = () =>
