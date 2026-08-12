@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
   if (!AI_READY) {
     return NextResponse.json(
-      { error: "ยังไม่ได้ตั้งค่าคีย์ AI — ใส่ ANTHROPIC_API_KEY ใน .env แล้วรีสตาร์ตระบบ" },
+      { error: "ยังไม่ได้ตั้งค่าคีย์ AI — ใส่ OPENROUTER_API_KEY ใน .env แล้วรีสตาร์ตระบบ" },
       { status: 503 },
     );
   }

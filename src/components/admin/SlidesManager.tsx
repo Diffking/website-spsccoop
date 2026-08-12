@@ -220,7 +220,7 @@ export default function SlidesManager({
           <span className="text-xs text-gray-500">
             {aiReady
               ? "อัปแล้ว AI จะอ่านภาพและเติมหัวข้อ คำอธิบาย และช่วงวันที่ให้ — ตรวจก่อนกดเพิ่มเสมอ"
-              : "ยังไม่ได้ตั้งค่าคีย์ AI จึงต้องพิมพ์เอง (ใส่ ANTHROPIC_API_KEY ใน .env แล้วรีสตาร์ต)"}
+              : "ยังไม่ได้ตั้งค่าคีย์ AI จึงต้องพิมพ์เอง (ใส่ OPENROUTER_API_KEY ใน .env แล้วรีสตาร์ต)"}
           </span>
         </div>
 
