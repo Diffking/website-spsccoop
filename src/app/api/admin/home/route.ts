@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { KINDS } from "@/lib/announcementKinds";
+import { TICKER_MAX_PER_KIND } from "@/lib/content";
 import { COMMITTEE_PHOTO_SCALES } from "@/lib/committee";
 import {
   DEFAULT_HOME_SECTIONS,
@@ -76,7 +77,7 @@ export async function PUT(request: Request) {
 
     await saveSetting("ticker", {
       auto: t.auto ?? DEFAULT_TICKER.auto,
-      limit: clamp(t.limit, 1, 30, DEFAULT_TICKER.limit),
+      perKind: clamp(t.perKind, 1, TICKER_MAX_PER_KIND, DEFAULT_TICKER.perKind),
       badgeText: (t.badgeText ?? DEFAULT_TICKER.badgeText).trim().slice(0, 12),
       badgeCounts: counts,
       badgeBlink: t.badgeBlink ?? DEFAULT_TICKER.badgeBlink,

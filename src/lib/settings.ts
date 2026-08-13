@@ -43,8 +43,11 @@ export type InterestRates = {
 export type TickerSettings = {
   /** ดึงประกาศ/จดหมายข่าว/รายงานผลดำเนินงาน ล่าสุดมาวิ่งอัตโนมัติ */
   auto: boolean;
-  /** ดึงมากี่รายการ */
-  limit: number;
+  /**
+   * ดึงมากี่เรื่อง "ต่อหมวด" — ประกาศ / จดหมายข่าว / รายงานกิจการ นับแยกกัน
+   * (เดิมดึงรวมกันทั้งหมด หมวดที่ออกไม่บ่อยจึงถูกประกาศเบียดตกจนไม่ได้วิ่งเลย)
+   */
+  perKind: number;
   /** คำบนป้าย เช่น New · ใหม่ · ด่วน — เว้นว่าง = ไม่ติดป้าย */
   badgeText: string;
   /**
@@ -110,7 +113,7 @@ export async function saveSetting(key: string, value: unknown): Promise<void> {
 
 export const DEFAULT_TICKER: TickerSettings = {
   auto: true,
-  limit: 10,
+  perKind: 5,
   badgeText: "New",
   badgeCounts: { ANNOUNCEMENT: 3, NEWSLETTER: 1, REPORT: 1 },
   badgeBlink: true,

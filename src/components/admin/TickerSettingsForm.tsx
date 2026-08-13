@@ -91,8 +91,9 @@ export default function TickerSettingsForm({
         <div>
           <h2 className="font-semibold text-gray-800">ดึงประกาศมาวิ่งอัตโนมัติ</h2>
           <p className="mt-0.5 text-xs text-gray-500">
-            ไม่ต้องมาพิมพ์ซ้ำ — ระบบหยิบประกาศล่าสุดจากเมนู “ประกาศ / จดหมายข่าว” มาวิ่งให้เอง
-            ออกประกาศใหม่เมื่อไหร่ข่าววิ่งเปลี่ยนตามทันที
+            ไม่ต้องมาพิมพ์ซ้ำ — ระบบหยิบเรื่องล่าสุดจากเมนู “ประกาศ / จดหมายข่าว” มาวิ่งให้เอง
+            หมวดละไม่เกินจำนวนที่ตั้งไว้ วิ่งเรียงทีละหมวด (ประกาศ → จดหมายข่าว → รายงานกิจการ)
+            ออกเรื่องใหม่เมื่อไหร่ข่าววิ่งเปลี่ยนตามทันที
           </p>
         </div>
       </div>
@@ -114,17 +115,19 @@ export default function TickerSettingsForm({
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <label className="block">
-          <span className="mb-1 block text-sm text-gray-600">ดึงประกาศมากี่รายการ</span>
+          <span className="mb-1 block text-sm text-gray-600">ดึงมากี่เรื่องต่อหมวด</span>
           <input
             type="number"
             min={1}
-            max={30}
-            value={form.limit}
-            onChange={(e) => set("limit", Number(e.target.value))}
+            max={20}
+            value={form.perKind}
+            onChange={(e) => set("perKind", Number(e.target.value))}
             disabled={!form.auto}
             className={`${field} disabled:bg-gray-50 disabled:text-gray-400`}
           />
-          <span className="mt-1 block text-xs text-gray-400">มากสุด 30 · ปกติใช้ 10</span>
+          <span className="mt-1 block text-xs text-gray-400">
+            นับแยกทั้งสามหมวด · ปกติใช้ 5 (รวมได้มากสุด {form.perKind * 3} เรื่อง)
+          </span>
         </label>
 
         <label className="block">
@@ -161,7 +164,8 @@ export default function TickerSettingsForm({
       <div className="mt-4 rounded-xl bg-gray-50 p-3">
         <p className="text-sm text-gray-700">ติดป้ายให้กี่รายการแรกของแต่ละหมวด</p>
         <p className="mt-0.5 text-xs text-gray-500">
-          สีป้ายบอกหมวดให้เอง เปลี่ยนสีไม่ได้ · 0 = หมวดนั้นไม่ติดป้าย
+          สีป้ายบอกหมวดให้เอง เปลี่ยนสีไม่ได้ · 0 = หมวดนั้นไม่ติดป้าย · ใส่มากกว่าจำนวนที่ดึงมา
+          ({form.perKind} เรื่องต่อหมวด) ส่วนที่เกินไม่มีผล
         </p>
 
         <div className="mt-3 grid gap-3 sm:grid-cols-3">

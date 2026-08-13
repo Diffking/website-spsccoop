@@ -54,54 +54,42 @@ export type TickerEntry = {
   kind: Kind | null;
 };
 
+/** ดึงกี่เรื่องต่อหมวดได้มากสุด — กันตั้งเลขเยอะจนข่าววิ่งครบรอบเป็นสิบนาที */
+export const TICKER_MAX_PER_KIND = 20;
+
 /**
  * ข้อความที่จะวิ่งจริง = ประกาศล่าสุดที่ดึงมาเอง + ข้อความที่พิมพ์เพิ่มไว้เอง (ถ้ามี)
  *
- * เอาประกาศขึ้นก่อน เพราะป้าย "New" ให้เฉพาะรายการต้น ๆ ของแต่ละหมวด
- * ซึ่งต้องหมายถึงประกาศที่ใหม่ที่สุด ไม่ใช่ข้อความประจำที่ปักไว้นาน ๆ
+ * ดึงแยกหมวด หมวดละไม่เกิน perKind เรื่อง แล้ววิ่งเรียงทีละหมวด
+ * (ประกาศ → จดหมายข่าว → รายงานกิจการ) เดิมดึงรวมกันเป็นชุดเดียว
+ * ประกาศซึ่งออกถี่กว่ามากจึงกินโควตาไปเกือบหมด อีกสองหมวดแทบไม่ได้ขึ้นเลย
  *
- * โควตาป้ายนับแยกหมวด (ตั้งได้ที่ /admin/home/ticker) — ประกาศออกถี่กว่าอีกสองหมวดมาก
- * ถ้านับรวมกันป้ายจะไปกองที่ประกาศจนจดหมายข่าว/รายงานกิจการไม่เคยได้ป้ายเลย
+ * ป้าย "New" ให้เฉพาะรายการต้น ๆ ของแต่ละหมวด (ตั้งจำนวนแยกหมวดได้ที่ /admin/home/ticker)
+ * เอาประกาศขึ้นก่อนข้อความที่พิมพ์เอง เพราะป้ายต้องหมายถึงเรื่องที่ใหม่จริง
+ * ไม่ใช่ข้อความประจำที่ปักไว้นาน ๆ
  */
 export async function getTickerEntries(): Promise<TickerEntry[]> {
   const settings = await getTickerSettings();
   const label = settings.badgeText.trim();
+  const perKind = Math.max(1, Math.min(TICKER_MAX_PER_KIND, settings.perKind));
 
-  /** ให้ป้ายไปแล้วกี่ตัวในหมวดนั้น — เดินไล่ตามลำดับที่จะวิ่งจริง */
-  const given: Record<Kind, number> = { ANNOUNCEMENT: 0, NEWSLETTER: 0, REPORT: 0 };
+  const auto: TickerEntry[] = [];
 
-  const rows = settings.auto
-    ? await getAnnouncements(Math.max(1, Math.min(30, settings.limit)))
-    : [];
-
-  /**
-   * เติมหมวดที่ไม่ติดมากับชุดล่าสุดรวม — รายงานกิจการออกปีละฉบับ
-   * ประกาศใหม่ ๆ ไม่กี่ใบก็เบียดตกจาก 10 อันดับแรกแล้ว ทั้งที่ตั้งใจให้มีป้ายส้มวิ่งอยู่
-   */
   if (settings.auto) {
     for (const kind of KINDS) {
+      const rows = await getAnnouncements(perKind, kind);
       const quota = settings.badgeCounts[kind] ?? 0;
-      const have = rows.filter((r) => r.kind === kind).length;
-      if (quota <= 0 || have >= quota) continue;
 
-      const extra = await getAnnouncements(quota, kind);
-      const ids = new Set(rows.map((r) => r.id));
-      rows.push(...extra.filter((r) => !ids.has(r.id)).slice(0, quota - have));
+      rows.forEach((a, i) => {
+        auto.push({
+          text: announcementLine(a.kind, a.number, a.title, a.hideNumber),
+          href: a.href && a.href !== "#" ? a.href : null,
+          badge: label && i < quota ? label : null,
+          kind: a.kind,
+        });
+      });
     }
   }
-
-  const auto: TickerEntry[] = rows.map((a) => {
-    const quota = settings.badgeCounts[a.kind] ?? 0;
-    const badge = label && given[a.kind] < quota ? label : null;
-    if (badge) given[a.kind] += 1;
-
-    return {
-      text: announcementLine(a.kind, a.number, a.title, a.hideNumber),
-      href: a.href && a.href !== "#" ? a.href : null,
-      badge,
-      kind: a.kind,
-    };
-  });
 
   const manual: TickerEntry[] = (await getTickerItems()).map((text) => ({
     text,
