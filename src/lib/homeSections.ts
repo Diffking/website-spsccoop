@@ -4,7 +4,7 @@
  * แยกไว้ไฟล์นี้ (ไม่รวมใน settings.ts) เพราะฟอร์มหลังบ้านเป็น client component
  * ถ้าไปวางรวมกับ settings.ts จะลาก prisma ติดเข้า bundle ฝั่งเบราว์เซอร์
  *
- * ลำดับในลิสต์ = ลำดับที่ปรากฏจริงบนหน้าแรก เลื่อนหน้าเว็บลงไปเจออะไรก่อน อยู่ก่อนในนี้
+ * ลำดับในลิสต์ = ลำดับตั้งต้น ถ้าไม่เคยจัดเองที่หลังบ้าน (ดู homeOrder ท้ายไฟล์)
  */
 
 export const HOME_SECTIONS = [
@@ -35,6 +35,53 @@ export const fillHomeSections = (saved: Partial<HomeSections> | null | undefined
 
 export const isHomeSectionKey = (value: unknown): value is HomeSectionKey =>
   typeof value === "string" && HOME_SECTIONS.some((s) => s.key === value);
+
+/* ---------------------------------- ลำดับ ---------------------------------- */
+
+/**
+ * ส่วนที่รวมของหลายอย่างไว้ในก้อนเดียว — บอกไว้ในหลังบ้านว่าอะไรย้ายตามกันบ้าง
+ * (สไลด์กับอัตราดอกเบี้ยวางอยู่แถวเดียวกันจริง ๆ แยกคนละที่ไม่ได้)
+ */
+export const SECTION_NOTE: Partial<Record<HomeSectionKey, string>> = {
+  hero: "สไลด์กับอัตราดอกเบี้ยวางคู่กันในแถวเดียว ย้ายไปไหนก็ไปด้วยกัน",
+  news: "ประกาศกับคณะกรรมการวางคู่กันในแถวเดียว ย้ายไปไหนก็ไปด้วยกัน",
+  member: "การ์ดใหญ่ การ์ดย่อย และแนะนำสมาชิก นับเป็นก้อนเดียวกัน",
+};
+
+export type HomeSection = (typeof HOME_SECTIONS)[number];
+export type HomeOrder = HomeSectionKey[];
+
+/** ลำดับตั้งต้น = ตามลิสต์ HOME_SECTIONS ด้านบน */
+export const DEFAULT_HOME_ORDER: HomeOrder = HOME_SECTIONS.map((s) => s.key);
+
+/**
+ * ทำให้ลำดับที่บันทึกไว้ใช้ได้เสมอ — ตัดคีย์แปลกปลอมและตัวซ้ำทิ้ง
+ * ส่วนที่เพิ่มเข้ามาใหม่ทีหลัง (ยังไม่มีในค่าที่บันทึก) ต่อท้ายให้ ไม่หายไปเฉย ๆ
+ */
+export function fillHomeOrder(saved: unknown): HomeOrder {
+  const seen = new Set<HomeSectionKey>();
+  const out: HomeOrder = [];
+
+  for (const key of Array.isArray(saved) ? saved : []) {
+    if (isHomeSectionKey(key) && !seen.has(key)) {
+      seen.add(key);
+      out.push(key);
+    }
+  }
+  for (const section of HOME_SECTIONS) {
+    if (!seen.has(section.key)) out.push(section.key);
+  }
+  return out;
+}
+
+const SECTION_OF = Object.fromEntries(HOME_SECTIONS.map((s) => [s.key, s])) as Record<
+  HomeSectionKey,
+  HomeSection
+>;
+
+/** รายละเอียดของแต่ละส่วน เรียงตามลำดับที่จัดไว้ */
+export const orderedSections = (order: unknown): HomeSection[] =>
+  fillHomeOrder(order).map((key) => SECTION_OF[key]);
 
 /**
  * โทนพื้นหลังของแต่ละส่วน — ใช้สีชุดเดิมของเว็บ ไม่เพิ่มสีใหม่ให้ขัดกัน
@@ -78,11 +125,13 @@ const CLASS_OF = Object.fromEntries(HOME_TONES.map((t) => [t.key, t.className]))
 export function resolveTones(
   tones: HomeTones,
   visible: (key: HomeSectionKey) => boolean,
+  /** ลำดับที่จัดไว้ — ต้องคิดสีตามลำดับจริงบนหน้าเว็บ ไม่งั้นสลับผิดคู่ */
+  order: unknown = DEFAULT_HOME_ORDER,
 ): Record<HomeSectionKey, string> {
   const out = {} as Record<HomeSectionKey, string>;
   let previous = "";
 
-  for (const section of HOME_SECTIONS) {
+  for (const section of orderedSections(order)) {
     if (!visible(section.key)) {
       out[section.key] = "";
       continue;

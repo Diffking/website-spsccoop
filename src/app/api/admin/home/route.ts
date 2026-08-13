@@ -4,6 +4,7 @@ import { COMMITTEE_PHOTO_SCALES } from "@/lib/committee";
 import {
   DEFAULT_HOME_SECTIONS,
   DEFAULT_HOME_TONES,
+  fillHomeOrder,
   isHomeSectionKey,
   isToneKey,
 } from "@/lib/homeSections";
@@ -28,6 +29,7 @@ export async function PUT(request: Request) {
     committeePhotoScale?: number;
     homeSections?: Record<string, unknown>;
     homeTones?: Record<string, unknown>;
+    homeOrder?: unknown;
   };
 
   if (body.siteInfo) {
@@ -101,6 +103,11 @@ export async function PUT(request: Request) {
       if (isHomeSectionKey(key)) next[key] = value === true;
     }
     await saveSetting("homeSections", next);
+  }
+
+  if (body.homeOrder !== undefined) {
+    // fill ตัดคีย์แปลกปลอม/ตัวซ้ำ และเติมส่วนที่ขาดให้ครบ — ลำดับที่เก็บจึงใช้ได้เสมอ
+    await saveSetting("homeOrder", fillHomeOrder(body.homeOrder));
   }
 
   if (body.homeTones) {

@@ -3,10 +3,13 @@ import { DEFAULT_COMMITTEE_PHOTO_SCALE } from "@/lib/committee";
 import {
   fillHomeSections,
   fillHomeTones,
+  fillHomeOrder,
   DEFAULT_HOME_SECTIONS,
   DEFAULT_HOME_TONES,
+  DEFAULT_HOME_ORDER,
   type HomeSections,
   type HomeTones,
+  type HomeOrder,
 } from "@/lib/homeSections";
 import { splashContent as DEFAULT_SPLASH, type SplashContent } from "@/content/splash";
 
@@ -117,6 +120,12 @@ export const getCommitteeSet = () => getSetting<number>("committeeSet", DEFAULT_
 export async function getHomeSections(): Promise<HomeSections> {
   const saved = await getSetting<Partial<HomeSections>>("homeSections", DEFAULT_HOME_SECTIONS);
   return fillHomeSections(saved);
+}
+
+/** ลำดับส่วนต่าง ๆ บนหน้าแรก — ค่าที่บันทึกอาจเก่ากว่าลิสต์ปัจจุบัน fill ให้ครบเสมอ */
+export async function getHomeOrder(): Promise<HomeOrder> {
+  const saved = await getSetting<unknown>("homeOrder", DEFAULT_HOME_ORDER);
+  return fillHomeOrder(saved);
 }
 
 /** สีพื้นหลังของแต่ละส่วนบนหน้าแรก */

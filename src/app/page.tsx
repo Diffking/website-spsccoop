@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Header from "@/components/site/Header";
 import Footer from "@/components/site/Footer";
 import SplashGate from "@/components/site/SplashGate";
@@ -13,10 +14,11 @@ import ScrollProgress from "@/components/ui/ScrollProgress";
 import PageTracker from "@/components/site/PageTracker";
 import BackToTop from "@/components/ui/BackToTop";
 import { site } from "@/data/home";
-import { resolveTones } from "@/lib/homeSections";
+import { orderedSections, resolveTones, type HomeSectionKey } from "@/lib/homeSections";
 import {
   getCommitteePhotoScale,
   getCommitteeSet,
+  getHomeOrder,
   getHomeSections,
   getHomeTones,
   getRates,
@@ -53,6 +55,7 @@ export default async function Home() {
     committeePhotoScale,
     show,
     tones,
+    order,
   ] = await Promise.all([
     getSiteInfo(),
     getRates(),
@@ -72,10 +75,11 @@ export default async function Home() {
     getCommitteePhotoScale(),
     getHomeSections(),
     getHomeTones(),
+    getHomeOrder(),
   ]);
 
-  // สีพื้นหลังของแต่ละส่วน — "สลับให้เอง" คิดจากส่วนที่แสดงอยู่จริงเท่านั้น
-  const bg = resolveTones(tones, (key) => show[key]);
+  // สีพื้นหลังของแต่ละส่วน — "สลับให้เอง" คิดจากส่วนที่แสดงอยู่จริง ตามลำดับที่จัดไว้
+  const bg = resolveTones(tones, (key) => show[key], order);
 
   // ปฏิทินรับ place/time เป็น optional ส่วนฐานเก็บเป็น null — แปลงก่อนส่งเข้า
   const calendar = events.map((e) => ({
@@ -85,6 +89,31 @@ export default async function Home() {
     place: e.place ?? undefined,
     time: e.time ?? undefined,
   }));
+
+  // เนื้อของแต่ละส่วน — ประกอบไว้ก่อน แล้วค่อยเรียงตามลำดับที่จัดไว้ตอน render
+  const blocks: Record<HomeSectionKey, React.ReactNode> = {
+    hero: <Hero rates={rates} slides={slides} />,
+    ticker: <NewsTicker bg={bg.ticker} />,
+    news: (
+      <NewsSection
+        announcements={announcements}
+        committees={committees}
+        committeeSet={committeeSet}
+        committeePhotoScale={committeePhotoScale}
+        bg={bg.news}
+      />
+    ),
+    services: <Services items={services} bg={bg.services} />,
+    // สองอันนี้เป็นเรื่องของสมาชิกชุดเดียวกัน ใช้พื้นหลังสีเดียวจะได้ดูเป็นก้อนเดียว
+    member: (
+      <>
+        <Recommend cards={recommends} features={memberFeatures} bg={bg.member} />
+        <MemberCorner links={memberLinks} bg={bg.member} />
+      </>
+    ),
+    calendar: <CoopCalendar holidays={holidays} events={calendar} bg={bg.calendar} />,
+    officers: <OfficerService items={officers} bg={bg.officers} />,
+  };
 
   // JSON-LD structured data สำหรับ SEO หน้า Home
   const jsonLd = {
@@ -111,29 +140,16 @@ export default async function Home() {
       <ScrollProgress />
       <SplashGate content={splash} />
       <Header />
-      {/* เปิด/ปิดแต่ละส่วนได้ที่ /admin/home — ปิดแล้วข้อมูลยังอยู่ครบ แค่ไม่ขึ้นบนหน้าเว็บ */}
+      {/*
+        เปิด/ปิดและจัดลำดับแต่ละส่วนได้ที่ /admin/home
+        ปิดแล้วข้อมูลยังอยู่ครบ แค่ไม่ขึ้นบนหน้าเว็บ · ลำดับด้านล่างมาจากที่จัดไว้ในหลังบ้าน
+      */}
       <main>
-        {show.hero && <Hero rates={rates} slides={slides} />}
-        {show.ticker && <NewsTicker bg={bg.ticker} />}
-        {show.news && (
-          <NewsSection
-            announcements={announcements}
-            committees={committees}
-            committeeSet={committeeSet}
-            committeePhotoScale={committeePhotoScale}
-            bg={bg.news}
-          />
-        )}
-        {show.services && <Services items={services} bg={bg.services} />}
-        {/* สองอันนี้เป็นเรื่องของสมาชิกชุดเดียวกัน ใช้พื้นหลังสีเดียวจะได้ดูเป็นก้อนเดียว */}
-        {show.member && (
-          <>
-            <Recommend cards={recommends} features={memberFeatures} bg={bg.member} />
-            <MemberCorner links={memberLinks} bg={bg.member} />
-          </>
-        )}
-        {show.calendar && <CoopCalendar holidays={holidays} events={calendar} bg={bg.calendar} />}
-        {show.officers && <OfficerService items={officers} bg={bg.officers} />}
+        {orderedSections(order).map((section) => {
+          if (!show[section.key]) return null;
+          const node = blocks[section.key];
+          return <Fragment key={section.key}>{node}</Fragment>;
+        })}
       </main>
       <BackToTop />
       <Footer />
