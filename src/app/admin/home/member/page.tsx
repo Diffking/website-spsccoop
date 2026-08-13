@@ -43,12 +43,18 @@ export default async function Page() {
         fieldLabels={{ imageUrl: "คิวอาร์โค้ด (ไม่ใส่ก็ได้)", theme: "สีการ์ด" }}
       />
 
-      <h2 className="mb-2 mt-8 text-sm font-semibold text-brand-700">ปุ่มลิงก์</h2>
+      <h2 className="mb-2 mt-8 text-sm font-semibold text-brand-700">แนะนำสมาชิก</h2>
+      <p className="mb-2 text-xs text-gray-500">
+        ปุ่มในแถบสีฟ้า-เขียวท้ายบล็อก — ใส่ลิงก์เองก็ได้ หรืออัปไฟล์ PDF (เช่น คู่มือสมาชิก)
+        แล้วระบบจะเอาที่อยู่ไฟล์ไปใส่ช่องลิงก์ให้เอง
+      </p>
       <HomeItemsManager
         section="memberLinks"
         items={links}
-        fields={["icon", "href"]}
+        folder="member_docs"
+        fields={["icon", "href", "hrefFile"]}
         titleLabel="ชื่อปุ่ม"
+        listLabel="แนะนำสมาชิก"
       />
     </main>
   );

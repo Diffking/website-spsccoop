@@ -20,6 +20,7 @@ export const FOLDERS = {
   Declar: "ประกาศ",
   newsletter: "จดหมายข่าว",
   resultreport: "รายงานกิจการ",
+  member_docs: "เอกสารแนะนำสมาชิก",
 } as const;
 
 /**

@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Loader2,
   ImagePlus,
+  FileUp,
   GripVertical,
 } from "lucide-react";
 import type { Item, Section } from "@/lib/homeItems";
@@ -31,7 +32,7 @@ import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
  * ผ่าน fields แล้วมันจะแสดงเฉพาะช่องนั้น (บางส่วนมีไอคอน บางส่วนมีรูป บางส่วนมีแค่ลิงก์)
  */
 
-export type Field = "subtitle" | "icon" | "href" | "imageUrl" | "theme";
+export type Field = "subtitle" | "icon" | "href" | "hrefFile" | "imageUrl" | "theme";
 
 /** สีการ์ด — ค่าเดียวกับที่ src/components/home/Recommend.tsx ใช้วาด */
 const CARD_THEMES = [
@@ -85,6 +86,7 @@ const FIELD_META: Record<Field, { label: string; hint?: string; placeholder?: st
     placeholder: "Users",
   },
   href: { label: "ลิงก์เมื่อคลิก", hint: "เว้นว่าง = ไม่ให้กดได้", placeholder: "/downloads" },
+  hrefFile: { label: "ไฟล์ PDF", hint: "อัปแล้วจะเอาที่อยู่ไฟล์ไปใส่ช่องลิงก์ให้เอง" },
   imageUrl: { label: "รูป", hint: "อัปโหลดหรือวางที่อยู่รูป" },
   theme: { label: "สีการ์ด", hint: "blue / green / orange", placeholder: "blue" },
 };
@@ -95,6 +97,7 @@ export default function HomeItemsManager({
   items,
   fields,
   titleLabel = "ชื่อรายการ",
+  listLabel = "รายการทั้งหมด",
   fieldLabels,
   grouped = false,
 }: {
@@ -104,6 +107,8 @@ export default function HomeItemsManager({
   items: Item[];
   fields: Field[];
   titleLabel?: string;
+  /** หัวข้อกล่องรายการด้านล่าง — ค่าเริ่มต้น "รายการทั้งหมด" */
+  listLabel?: string;
   /** เปลี่ยนชื่อช่องบางช่องเฉพาะส่วนนี้ เช่น "รูป" → "คิวอาร์โค้ด" */
   fieldLabels?: Partial<Record<Field, string>>;
   /** แบ่งกลุ่มตามประเภท (ใช้กับ "บริการของเรา") */
@@ -191,7 +196,7 @@ export default function HomeItemsManager({
       body: JSON.stringify(body),
     });
 
-  async function upload(file: File, forId: string | "new") {
+  async function upload(file: File, forId: string | "new", field: "imageUrl" | "href" = "imageUrl") {
     setUploadingFor(forId);
     setProgress({ phase: "upload", percent: 0, name: file.name });
 
@@ -209,8 +214,22 @@ export default function HomeItemsManager({
       setError(result.error);
       return;
     }
-    if (forId === "new") set("imageUrl", result.data.url);
-    else await patch(forId, { imageUrl: result.data.url });
+    if (forId === "new") set(field, result.data.url);
+    else await patch(forId, { [field]: result.data.url });
+  }
+
+  /**
+   * เปิดกล่องเลือกไฟล์ — บอกไว้ว่าเลือกให้แถวไหน และเอาที่อยู่ไฟล์ไปลงช่องอะไร
+   * ตั้ง accept ตรงนี้เลย จะได้ใช้ input ตัวเดียวทั้งรูปและ PDF
+   */
+  function openPicker(target: string | "new", field: "imageUrl" | "href") {
+    const input = fileInput.current;
+    if (!input) return;
+    input.dataset.target = target;
+    input.dataset.field = field;
+    input.accept =
+      field === "href" ? "application/pdf" : "image/jpeg,image/png,image/webp,image/gif";
+    input.click();
   }
 
   async function add() {
@@ -238,7 +257,8 @@ export default function HomeItemsManager({
         onChange={(e) => {
           const file = e.target.files?.[0];
           const target = fileInput.current?.dataset.target;
-          if (file && target) upload(file, target as string | "new");
+          const field = fileInput.current?.dataset.field === "href" ? "href" : "imageUrl";
+          if (file && target) upload(file, target as string | "new", field);
           e.target.value = "";
         }}
       />
@@ -289,10 +309,7 @@ export default function HomeItemsManager({
               <span className="text-xs text-gray-500">{labelOf(field)}</span>
               <div className="mt-1 flex items-center gap-2">
                 <button
-                  onClick={() => {
-                    if (fileInput.current) fileInput.current.dataset.target = "new";
-                    fileInput.current?.click();
-                  }}
+                  onClick={() => openPicker("new", "imageUrl")}
                   disabled={uploadingFor !== null}
                   className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-700 transition hover:bg-brand-100 disabled:opacity-60"
                 >
@@ -324,6 +341,27 @@ export default function HomeItemsManager({
                 onChange={(next) => set("theme", next)}
                 label={labelOf(field)}
               />
+            </div>
+          ) : field === "hrefFile" ? (
+            <div key={field} className="mt-2.5">
+              <span className="text-xs text-gray-500">
+                {labelOf(field)}
+                <span className="ml-1 text-gray-400">({FIELD_META[field].hint})</span>
+              </span>
+              <div className="mt-1">
+                <button
+                  onClick={() => openPicker("new", "href")}
+                  disabled={uploadingFor !== null}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-700 transition hover:bg-brand-100 disabled:opacity-60"
+                >
+                  {uploadingFor === "new" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileUp className="h-4 w-4" />
+                  )}
+                  เลือกไฟล์ PDF
+                </button>
+              </div>
             </div>
           ) : (
             <label key={field} className="mt-2.5 block">
@@ -362,7 +400,7 @@ export default function HomeItemsManager({
       {/* รายการที่มี */}
       <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
         <h2 className="font-semibold text-gray-800">
-          รายการทั้งหมด <span className="text-sm font-normal text-gray-400">({items.length})</span>
+          {listLabel} <span className="text-sm font-normal text-gray-400">({items.length})</span>
         </h2>
 
         {visible.length === 0 ? (
@@ -481,10 +519,7 @@ export default function HomeItemsManager({
                       field === "imageUrl" ? (
                         <button
                           key={field}
-                          onClick={() => {
-                            if (fileInput.current) fileInput.current.dataset.target = item.id;
-                            fileInput.current?.click();
-                          }}
+                          onClick={() => openPicker(item.id, "imageUrl")}
                           disabled={uploadingFor !== null}
                           className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-200 disabled:opacity-60"
                         >
@@ -510,6 +545,20 @@ export default function HomeItemsManager({
                             label={labelOf(field)}
                           />
                         </div>
+                      ) : field === "hrefFile" ? (
+                        <button
+                          key={field}
+                          onClick={() => openPicker(item.id, "href")}
+                          disabled={uploadingFor !== null}
+                          className="inline-flex items-center justify-center gap-1.5 self-end rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-200 disabled:opacity-60"
+                        >
+                          {uploadingFor === item.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <FileUp className="h-3.5 w-3.5" />
+                          )}
+                          {item.href?.toLowerCase().endsWith(".pdf") ? "เปลี่ยนไฟล์ PDF" : "อัปโหลด PDF"}
+                        </button>
                       ) : (
                         <label key={field} className="block">
                           <span className="text-[11px] text-gray-400">
