@@ -75,7 +75,10 @@ export const DEFAULTS: Record<Section, Seed[]> = {
 export const SECTION_LABELS: Record<Section, { label: string; hint: string }> = {
   services: { label: "บริการของเรา", hint: "แถวไอคอนบริการกลางหน้าแรก" },
   recommends: { label: "แนะนำสมาชิก", hint: "การ์ดใหญ่ 3 ใบ เงินฝาก/เงินกู้/สวัสดิการ" },
-  memberFeatures: { label: "การ์ดสำหรับสมาชิก", hint: "การ์ดบริการย่อยในส่วนสำหรับสมาชิก" },
+  memberFeatures: {
+    label: "การ์ดคิวอาร์โค้ด/โซเชียล",
+    hint: "การ์ดคิวอาร์โค้ดและลิงก์โซเชียลมีเดีย ในส่วนสำหรับสมาชิก",
+  },
   memberLinks: { label: "ลิงก์สำหรับสมาชิก", hint: "ปุ่มคู่มือและไลน์สหกรณ์" },
   committees: { label: "คณะกรรมการ (สไลด์หน้าแรก)", hint: "สไลด์เล็กข้างการ์ดประกาศ" },
   officers: { label: "สำนักงานบริการสมาชิก", hint: "การ์ดสำนักงานท้ายหน้าแรก" },

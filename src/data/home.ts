@@ -144,7 +144,7 @@ export const recommends = [
   },
 ] as const;
 
-// แถวที่ 2 ของส่วน "สำหรับสมาชิก" (การ์ดบริการย่อย)
+// แถวที่ 2 ของส่วน "สำหรับสมาชิก" (การ์ดคิวอาร์โค้ดและลิงก์โซเชียล)
 export const memberFeatures = [
   { title: "สหกรณ์เพื่อนคิด", subtitle: "ปรึกษา / ข้อเสนอแนะ", icon: "Users", href: "#" },
   { title: "ตรวจสุขภาพการเงิน", subtitle: "ประเมินสถานะการเงินของคุณ", icon: "HeartPulse", href: "#" },

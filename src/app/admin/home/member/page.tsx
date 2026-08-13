@@ -17,7 +17,7 @@ export default async function Page() {
     <main className="mx-auto max-w-3xl px-4 py-6">
       <h1 className="mb-1 text-xl font-bold text-gray-800">สำหรับสมาชิก</h1>
       <p className="mb-5 text-sm text-gray-500">
-        ทั้งบล็อกนี้บนหน้าแรก — การ์ดใหญ่ การ์ดบริการย่อย และปุ่มลิงก์
+        ทั้งบล็อกนี้บนหน้าแรก — การ์ดใหญ่ การ์ดคิวอาร์โค้ด/โซเชียล และปุ่มลิงก์
       </p>
 
       <h2 className="mb-2 text-sm font-semibold text-brand-700">การ์ดใหญ่ 3 ใบ</h2>
@@ -28,7 +28,9 @@ export default async function Page() {
         titleLabel="หัวข้อการ์ด"
       />
 
-      <h2 className="mb-2 mt-8 text-sm font-semibold text-brand-700">การ์ดบริการย่อย</h2>
+      <h2 className="mb-2 mt-8 text-sm font-semibold text-brand-700">
+        การ์ดบริการคิวอาร์โค้ดและลิงก์โซเชียลมีเดีย
+      </h2>
       <p className="mb-2 text-xs text-gray-500">
         ใช้ทำปุ่มเพิ่มเพื่อนไลน์ หรือลิงก์แฟนเพจก็ได้ — แนบรูปคิวอาร์โค้ดไว้
         การ์ดใบนั้นจะโชว์คิวอาร์ขนาด 200×200 บนหน้าแรกให้สแกนจากจอได้เลย
