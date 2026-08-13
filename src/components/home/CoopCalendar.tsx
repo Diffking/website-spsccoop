@@ -29,7 +29,7 @@ function EventItem({ ev }: { ev: CalendarEvent }) {
       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-white ${t.color}`}>
         <t.Icon className="h-3 w-3" /> {t.label}
       </span>
-      <p className="mt-1.5 text-sm font-semibold leading-snug text-gray-800">{ev.title}</p>
+      <p className="mt-1.5 break-words text-sm font-semibold leading-snug text-gray-800">{ev.title}</p>
       {ev.place && (
         // กิจกรรมที่ดึงมาจากสไลด์ใช้คำโปรยของสไลด์ ซึ่งบางใบยาวเป็นย่อหน้า — ตัดไว้ 3 บรรทัด
         // ไม่งั้นการ์ดวันนั้นยืดยาวจนดันการ์ดข้าง ๆ เสียรูป
@@ -47,6 +47,12 @@ function EventItem({ ev }: { ev: CalendarEvent }) {
   );
 }
 
+/**
+ * ความสูงตายตัวของการ์ดวัน — วันที่มีกิจกรรม 1 กับ 5 รายการต้องสูงเท่ากัน
+ * ไม่งั้นเลื่อนไปมาแล้วทั้งแถวกระตุกขึ้นลงตามจำนวนกิจกรรมของแต่ละวัน
+ */
+const CARD_HEIGHT = "h-[19rem] md:h-[23rem]";
+
 function DayCard({
   day, year, month, today, focus, events,
 }: {
@@ -54,7 +60,7 @@ function DayCard({
 }) {
   // ช่องว่างเมื่อเลยขอบเดือน (คงรูปแบบ 3 คอลัมน์)
   if (day === null) {
-    return <div className="rounded-2xl border-2 border-dashed border-brand-100/70" />;
+    return <div className={`rounded-2xl border-2 border-dashed border-brand-100/70 ${CARD_HEIGHT}`} />;
   }
 
   const dow = new Date(year, month, day).getDay();
@@ -65,7 +71,7 @@ function DayCard({
 
   return (
     <div
-      className={`flex flex-col rounded-2xl bg-white p-3 transition md:p-4 ${
+      className={`flex min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-3 transition md:p-4 ${CARD_HEIGHT} ${
         focus
           ? "shadow-xl ring-2 ring-brand-400"
           : "opacity-90 shadow-sm ring-1 ring-brand-100"
@@ -86,8 +92,11 @@ function DayCard({
         </span>
       </div>
 
-      {/* กิจกรรม */}
-      <div className="mt-3 flex-1 space-y-2">
+      {/*
+        กิจกรรม — วันไหนมีหลายรายการให้เลื่อนดูในกรอบ ไม่ยืดการ์ดให้สูงขึ้น
+        (ก่อนหน้านี้วันที่มี 3 กิจกรรมจะดันการ์ดข้าง ๆ สูงตามไปด้วยทั้งแถว)
+      */}
+      <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-0.5">
         {evs.length > 0 ? (
           evs.map((ev, i) => <EventItem key={i} ev={ev} />)
         ) : (
@@ -96,6 +105,13 @@ function DayCard({
           </p>
         )}
       </div>
+
+      {/* บอกจำนวนไว้ เพราะกิจกรรมที่เกินกรอบต้องเลื่อนถึงจะเห็น */}
+      {evs.length > 1 && (
+        <p className="mt-1.5 shrink-0 text-center text-[11px] text-gray-400">
+          {evs.length} กิจกรรม · เลื่อนดูในกรอบ
+        </p>
+      )}
     </div>
   );
 }
@@ -185,13 +201,17 @@ export default function CoopCalendar({
             <ChevronRight className="h-5 w-5" />
           </button>
 
-          {/* 3 คอลัมน์: อดีต | ปัจจุบัน | อนาคต (สไลด์เบาๆ ไม่ fade กันภาพกระพริบ) */}
+          {/*
+            3 คอลัมน์: อดีต | ปัจจุบัน | อนาคต
+            สไลด์เบา ๆ อย่างเดียว ไม่ fade — การ์ดสูงเท่ากันทุกใบอยู่แล้ว แถวจึงไม่ขยับตอนเปลี่ยนวัน
+            ระยะเลื่อนสั้นและใช้ spring หน่วง ๆ ให้ดูลื่นตา ไม่กระตุกเหมือนกระโดดทีเดียวจบ
+          */}
           <div className="overflow-hidden px-1">
             <motion.div
               key={active}
-              initial={{ x: dir * 28 }}
+              initial={{ x: dir * 18 }}
               animate={{ x: 0 }}
-              transition={{ duration: 0.22, ease: "easeOut" }}
+              transition={{ type: "spring", stiffness: 260, damping: 30, mass: 0.7 }}
               className="grid grid-cols-[1fr_1.2fr_1fr] items-stretch gap-2 md:gap-4"
             >
               {cols.map((d, i) => (
