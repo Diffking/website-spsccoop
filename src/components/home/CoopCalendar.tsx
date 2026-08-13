@@ -31,8 +31,11 @@ function EventItem({ ev }: { ev: CalendarEvent }) {
       </span>
       <p className="mt-1.5 text-sm font-semibold leading-snug text-gray-800">{ev.title}</p>
       {ev.place && (
-        <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
-          <MapPin className="h-3.5 w-3.5 shrink-0 text-brand-400" /> {ev.place}
+        // กิจกรรมที่ดึงมาจากสไลด์ใช้คำโปรยของสไลด์ ซึ่งบางใบยาวเป็นย่อหน้า — ตัดไว้ 3 บรรทัด
+        // ไม่งั้นการ์ดวันนั้นยืดยาวจนดันการ์ดข้าง ๆ เสียรูป
+        <p className="mt-1 flex items-start gap-1 text-xs text-gray-500" title={ev.place}>
+          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-400" />
+          <span className="line-clamp-3">{ev.place}</span>
         </p>
       )}
       {ev.time && (

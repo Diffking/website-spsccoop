@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
+import { isEventType } from "@/lib/homeItems";
 
 /** "YYYY-MM-DD" จากช่องเลือกวัน → เที่ยงคืนเวลาไทย · ว่าง = ไม่จำกัด */
 export function parseDay(value?: string): Date | null {
@@ -22,6 +23,8 @@ export async function POST(request: Request) {
     href?: string;
     startsAt?: string;
     endsAt?: string;
+    eventDate?: string;
+    eventType?: string;
   };
 
   const imageUrl = String(body.imageUrl ?? "").trim();
@@ -41,6 +44,9 @@ export async function POST(request: Request) {
       href: String(body.href ?? "").trim() || null,
       startsAt: parseDay(body.startsAt),
       endsAt: parseDay(body.endsAt),
+      // ใส่วันจัดกิจกรรมไว้ = สไลด์นี้ไปโผล่บนปฏิทินหน้าแรกด้วย
+      eventDate: parseDay(body.eventDate),
+      eventType: isEventType(body.eventType) ? body.eventType : null,
       sortOrder: (last?.sortOrder ?? 0) + 1,
     },
   });

@@ -35,6 +35,10 @@ export default async function AdminSlidesPage() {
           endsAt: s.endsAt
             ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(s.endsAt)
             : "",
+          eventDate: s.eventDate
+            ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(s.eventDate)
+            : "",
+          eventType: s.eventType ?? "",
         }))}
         aiReady={AI_READY}
       />

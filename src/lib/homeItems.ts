@@ -173,8 +173,42 @@ const thaiYmd = (d: Date) =>
  * รายการที่ระบุวันที่เต็มไว้ ขึ้นเฉพาะเดือน/ปีของมันจริง ๆ
  * ส่วนรายการเก่าที่มีแต่เลขวัน (ยังไม่เคยแก้ให้ระบุวันที่) ขึ้นทุกเดือนเหมือนเดิม
  */
+/**
+ * กิจกรรมที่มาจากแบนเนอร์สไลด์ — สไลด์ที่ใส่ "วันจัดกิจกรรม" ไว้จะไปปักบนปฏิทินให้เอง
+ * ไม่ต้องมาพิมพ์ซ้ำอีกรอบในเมนูปฏิทิน แก้ชื่อที่สไลด์ที่เดียวเปลี่ยนทั้งสองที่
+ */
+async function getSlideEvents(month: string): Promise<EventItem[]> {
+  try {
+    const rows = await db.slide.findMany({
+      where: { published: true, eventDate: { not: null } },
+      orderBy: { eventDate: "asc" },
+      select: { id: true, title: true, caption: true, eventDate: true, eventType: true },
+    });
+
+    return rows
+      .map((r) => {
+        const date = thaiYmd(r.eventDate as Date);
+        return {
+          id: `slide-${r.id}`,
+          day: Number(date.slice(8)),
+          date,
+          type: isEventType(r.eventType) ? r.eventType : ("project" as EventType),
+          title: r.title,
+          place: r.caption,
+          time: null,
+          published: true,
+        };
+      })
+      .filter((e) => e.date.startsWith(month));
+  } catch (error) {
+    console.error("อ่านกิจกรรมจากสไลด์ไม่ได้:", error);
+    return [];
+  }
+}
+
 export async function getCalendarEvents(): Promise<EventItem[]> {
   const month = thaiYmd(new Date()).slice(0, 7); // "2026-08"
+  const fromSlides = await getSlideEvents(month);
 
   try {
     const rows = await db.calendarEvent.findMany({
@@ -193,7 +227,8 @@ export async function getCalendarEvents(): Promise<EventItem[]> {
           time: r.time,
           published: r.published,
         }))
-        .filter((e) => !e.date || e.date.startsWith(month));
+        .filter((e) => !e.date || e.date.startsWith(month))
+        .concat(fromSlides);
     }
   } catch (error) {
     console.error("อ่านกิจกรรมปฏิทินไม่ได้:", error);
@@ -206,12 +241,13 @@ export async function getCalendarEvents(): Promise<EventItem[]> {
       id: `default-${i}`,
       day: e.day,
       date: "",
-      type: isEventType(e.type) ? e.type : "project",
+      type: isEventType(e.type) ? e.type : ("project" as EventType),
       title: e.title,
       place: e.place ?? null,
       time: e.time ?? null,
       published: true,
-    }));
+    }))
+    .concat(fromSlides);
 }
 
 export async function getCalendarEventsForAdmin(): Promise<EventItem[]> {

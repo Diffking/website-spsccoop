@@ -177,6 +177,11 @@ model Slide {
   /// มีไว้กันข่าวเก่าค้างหน้าแรก พอเลยวันสิ้นสุดจะหายไปเอง ไม่ต้องมาคอยลบ
   startsAt  DateTime?
   endsAt    DateTime?
+  /// วันจัดกิจกรรมของสไลด์นี้ (เที่ยงคืนเวลาไทย) — ใส่ไว้เพื่อให้ไปโผล่บนปฏิทินหน้าแรกด้วย
+  /// ว่าง = เป็นสไลด์ประชาสัมพันธ์เฉย ๆ ไม่ขึ้นปฏิทิน · คนละเรื่องกับ startsAt/endsAt ที่คุมว่าสไลด์โชว์ช่วงไหน
+  eventDate DateTime?
+  /// ประเภทบนปฏิทิน: mobile | project | seminar — ว่าง = project
+  eventType String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

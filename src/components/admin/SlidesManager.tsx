@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import UploadProgress from "@/components/admin/UploadProgress";
+import ThaiDatePicker from "@/components/admin/ThaiDatePicker";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -29,7 +30,18 @@ export type SlideRow = {
   /** "YYYY-MM-DD" หรือ "" = ไม่จำกัด */
   startsAt: string;
   endsAt: string;
+  /** วันจัดกิจกรรม — ใส่แล้วสไลด์นี้จะไปโผล่บนปฏิทินหน้าแรกด้วย */
+  eventDate: string;
+  /** ประเภทบนปฏิทิน mobile | project | seminar — "" = โครงการ */
+  eventType: string;
 };
+
+/** ประเภทกิจกรรมบนปฏิทิน — ชื่อ/สีเดียวกับที่เมนูปฏิทินสหกรณ์ใช้ */
+const EVENT_TYPES = [
+  { key: "project", label: "โครงการ" },
+  { key: "mobile", label: "รถโมบาย" },
+  { key: "seminar", label: "สัมมนา" },
+] as const;
 
 const thaiDate = new Intl.DateTimeFormat("th-TH", {
   day: "numeric",
@@ -88,6 +100,8 @@ export default function SlidesManager({
   const [href, setHref] = useState("");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [eventType, setEventType] = useState("project");
   const [busy, setBusy] = useState<null | "upload" | "ai" | "save" | "row">(null);
   const [progress, setProgress] = useState<{ phase: UploadPhase | null; percent: number; name: string }>(
     { phase: null, percent: 0, name: "" },
@@ -186,7 +200,7 @@ export default function SlidesManager({
     const response = await fetch("/api/admin/slides/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageUrl, title, caption, href, startsAt, endsAt }),
+      body: JSON.stringify({ imageUrl, title, caption, href, startsAt, endsAt, eventDate, eventType }),
     });
     const data = await response.json().catch(() => ({}));
     setBusy(null);
@@ -203,6 +217,8 @@ export default function SlidesManager({
     setHref("");
     setStartsAt("");
     setEndsAt("");
+    setEventDate("");
+    setEventType("project");
     setStatus({ kind: "ok", text: "เพิ่มสไลด์แล้ว" });
     router.refresh();
   }
@@ -383,6 +399,27 @@ export default function SlidesManager({
                 onChange={(e) => setEndsAt(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
               />
+            </label>
+
+            {/* ใส่วันจัดกิจกรรมไว้ = ไปปักบนปฏิทินหน้าแรกให้เอง ไม่ต้องพิมพ์ซ้ำในเมนูปฏิทิน */}
+            <div className="block">
+              <span className="text-xs text-gray-500">วันจัดกิจกรรม (เว้นว่าง = ไม่ขึ้นปฏิทิน)</span>
+              <ThaiDatePicker value={eventDate} onChange={setEventDate} className="mt-1" />
+            </div>
+            <label className="block">
+              <span className="text-xs text-gray-500">ประเภทบนปฏิทิน</span>
+              <select
+                value={eventType}
+                onChange={(e) => setEventType(e.target.value)}
+                disabled={!eventDate}
+                className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400 disabled:bg-gray-50 disabled:text-gray-400"
+              >
+                {EVENT_TYPES.map((t) => (
+                  <option key={t.key} value={t.key}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
           <p className="text-xs text-gray-400">
@@ -580,6 +617,30 @@ export default function SlidesManager({
                       onChange={(e) => patch(slide.id, { endsAt: e.target.value })}
                       className="mt-0.5 w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-brand-400"
                     />
+                  </label>
+                  <div className="block">
+                    <span className="text-[11px] text-gray-400">วันจัดกิจกรรม (ขึ้นปฏิทิน)</span>
+                    <ThaiDatePicker
+                      value={slide.eventDate}
+                      onChange={(next) => patch(slide.id, { eventDate: next })}
+                      placeholder="ไม่ขึ้นปฏิทิน"
+                      className="mt-0.5"
+                    />
+                  </div>
+                  <label className="block">
+                    <span className="text-[11px] text-gray-400">ประเภทบนปฏิทิน</span>
+                    <select
+                      defaultValue={slide.eventType || "project"}
+                      disabled={!slide.eventDate}
+                      onChange={(e) => patch(slide.id, { eventType: e.target.value })}
+                      className="mt-0.5 w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-brand-400 disabled:bg-gray-50 disabled:text-gray-400"
+                    >
+                      {EVENT_TYPES.map((t) => (
+                        <option key={t.key} value={t.key}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
                   </label>
                 </div>
                 </div>
