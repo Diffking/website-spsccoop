@@ -36,9 +36,9 @@ export default async function Page() {
       <HomeItemsManager
         section="memberFeatures"
         items={features}
-        fields={["subtitle", "icon", "href", "imageUrl"]}
+        fields={["subtitle", "icon", "href", "imageUrl", "theme"]}
         titleLabel="หัวข้อการ์ด"
-        fieldLabels={{ imageUrl: "คิวอาร์โค้ด (ไม่ใส่ก็ได้)" }}
+        fieldLabels={{ imageUrl: "คิวอาร์โค้ด (ไม่ใส่ก็ได้)", theme: "สีการ์ด" }}
       />
 
       <h2 className="mb-2 mt-8 text-sm font-semibold text-brand-700">ปุ่มลิงก์</h2>

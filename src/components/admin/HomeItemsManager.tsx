@@ -33,6 +33,50 @@ import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
 
 export type Field = "subtitle" | "icon" | "href" | "imageUrl" | "theme";
 
+/** สีการ์ด — ค่าเดียวกับที่ src/components/home/Recommend.tsx ใช้วาด */
+const CARD_THEMES = [
+  { key: "blue", label: "ฟ้า", swatch: "#1c7fca" },
+  { key: "green", label: "เขียว", swatch: "#17a589" },
+  { key: "orange", label: "ส้ม", swatch: "#ff7a00" },
+] as const;
+
+/** ปุ่มเลือกสีการ์ด — เดิมต้องพิมพ์ว่า blue/green/orange เองให้ถูก */
+function ThemePicker({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  label: string;
+}) {
+  return (
+    <div>
+      <span className="text-xs text-gray-500">{label}</span>
+      <div className="mt-1 flex flex-wrap gap-1.5">
+        {CARD_THEMES.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => onChange(t.key)}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+              (value || "blue") === t.key
+                ? "bg-gray-900 text-white"
+                : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50"
+            }`}
+          >
+            <span
+              style={{ background: t.swatch }}
+              className="h-3 w-3 rounded-full ring-1 ring-black/10"
+            />
+            {t.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const FIELD_META: Record<Field, { label: string; hint?: string; placeholder?: string }> = {
   subtitle: { label: "คำอธิบาย" },
   icon: {
@@ -273,6 +317,14 @@ export default function HomeItemsManager({
             <div key={field} className="mt-2.5">
               <IconPicker value={draft.icon ?? ""} onChange={(name) => set("icon", name)} />
             </div>
+          ) : field === "theme" ? (
+            <div key={field} className="mt-2.5">
+              <ThemePicker
+                value={draft.theme ?? ""}
+                onChange={(next) => set("theme", next)}
+                label={labelOf(field)}
+              />
+            </div>
           ) : (
             <label key={field} className="mt-2.5 block">
               <span className="text-xs text-gray-500">
@@ -448,6 +500,14 @@ export default function HomeItemsManager({
                           <IconPicker
                             value={item.icon ?? ""}
                             onChange={(name) => patch(item.id, { icon: name })}
+                          />
+                        </div>
+                      ) : field === "theme" ? (
+                        <div key={field}>
+                          <ThemePicker
+                            value={item.theme ?? ""}
+                            onChange={(next) => patch(item.id, { theme: next })}
+                            label={labelOf(field)}
                           />
                         </div>
                       ) : (
