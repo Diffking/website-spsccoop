@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { COMMITTEE_PHOTO_SCALES } from "@/lib/committee";
-import { DEFAULT_HOME_SECTIONS, isHomeSectionKey } from "@/lib/homeSections";
+import {
+  DEFAULT_HOME_SECTIONS,
+  DEFAULT_HOME_TONES,
+  isHomeSectionKey,
+  isToneKey,
+} from "@/lib/homeSections";
 import {
   saveSetting,
   DEFAULT_TICKER,
@@ -22,6 +27,7 @@ export async function PUT(request: Request) {
     committeeSet?: number;
     committeePhotoScale?: number;
     homeSections?: Record<string, unknown>;
+    homeTones?: Record<string, unknown>;
   };
 
   if (body.siteInfo) {
@@ -95,6 +101,15 @@ export async function PUT(request: Request) {
       if (isHomeSectionKey(key)) next[key] = value === true;
     }
     await saveSetting("homeSections", next);
+  }
+
+  if (body.homeTones) {
+    // รับเฉพาะคีย์และโทนที่รู้จัก ค่าที่เหลือใช้ค่าตั้งต้น
+    const next = { ...DEFAULT_HOME_TONES };
+    for (const [key, value] of Object.entries(body.homeTones)) {
+      if (isHomeSectionKey(key) && isToneKey(value)) next[key] = value;
+    }
+    await saveSetting("homeTones", next);
   }
 
   return NextResponse.json({ ok: true });

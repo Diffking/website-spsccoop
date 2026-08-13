@@ -28,9 +28,9 @@ const THEME: Record<string, { iconBg: string; link: string; bar: string }> = {
   van: { iconBg: "bg-orange-50 text-orange-600", link: "text-orange-600", bar: "bg-orange-500" },
 };
 
-export default function OfficerService({ items }: { items: Item[] }) {
+export default function OfficerService({ items, bg = "bg-sky-soft" }: { items: Item[]; bg?: string }) {
   return (
-    <section className="bg-sky-soft py-12">
+    <section className={`${bg} py-12`}>
       <div className="mx-auto max-w-6xl px-4">
         <SectionHeading
           title="สำนักงานบริการสมาชิก"

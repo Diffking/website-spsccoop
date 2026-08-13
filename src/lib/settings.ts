@@ -2,8 +2,11 @@ import { db } from "@/lib/db";
 import { DEFAULT_COMMITTEE_PHOTO_SCALE } from "@/lib/committee";
 import {
   fillHomeSections,
+  fillHomeTones,
   DEFAULT_HOME_SECTIONS,
+  DEFAULT_HOME_TONES,
   type HomeSections,
+  type HomeTones,
 } from "@/lib/homeSections";
 import { splashContent as DEFAULT_SPLASH, type SplashContent } from "@/content/splash";
 
@@ -114,6 +117,12 @@ export const getCommitteeSet = () => getSetting<number>("committeeSet", DEFAULT_
 export async function getHomeSections(): Promise<HomeSections> {
   const saved = await getSetting<Partial<HomeSections>>("homeSections", DEFAULT_HOME_SECTIONS);
   return fillHomeSections(saved);
+}
+
+/** สีพื้นหลังของแต่ละส่วนบนหน้าแรก */
+export async function getHomeTones(): Promise<HomeTones> {
+  const saved = await getSetting<Partial<HomeTones>>("homeTones", DEFAULT_HOME_TONES);
+  return fillHomeTones(saved);
 }
 
 /** ขนาดรูปกรรมการบนการ์ดหน้าแรก (%) — ค่าคงที่อยู่ที่ src/lib/committee.ts เพราะฝั่ง client ก็ใช้ */

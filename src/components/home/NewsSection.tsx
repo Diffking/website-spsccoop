@@ -190,18 +190,21 @@ export default function NewsSection({
   committees,
   committeeSet,
   committeePhotoScale,
+  bg = "bg-white",
 }: {
   announcements: AnnouncementItem[];
   committees: Item[];
   committeeSet: number;
   committeePhotoScale: number;
+  /** คลาสพื้นหลังของส่วนนี้ — กำหนดได้ที่ /admin/home */
+  bg?: string;
 }) {
   const [tab, setTab] = useState<Kind>(KINDS[0]);
   // แยกครั้งเดียวแล้วใช้ทุกแท็บ ไม่ต้องกรองใหม่ทุกครั้งที่กดสลับ
   const byKind = { ANNOUNCEMENT: [], NEWSLETTER: [], REPORT: [] } as Record<Kind, AnnouncementItem[]>;
   for (const a of announcements) byKind[a.kind]?.push(a);
   return (
-    <section className="bg-white py-12">
+    <section className={`${bg} py-12`}>
       <div className="mx-auto max-w-6xl px-4">
         <SectionHeading title="ประกาศ / จดหมายข่าว" subtitle="ประกาศและข่าวสารต่างๆ ของดูแลสมาชิกสหกรณ์ด้วยใจ" />
 

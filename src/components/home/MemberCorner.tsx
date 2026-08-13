@@ -3,9 +3,9 @@ import Icon from "@/components/ui/Icon";
 import MaybeLink from "@/components/ui/MaybeLink";
 import type { Item } from "@/lib/homeItems";
 
-export default function MemberCorner({ links }: { links: Item[] }) {
+export default function MemberCorner({ links, bg = "bg-white" }: { links: Item[]; bg?: string }) {
   return (
-    <section className="bg-white pb-12">
+    <section className={`${bg} pb-12`}>
       <div className="mx-auto max-w-6xl px-4">
         <Reveal>
           <div className="grid items-center gap-6 rounded-2xl bg-gradient-to-r from-brand-600 to-brand-400 p-7 text-white shadow-lg md:grid-cols-[1fr_auto]">

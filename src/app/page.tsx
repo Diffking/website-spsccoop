@@ -13,10 +13,12 @@ import ScrollProgress from "@/components/ui/ScrollProgress";
 import PageTracker from "@/components/site/PageTracker";
 import BackToTop from "@/components/ui/BackToTop";
 import { site } from "@/data/home";
-import { getHomeSections } from "@/lib/settings";
+import { resolveTones } from "@/lib/homeSections";
 import {
   getCommitteePhotoScale,
   getCommitteeSet,
+  getHomeSections,
+  getHomeTones,
   getRates,
   getSiteInfo,
   getSplash,
@@ -50,6 +52,7 @@ export default async function Home() {
     committeeSet,
     committeePhotoScale,
     show,
+    tones,
   ] = await Promise.all([
     getSiteInfo(),
     getRates(),
@@ -68,7 +71,11 @@ export default async function Home() {
     getCommitteeSet(),
     getCommitteePhotoScale(),
     getHomeSections(),
+    getHomeTones(),
   ]);
+
+  // สีพื้นหลังของแต่ละส่วน — "สลับให้เอง" คิดจากส่วนที่แสดงอยู่จริงเท่านั้น
+  const bg = resolveTones(tones, (key) => show[key]);
 
   // ปฏิทินรับ place/time เป็น optional ส่วนฐานเก็บเป็น null — แปลงก่อนส่งเข้า
   const calendar = events.map((e) => ({
@@ -107,20 +114,23 @@ export default async function Home() {
       {/* เปิด/ปิดแต่ละส่วนได้ที่ /admin/home — ปิดแล้วข้อมูลยังอยู่ครบ แค่ไม่ขึ้นบนหน้าเว็บ */}
       <main>
         {show.hero && <Hero rates={rates} slides={slides} />}
-        {show.ticker && <NewsTicker />}
+        {show.ticker && <NewsTicker bg={bg.ticker} />}
         {show.news && (
           <NewsSection
             announcements={announcements}
             committees={committees}
             committeeSet={committeeSet}
             committeePhotoScale={committeePhotoScale}
+            bg={bg.news}
           />
         )}
-        {show.services && <Services items={services} />}
-        {show.recommend && <Recommend cards={recommends} features={memberFeatures} />}
-        {show.memberCorner && <MemberCorner links={memberLinks} />}
-        {show.calendar && <CoopCalendar holidays={holidays} events={calendar} />}
-        {show.officers && <OfficerService items={officers} />}
+        {show.services && <Services items={services} bg={bg.services} />}
+        {show.recommend && (
+          <Recommend cards={recommends} features={memberFeatures} bg={bg.recommend} />
+        )}
+        {show.memberCorner && <MemberCorner links={memberLinks} bg={bg.memberCorner} />}
+        {show.calendar && <CoopCalendar holidays={holidays} events={calendar} bg={bg.calendar} />}
+        {show.officers && <OfficerService items={officers} bg={bg.officers} />}
       </main>
       <BackToTop />
       <Footer />

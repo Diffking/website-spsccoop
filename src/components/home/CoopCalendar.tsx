@@ -100,9 +100,11 @@ function DayCard({
 export default function CoopCalendar({
   holidays = [],
   events = [],
+  bg = "bg-sky-soft",
 }: {
   holidays?: CalendarEvent[];
   events?: CalendarEvent[];
+  bg?: string;
 }) {
   const isClient = useIsClient();
   // null = ยังไม่ได้เลื่อนเอง ให้ยึดวันนี้เป็นศูนย์กลาง
@@ -122,7 +124,7 @@ export default function CoopCalendar({
   // วันที่ของเครื่องผู้ใช้ — ตอน SSR ยังไม่รู้ ต้องวางโครงเปล่าไว้ก่อน
   if (!isClient) {
     return (
-      <section className="bg-sky-soft py-12">
+      <section className={`${bg} py-12`}>
         <div className="mx-auto max-w-6xl px-4">
           <SectionHeading title="ปฏิทินสหกรณ์" />
           {legend}
@@ -153,7 +155,7 @@ export default function CoopCalendar({
   const cols = [inRange(active - 1), inRange(active), inRange(active + 1)];
 
   return (
-    <section className="bg-sky-soft py-12">
+    <section className={`${bg} py-12`}>
       <div className="mx-auto max-w-6xl px-4">
         <SectionHeading title="ปฏิทินสหกรณ์" subtitle={`ประจำเดือน${THAI_MONTHS[month]} ${year + 543}`} />
         {legend}

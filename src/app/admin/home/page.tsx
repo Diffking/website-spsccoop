@@ -2,13 +2,13 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import HomePreview from "@/components/admin/HomePreview";
 import HomeSectionsForm from "@/components/admin/HomeSectionsForm";
-import { getHomeSections } from "@/lib/settings";
+import { getHomeSections, getHomeTones } from "@/lib/settings";
 
 export default async function AdminHomePage() {
   const user = await currentUser();
   if (!user) redirect("/admin/");
 
-  const sections = await getHomeSections();
+  const [sections, tones] = await Promise.all([getHomeSections(), getHomeTones()]);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6">
@@ -18,7 +18,7 @@ export default async function AdminHomePage() {
       </p>
 
       <div className="space-y-5">
-        <HomeSectionsForm initial={sections} />
+        <HomeSectionsForm initial={sections} initialTones={tones} />
         <HomePreview />
       </div>
     </main>

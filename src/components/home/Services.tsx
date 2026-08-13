@@ -4,9 +4,9 @@ import Icon from "@/components/ui/Icon";
 import MaybeLink from "@/components/ui/MaybeLink";
 import type { Item } from "@/lib/homeItems";
 
-export default function Services({ items }: { items: Item[] }) {
+export default function Services({ items, bg = "bg-sky-soft" }: { items: Item[]; bg?: string }) {
   return (
-    <section className="bg-sky-soft py-12">
+    <section className={`${bg} py-12`}>
       <div className="mx-auto max-w-6xl px-4">
         <SectionHeading title="บริการของเรา" en="Our Services" />
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">

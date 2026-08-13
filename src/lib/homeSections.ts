@@ -34,3 +34,67 @@ export const fillHomeSections = (saved: Partial<HomeSections> | null | undefined
 
 export const isHomeSectionKey = (value: unknown): value is HomeSectionKey =>
   typeof value === "string" && HOME_SECTIONS.some((s) => s.key === value);
+
+/**
+ * โทนพื้นหลังของแต่ละส่วน — ใช้สีชุดเดิมของเว็บ ไม่เพิ่มสีใหม่ให้ขัดกัน
+ * เพิ่มโทนใหม่ทีหลังก็แค่มาต่อในลิสต์นี้ ที่เหลือรับไปเองทั้งหมด
+ */
+export const HOME_TONES = [
+  { key: "auto", label: "สลับให้เอง", className: "", swatch: "linear-gradient(135deg,#ffffff 50%,#e8f5fc 50%)" },
+  { key: "white", label: "ขาว", className: "bg-white", swatch: "#ffffff" },
+  { key: "sky", label: "ฟ้าอ่อน", className: "bg-sky-soft", swatch: "#e8f5fc" },
+  { key: "brand", label: "ฟ้าแบรนด์", className: "bg-brand-50", swatch: "#eaf4fc" },
+  { key: "gray", label: "เทาอ่อน", className: "bg-gray-50", swatch: "#f9fafb" },
+] as const;
+
+export type ToneKey = (typeof HOME_TONES)[number]["key"];
+export type HomeTones = Record<HomeSectionKey, ToneKey>;
+
+/** ค่าตั้งต้น = สลับให้เองทุกส่วน */
+export const DEFAULT_HOME_TONES = Object.fromEntries(
+  HOME_SECTIONS.map((s) => [s.key, "auto"]),
+) as HomeTones;
+
+export const fillHomeTones = (saved: Partial<HomeTones> | null | undefined): HomeTones => ({
+  ...DEFAULT_HOME_TONES,
+  ...(saved ?? {}),
+});
+
+export const isToneKey = (value: unknown): value is ToneKey =>
+  typeof value === "string" && HOME_TONES.some((t) => t.key === value);
+
+const CLASS_OF = Object.fromEntries(HOME_TONES.map((t) => [t.key, t.className])) as Record<
+  ToneKey,
+  string
+>;
+
+/**
+ * แปลงเป็นคลาสจริงของแต่ละส่วน
+ *
+ * "สลับให้เอง" = ดูว่าส่วนก่อนหน้าที่แสดงอยู่ใช้สีอะไร แล้วเลือกอีกสีให้ต่างกัน
+ * จึงไม่มีทางเกิดสองส่วนติดกันสีเดียวกัน แม้จะปิดบางส่วนไปหรือกำหนดสีเองสลับกับ auto
+ */
+export function resolveTones(
+  tones: HomeTones,
+  visible: (key: HomeSectionKey) => boolean,
+): Record<HomeSectionKey, string> {
+  const out = {} as Record<HomeSectionKey, string>;
+  let previous = "";
+
+  for (const section of HOME_SECTIONS) {
+    if (!visible(section.key)) {
+      out[section.key] = "";
+      continue;
+    }
+    const picked = tones[section.key];
+    const className =
+      picked === "auto"
+        ? previous === CLASS_OF.white
+          ? CLASS_OF.sky
+          : CLASS_OF.white
+        : CLASS_OF[picked];
+    out[section.key] = className;
+    previous = className;
+  }
+  return out;
+}

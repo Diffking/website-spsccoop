@@ -43,12 +43,12 @@ function Item({ entry, blink }: { entry: TickerEntry; blink: boolean }) {
   );
 }
 
-export default async function NewsTicker() {
+export default async function NewsTicker({ bg = "bg-white" }: { bg?: string }) {
   const [entries, settings] = await Promise.all([getTickerEntries(), getTickerSettings()]);
   if (entries.length === 0) return null; // ยังไม่มีข่าววิ่ง — ไม่ต้องมีแถบเปล่าคาหน้า
 
   return (
-    <div className="border-y border-brand-100 bg-white">
+    <div className={`border-y border-brand-100 ${bg}`}>
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5">
         <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-accent-red px-3 py-1 text-xs font-semibold text-white">
           <Megaphone className="h-3.5 w-3.5" /> ประกาศล่าสุด

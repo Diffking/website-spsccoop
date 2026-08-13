@@ -11,9 +11,17 @@ const THEME: Record<string, string> = {
   orange: "from-accent-orange to-accent-orange-dark",
 };
 
-export default function Recommend({ cards, features }: { cards: Item[]; features: Item[] }) {
+export default function Recommend({
+  cards,
+  features,
+  bg = "bg-white",
+}: {
+  cards: Item[];
+  features: Item[];
+  bg?: string;
+}) {
   return (
-    <section className="bg-white py-12">
+    <section className={`${bg} py-12`}>
       <div className="mx-auto max-w-6xl px-4">
         <SectionHeading title={<span>✨ สำหรับสมาชิก</span>} />
 
