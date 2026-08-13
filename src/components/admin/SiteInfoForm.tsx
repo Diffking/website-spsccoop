@@ -9,7 +9,6 @@ const FIELDS: { key: keyof SiteInfo; label: string; hint?: string }[] = [
   { key: "phone", label: "เบอร์โทรศัพท์" },
   { key: "fax", label: "โทรสาร", hint: "เว้นว่างได้" },
   { key: "email", label: "อีเมล" },
-  { key: "officeHours", label: "เวลาทำการ" },
   { key: "memberCount", label: "จำนวนสมาชิก", hint: "ใส่ตัวเลขพร้อมคอมมา เช่น 220,031" },
   { key: "facebook", label: "ลิงก์เฟซบุ๊ก", hint: "เว้นว่าง = ซ่อนปุ่มเฟซบุ๊กที่ท้ายเว็บ" },
 ];

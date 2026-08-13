@@ -102,6 +102,27 @@ export async function getTickerEntries(): Promise<TickerEntry[]> {
 }
 
 /**
+ * วันหยุดสหกรณ์ของ "วันนี้" — ป้ายบนหัวเว็บใช้บอกว่าวันนี้ปิดทำการ
+ * คืนชื่อวันหยุด หรือ null ถ้าวันนี้ทำการปกติ (ฐานล่มก็คืน null ไม่ทำให้หัวเว็บพัง)
+ */
+export async function getHolidayToday(): Promise<string | null> {
+  try {
+    const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+    const from = new Date(`${ymd}T00:00:00+07:00`);
+    const to = new Date(from.getTime() + 24 * 3_600_000);
+
+    const row = await db.holiday.findFirst({
+      where: { published: true, date: { gte: from, lt: to } },
+      select: { title: true },
+    });
+    return row?.title ?? null;
+  } catch (error) {
+    console.error("อ่านวันหยุดวันนี้ไม่ได้:", error);
+    return null;
+  }
+}
+
+/**
  * วันหยุดสหกรณ์ของ "เดือนนี้" สำหรับปฏิทินหน้าแรก (ปฏิทินแสดงทีละเดือน)
  * ตัดเดือนตามเวลาไทย ไม่ใช่ UTC ไม่งั้นต้นเดือน/ปลายเดือนจะคลาดไปหนึ่งวัน
  */

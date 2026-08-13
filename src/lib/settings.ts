@@ -12,6 +12,11 @@ import {
   type HomeTones,
   type HomeOrder,
 } from "@/lib/homeSections";
+import {
+  DEFAULT_OFFICE_HOURS,
+  fillOfficeHours,
+  type OfficeHours,
+} from "@/lib/officeHours";
 import { splashContent as DEFAULT_SPLASH, type SplashContent } from "@/content/splash";
 
 /**
@@ -24,6 +29,7 @@ export type SiteInfo = {
   phone: string;
   fax: string;
   email: string;
+  /** เลิกใช้แล้ว — เวลาทำการย้ายไปตั้งเป็นวัน/เวลาจริงที่ Setting["officeHours"] (ดู src/lib/officeHours.ts) */
   officeHours: string;
   memberCount: string;
   /** ลิงก์เพจเฟซบุ๊ก — เว้นว่าง = ไม่แสดงปุ่มที่ท้ายเว็บ */
@@ -134,6 +140,12 @@ export async function getHomeSections(): Promise<HomeSections> {
 export async function getHomeOrder(): Promise<HomeOrder> {
   const saved = await getSetting<unknown>("homeOrder", DEFAULT_HOME_ORDER);
   return fillHomeOrder(saved);
+}
+
+/** วันและเวลาทำการ — เติมค่าตั้งต้นให้ครบเสมอ เผื่อค่าที่บันทึกไว้เก่ากว่ารูปแบบปัจจุบัน */
+export async function getOfficeHours(): Promise<OfficeHours> {
+  const saved = await getSetting<Partial<OfficeHours>>("officeHours", DEFAULT_OFFICE_HOURS);
+  return fillOfficeHours(saved);
 }
 
 /** สีพื้นหลังของแต่ละส่วนบนหน้าแรก */

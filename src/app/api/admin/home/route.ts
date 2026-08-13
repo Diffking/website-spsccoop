@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/apiAuth";
 import { KINDS } from "@/lib/announcementKinds";
 import { TICKER_MAX_PER_KIND } from "@/lib/content";
 import { COMMITTEE_PHOTO_SCALES } from "@/lib/committee";
+import { fillOfficeHours, type OfficeHours } from "@/lib/officeHours";
 import {
   DEFAULT_HOME_SECTIONS,
   DEFAULT_HOME_TONES,
@@ -32,6 +33,7 @@ export async function PUT(request: Request) {
     homeSections?: Record<string, unknown>;
     homeTones?: Record<string, unknown>;
     homeOrder?: unknown;
+    officeHours?: Partial<OfficeHours>;
   };
 
   if (body.siteInfo) {
@@ -111,6 +113,15 @@ export async function PUT(request: Request) {
       if (isHomeSectionKey(key)) next[key] = value === true;
     }
     await saveSetting("homeSections", next);
+  }
+
+  if (body.officeHours) {
+    // fill ตัดวันแปลก ๆ และเวลาที่รูปแบบผิดทิ้งให้แล้ว เหลือแต่ค่าที่ใช้ได้จริง
+    const hours = fillOfficeHours(body.officeHours);
+    if (hours.open >= hours.close) {
+      return NextResponse.json({ error: "เวลาเปิดต้องมาก่อนเวลาปิด" }, { status: 400 });
+    }
+    await saveSetting("officeHours", hours);
   }
 
   if (body.homeOrder !== undefined) {

@@ -1,7 +1,8 @@
 import { MapPin, Phone, Mail, Clock, Users, ExternalLink } from "lucide-react";
 import { getItems } from "@/lib/homeItems";
 import { getBrand } from "@/lib/nav";
-import { getSiteInfo } from "@/lib/settings";
+import { getOfficeHours, getSiteInfo } from "@/lib/settings";
+import { describeClosedDays, describeOfficeHours } from "@/lib/officeHours";
 
 function FacebookIcon({ className }: { className?: string }) {
   return (
@@ -13,11 +14,13 @@ function FacebookIcon({ className }: { className?: string }) {
 
 // ที่อยู่/เบอร์/เวลาทำการ มาจากตาราง Setting ที่แก้ได้ที่ /admin/home
 export default async function Footer() {
-  const [info, agencyLinks, brand] = await Promise.all([
+  const [info, agencyLinks, brand, hours] = await Promise.all([
     getSiteInfo(),
     getItems("footerLinks"),
     getBrand(),
+    getOfficeHours(),
   ]);
+  const closed = describeClosedDays(hours);
   return (
     <footer className="mt-auto bg-brand-800 text-white">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-4">
@@ -60,9 +63,13 @@ export default async function Footer() {
         {/* เวลาทำการ */}
         <div>
           <p className="mb-3 text-sm font-semibold text-white/80">เวลาทำการ</p>
+          {/* ข้อความสร้างจากวัน/เวลาที่ตั้งไว้ที่หลังบ้าน ไม่ต้องพิมพ์เอง จะได้ไม่หลุดไม่ตรงกับป้ายบนหัวเว็บ */}
           <p className="flex gap-2 text-sm text-white/80">
-            <Clock className="mt-0.5 h-4 w-4 shrink-0" /> {info.officeHours}
+            <Clock className="mt-0.5 h-4 w-4 shrink-0" /> {describeOfficeHours(hours)}
           </p>
+          {closed && (
+            <p className="mt-1.5 pl-6 text-sm text-white/60">{closed} และวันหยุดสหกรณ์ — ปิดทำการ</p>
+          )}
         </div>
 
         {/* ลิงก์หน่วยงาน */}

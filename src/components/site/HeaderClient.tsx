@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, Clock, Menu, X, Minus, Plus } from "lucide-react";
 import { useIsClient } from "@/lib/useIsClient";
 import type { NavNode, SiteBrand } from "@/lib/nav";
+import { officeStatus, type OfficeHours } from "@/lib/officeHours";
 import logo from "@/data/asset/logo_vector.svg";
 
 const THAI_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
@@ -14,7 +15,7 @@ const THAI_MONTHS = [
   "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
 ];
 
-function ThaiClock() {
+function ThaiClock({ hours, holidayToday }: { hours: OfficeHours; holidayToday: string | null }) {
   const isClient = useIsClient();
   const [tick, setTick] = useState<Date | null>(null);
   useEffect(() => {
@@ -27,14 +28,21 @@ function ThaiClock() {
   if (!now) return <span className="tabular-nums opacity-70">--:--:--</span>;
   const time = now.toLocaleTimeString("th-TH", { hour12: false });
   const dateStr = `วัน${THAI_DAYS[now.getDay()]}ที่ ${now.getDate()} ${THAI_MONTHS[now.getMonth()]} ${now.getFullYear() + 543}`;
+  const status = officeStatus(now, hours, holidayToday);
   return (
     <span className="flex items-center gap-2">
       <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 tabular-nums">
         <Clock className="h-3.5 w-3.5" /> {time}
       </span>
       <span className="hidden sm:inline">{dateStr}</span>
-      <span className="hidden md:inline rounded-full bg-emerald-500/90 px-2 py-0.5 text-[11px]">
-        เปิดทำการ
+      {/* เปิด/ปิดจริงตามวันเวลาทำการที่ตั้งไว้ และวันหยุดสหกรณ์ — เดิมขึ้น "เปิดทำการ" ค้างตลอด */}
+      <span
+        title={status.detail}
+        className={`hidden rounded-full px-2 py-0.5 text-[11px] md:inline ${
+          status.open ? "bg-emerald-500/90" : "bg-black/30"
+        }`}
+      >
+        {status.label}
       </span>
     </span>
   );
@@ -63,7 +71,17 @@ function FontSizeControl() {
 
 const real = (href: string | undefined) => (href && href !== "#" ? href : null);
 
-export default function HeaderClient({ nav, brand }: { nav: NavNode[]; brand: SiteBrand }) {
+export default function HeaderClient({
+  nav,
+  brand,
+  hours,
+  holidayToday,
+}: {
+  nav: NavNode[];
+  brand: SiteBrand;
+  hours: OfficeHours;
+  holidayToday: string | null;
+}) {
   const [open, setOpen] = useState(false);
   const [openSub, setOpenSub] = useState<string | null>(null);
 
@@ -88,7 +106,7 @@ export default function HeaderClient({ nav, brand }: { nav: NavNode[]; brand: Si
           </Link>
           <div className="flex items-center gap-3">
             <div className="hidden sm:block">
-              <ThaiClock />
+              <ThaiClock hours={hours} holidayToday={holidayToday} />
             </div>
             <FontSizeControl />
           </div>
