@@ -74,15 +74,68 @@ body {
   .animate-blink { animation: none; }
 }
 
-/* เนื้อหาที่พิมพ์จากหลังบ้าน (HTML) — จัดรูปแบบพื้นฐานให้อ่านง่าย */
-.prose-page h2 { font-size: 1.25rem; font-weight: 700; color: #1f2937; margin: 1.25rem 0 .5rem; }
-.prose-page h3 { font-size: 1.05rem; font-weight: 600; color: #374151; margin: 1rem 0 .4rem; }
-.prose-page p { margin: .6rem 0; line-height: 1.85; color: #374151; }
-.prose-page ul, .prose-page ol { margin: .6rem 0 .6rem 1.5rem; line-height: 1.85; }
+/* ================= เนื้อหาที่พิมพ์จากหลังบ้าน (HTML) =================
+   ใช้ทั้งหน้าเนื้อหาจริงและช่องพรีวิวในหลังบ้าน จะได้เห็นหน้าตาตรงกัน
+   ระยะห่างคิดจาก "ก้อนถัดไปต้องรู้ว่าเป็นเรื่องเดียวกันหรือเรื่องใหม่"
+   หัวข้อจึงห่างจากย่อหน้าเหนือมันมาก แต่ชิดกับย่อหน้าใต้มัน */
+.prose-page { color: #374151; }
+.prose-page > * + * { margin-top: 1rem; }
+
+.prose-page h2 {
+  font-size: 1.375rem; font-weight: 700; color: #0f5390; line-height: 1.5;
+  margin-top: 2.25rem; padding-left: .75rem; border-left: 4px solid #1c7fca;
+}
+.prose-page h3 {
+  font-size: 1.125rem; font-weight: 600; color: #1f2937; line-height: 1.6;
+  margin-top: 1.75rem;
+}
+.prose-page h2 + *, .prose-page h3 + * { margin-top: .6rem; }
+.prose-page p { line-height: 1.95; text-align: justify; text-justify: inter-word; }
+
+/* ย่อหน้าแรกของหน้า = บทนำ ตัวโตกว่านิดหนึ่งให้เริ่มอ่านง่าย */
+.prose-page > p:first-child { font-size: 1.05rem; color: #1f2937; }
+
+.prose-page ul, .prose-page ol { padding-left: 1.5rem; line-height: 1.95; }
 .prose-page ul { list-style: disc; }
 .prose-page ol { list-style: decimal; }
-.prose-page a { color: #1d4ed8; text-decoration: underline; }
-.prose-page img { max-width: 100%; height: auto; border-radius: .5rem; margin: .75rem 0; }
-.prose-page table { width: 100%; border-collapse: collapse; margin: .75rem 0; font-size: .95rem; }
-.prose-page th, .prose-page td { border: 1px solid #e5e7eb; padding: .5rem .75rem; text-align: left; }
-.prose-page th { background: #f9fafb; font-weight: 600; }
+.prose-page li + li { margin-top: .35rem; }
+.prose-page li::marker { color: #1c7fca; }
+
+.prose-page a { color: #1568b0; text-decoration: underline; text-underline-offset: 3px; }
+.prose-page a:hover { color: #0f5390; }
+.prose-page strong { color: #1f2937; font-weight: 600; }
+.prose-page hr { border: 0; border-top: 1px solid #e5e7eb; margin: 2rem 0; }
+
+.prose-page blockquote {
+  margin: 1.5rem 0; padding: .75rem 1rem; border-left: 4px solid #a3d0f1;
+  background: #f5fbff; border-radius: 0 .5rem .5rem 0; color: #374151;
+}
+
+/* รูป: กว้างเต็มคอลัมน์ มีเงาบาง ๆ · ใส่ <figure><img><figcaption> จะได้คำบรรยายใต้ภาพ */
+.prose-page img {
+  display: block; max-width: 100%; height: auto; margin: 1.5rem auto;
+  border-radius: .75rem; box-shadow: 0 6px 18px rgb(15 83 144 / .12);
+}
+.prose-page figure { margin: 1.5rem 0; }
+.prose-page figure img { margin: 0 auto; }
+.prose-page figcaption {
+  margin-top: .5rem; text-align: center; font-size: .85rem; color: #6b7280;
+}
+
+/* ตารางกว้างเกินจอ — PageContent ห่อด้วย .table-scroll ให้เอง เลื่อนในกรอบไม่ดันทั้งหน้า */
+.table-scroll { overflow-x: auto; margin: 1.5rem 0; }
+.prose-page table { width: 100%; border-collapse: collapse; font-size: .95rem; min-width: 30rem; }
+.prose-page th, .prose-page td { border: 1px solid #e5e7eb; padding: .6rem .75rem; text-align: left; }
+.prose-page th { background: #eaf4fc; font-weight: 600; color: #0f5390; }
+.prose-page tbody tr:nth-child(even) { background: #fafafa; }
+
+/* ค่อย ๆ ปรากฏทีละก้อนตอนเลื่อนถึง — คลาสถูกใส่โดย JS เท่านั้น
+   ปิด JavaScript อยู่ก็ยังอ่านได้ครบ เพราะ HTML ตั้งต้นไม่มีคลาสนี้ */
+.reveal-item { opacity: 0; transform: translateY(14px); }
+.reveal-item.is-in {
+  opacity: 1; transform: none;
+  transition: opacity .55s ease-out, transform .55s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-item, .reveal-item.is-in { opacity: 1; transform: none; transition: none; }
+}
