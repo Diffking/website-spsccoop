@@ -207,6 +207,7 @@ export default function HomeItemsManager({
             value: c.key,
             label: c.label,
             count: list.filter((i) => categoryOf(i.category) === c.key).length,
+            dot: c.tone.dot,
           }))}
         />
       )}
@@ -217,7 +218,10 @@ export default function HomeItemsManager({
           เพิ่มรายการ
           {grouped && (
             <span className="ml-1.5 text-sm font-normal text-gray-500">
-              ใน {SERVICE_CATEGORIES.find((c) => c.key === tab)?.label}
+              ใน{" "}
+              <span className={SERVICE_CATEGORIES.find((c) => c.key === tab)?.tone.heading}>
+                {SERVICE_CATEGORIES.find((c) => c.key === tab)?.label}
+              </span>
             </span>
           )}
         </h2>

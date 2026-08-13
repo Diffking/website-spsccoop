@@ -14,6 +14,7 @@ import { SERVICE_CATEGORIES, categoryOf } from "@/lib/serviceCategories";
 export default function Services({ items, bg = "bg-sky-soft" }: { items: Item[]; bg?: string }) {
   const groups = SERVICE_CATEGORIES.map((c) => ({
     label: c.label,
+    tone: c.tone,
     items: items.filter((s) => categoryOf(s.category) === c.key),
   })).filter((g) => g.items.length > 0);
 
@@ -29,8 +30,8 @@ export default function Services({ items, bg = "bg-sky-soft" }: { items: Item[];
           {groups.map((group) => (
             <div key={group.label}>
               {showHeadings && (
-                <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-700">
-                  <span className="h-4 w-1 rounded-full bg-brand-500" />
+                <p className={`mb-3 flex items-center gap-2 text-sm font-semibold ${group.tone.heading}`}>
+                  <span className={`h-4 w-1 rounded-full ${group.tone.bar}`} />
                   {group.label}
                   <span className="text-xs font-normal text-gray-400">
                     ({group.items.length})
@@ -45,12 +46,14 @@ export default function Services({ items, bg = "bg-sky-soft" }: { items: Item[];
                       href={s.href}
                       className="group flex h-full min-h-16 items-center gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5 transition hover:-translate-y-1 hover:shadow-md"
                     >
-                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-500 transition group-hover:bg-brand-500 group-hover:text-white">
+                      <span
+                        className={`grid h-11 w-11 shrink-0 place-items-center rounded-lg transition ${group.tone.chip} ${group.tone.chipHover}`}
+                      >
                         <Icon name={s.icon ?? "LayoutGrid"} className="h-5 w-5" />
                       </span>
                       <span
                         title={s.title}
-                        className="line-clamp-2 text-sm font-medium text-gray-700 group-hover:text-brand-700"
+                        className={`line-clamp-2 text-sm font-medium text-gray-700 ${group.tone.titleHover}`}
                       >
                         {s.title}
                       </span>

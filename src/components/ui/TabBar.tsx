@@ -14,6 +14,8 @@ export type TabItem<T extends string> = {
   label: string;
   /** ตัวเลขข้างชื่อ เช่น จำนวนรายการในหมวดนั้น — ไม่ใส่ = ไม่แสดง */
   count?: number;
+  /** คลาสสีพื้นของจุดหน้าชื่อ เช่น "bg-teal-400" — ไม่ใส่ = ไม่มีจุด */
+  dot?: string;
 };
 
 export default function TabBar<T extends string>({
@@ -46,6 +48,14 @@ export default function TabBar<T extends string>({
                   : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
               }`}
             >
+              {item.dot && (
+                <span
+                  aria-hidden="true"
+                  className={`mr-1.5 inline-block h-2 w-2 rounded-full align-middle transition ${item.dot} ${
+                    active ? "" : "opacity-40"
+                  }`}
+                />
+              )}
               {item.label}
               {item.count !== undefined && (
                 <span

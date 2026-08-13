@@ -5,11 +5,66 @@
  * ไฟล์นี้ไม่แตะฐานข้อมูล ฝั่ง client จึง import ได้
  */
 
+/**
+ * สีประจำกลุ่ม — คุมโทนเย็นทั้งสามให้อยู่ตระกูลเดียวกับสีหลักของเว็บ
+ * ฟ้ายามเย็น (สมาชิก) · ฟ้าอมเขียวทะเล (คณะกรรมการ) · น้ำเงิน (เจ้าหน้าที่)
+ *
+ * เขียนเป็นชื่อคลาสเต็มทุกตัว ห้ามต่อสตริงเอาเอง เช่น `bg-${c}-50`
+ * เพราะ Tailwind อ่านจากไฟล์ตรง ๆ ชื่อที่ประกอบตอนรันจะไม่ถูกสร้าง CSS ให้
+ */
+export type CategoryTone = {
+  /** แถบสั้นหน้าหัวข้อกลุ่ม */
+  bar: string;
+  /** ตัวหนังสือหัวข้อกลุ่ม */
+  heading: string;
+  /** กรอบไอคอนในการ์ด (ปกติ) */
+  chip: string;
+  /** กรอบไอคอนตอนเอาเมาส์ชี้การ์ด */
+  chipHover: string;
+  /** ชื่อบริการตอนเอาเมาส์ชี้ */
+  titleHover: string;
+  /** จุดสีหน้าชื่อแท็บในหลังบ้าน */
+  dot: string;
+};
+
 export const SERVICE_CATEGORIES = [
-  { key: "member", label: "เกี่ยวกับสมาชิก" },
-  { key: "committee", label: "เกี่ยวกับคณะกรรมการ" },
-  { key: "staff", label: "เกี่ยวกับเจ้าหน้าที่" },
-] as const;
+  {
+    key: "member",
+    label: "เกี่ยวกับสมาชิก",
+    tone: {
+      bar: "bg-sky-400",
+      heading: "text-sky-700",
+      chip: "bg-sky-100 text-sky-700",
+      chipHover: "group-hover:bg-sky-500 group-hover:text-white",
+      titleHover: "group-hover:text-sky-700",
+      dot: "bg-sky-400",
+    },
+  },
+  {
+    key: "committee",
+    label: "เกี่ยวกับคณะกรรมการ",
+    tone: {
+      bar: "bg-teal-400",
+      heading: "text-teal-700",
+      chip: "bg-teal-100 text-teal-700",
+      chipHover: "group-hover:bg-teal-500 group-hover:text-white",
+      titleHover: "group-hover:text-teal-700",
+      dot: "bg-teal-400",
+    },
+  },
+  {
+    key: "staff",
+    label: "เกี่ยวกับเจ้าหน้าที่",
+    tone: {
+      bar: "bg-brand-600",
+      heading: "text-brand-800",
+      chip: "bg-brand-100 text-brand-700",
+      chipHover: "group-hover:bg-brand-600 group-hover:text-white",
+      titleHover: "group-hover:text-brand-800",
+      dot: "bg-brand-600",
+    },
+  },
+] as const satisfies readonly { key: string; label: string; tone: CategoryTone }[];
 
 export type ServiceCategory = (typeof SERVICE_CATEGORIES)[number]["key"];
 
