@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { currentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { AI_READY } from "@/lib/ai";
 import PageEditor from "@/components/admin/PageEditor";
 
 export default async function EditPagePage({ params }: { params: Promise<{ id: string }> }) {
@@ -33,6 +34,7 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
             body: page.body,
             published: page.published,
           }}
+          aiReady={AI_READY}
         />
       </main>
     </>

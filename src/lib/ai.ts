@@ -65,23 +65,17 @@ type Completion = {
   error?: { message?: string };
 };
 
-async function readImage<T>(
-  base64: string,
-  mediaType: MediaType,
-  instruction: string,
+/**
+ * ยิงคำถามไป OpenRouter แล้วบังคับให้ตอบเป็น JSON ตามโครงที่กำหนด
+ * ใช้ร่วมกันทั้งงานอ่านไฟล์ (มีไฟล์แนบ) และงานข้อความล้วน
+ */
+async function askJson<T>(
+  content: unknown[],
   schemaName: string,
   schema: Record<string, unknown>,
+  maxTokens = 4000,
 ): Promise<T> {
   if (!AI_READY) throw new AiNotConfigured();
-
-  // PDF ส่งเป็นบล็อก file ส่วนรูปส่งเป็น image_url — รุ่นที่ใช้อ่าน PDF ได้เองไม่ต้องแปลงเป็นภาพก่อน
-  const attachment =
-    mediaType === "application/pdf"
-      ? {
-          type: "file",
-          file: { filename: "document.pdf", file_data: `data:${mediaType};base64,${base64}` },
-        }
-      : { type: "image_url", image_url: { url: `data:${mediaType};base64,${base64}` } };
 
   const response = await fetch(API_URL, {
     method: "POST",
@@ -95,13 +89,8 @@ async function readImage<T>(
     },
     body: JSON.stringify({
       model,
-      max_tokens: 4000,
-      messages: [
-        {
-          role: "user",
-          content: [{ type: "text", text: instruction }, attachment],
-        },
-      ],
+      max_tokens: maxTokens,
+      messages: [{ role: "user", content }],
       response_format: {
         type: "json_schema",
         json_schema: { name: schemaName, strict: true, schema },
@@ -130,6 +119,25 @@ async function readImage<T>(
     throw new Error("AI ไม่ได้ตอบข้อความกลับมา ลองใหม่อีกครั้ง");
   }
   return parseJson<T>(text);
+}
+
+function readImage<T>(
+  base64: string,
+  mediaType: MediaType,
+  instruction: string,
+  schemaName: string,
+  schema: Record<string, unknown>,
+): Promise<T> {
+  // PDF ส่งเป็นบล็อก file ส่วนรูปส่งเป็น image_url — รุ่นที่ใช้อ่าน PDF ได้เองไม่ต้องแปลงเป็นภาพก่อน
+  const attachment =
+    mediaType === "application/pdf"
+      ? {
+          type: "file",
+          file: { filename: "document.pdf", file_data: `data:${mediaType};base64,${base64}` },
+        }
+      : { type: "image_url", image_url: { url: `data:${mediaType};base64,${base64}` } };
+
+  return askJson<T>([{ type: "text", text: instruction }, attachment], schemaName, schema);
 }
 
 const SLIDE_SCHEMA = {
@@ -275,5 +283,55 @@ export function readAnnouncementFromFile(
       "เอกสารที่ไม่มีบรรทัด “เรื่อง” จึงค่อยสรุปเนื้อหาที่อ่านได้เป็นชื่อเรื่องสั้น ๆ ช่องนี้ห้ามว่าง",
     "announcement_draft",
     ANNOUNCEMENT_SCHEMA,
+  );
+}
+
+const PAGE_HTML_SCHEMA = {
+  type: "object",
+  properties: {
+    html: { type: "string", description: "เนื้อหาเดิมที่จัดรูปแบบใหม่เป็น HTML" },
+  },
+  required: ["html"],
+  additionalProperties: false,
+} as const;
+
+/**
+ * จัดรูปแบบเนื้อหาหน้าเว็บให้อ่านง่ายขึ้น — จัดโครงอย่างเดียว ห้ามแก้เนื้อความ
+ *
+ * งานจริงที่เจอคือเจ้าหน้าที่ก๊อปข้อความจาก Word มาวางเป็นก้อนยาว ๆ ไม่มีย่อหน้า
+ * ไม่มีหัวข้อ ปนแท็กขยะจาก Word มาเต็ม อ่านบนเว็บแล้วตาลาย
+ *
+ * ห้ามให้ AI แต่งเนื้อหาเพิ่มเด็ดขาด — นี่คือประวัติและระเบียบของสหกรณ์
+ * ผิดคำเดียวก็เป็นข้อมูลเท็จที่เผยแพร่ในนามองค์กร
+ */
+export function formatPageHtml(html: string, title: string) {
+  return askJson<{ html: string }>(
+    [
+      {
+        type: "text",
+        text:
+          "จัดรูปแบบเนื้อหาหน้าเว็บของสหกรณ์ออมทรัพย์ต่อไปนี้ให้อ่านง่ายขึ้น " +
+          `หัวเรื่องของหน้านี้คือ "${title}" (มีหัวเรื่องอยู่นอกเนื้อหาแล้ว ไม่ต้องใส่ซ้ำ)\n\n` +
+          "กฎเหล็ก ห้ามฝ่าฝืน:\n" +
+          "1. ห้ามเพิ่ม ลด แก้ไข หรือเรียบเรียงถ้อยคำใด ๆ ตัวเลข ชื่อคน วันที่ ต้องเหมือนเดิมทุกตัวอักษร\n" +
+          "2. ห้ามสรุป ห้ามตัดข้อความที่คิดว่าซ้ำซ้อน ข้อความต้องครบเท่าเดิม\n" +
+          "3. เปลี่ยนได้แค่โครงสร้าง HTML เท่านั้น\n\n" +
+          "สิ่งที่ให้ทำ:\n" +
+          "- ตัดข้อความก้อนยาวเป็นย่อหน้า <p> ตามใจความ\n" +
+          "- บรรทัดที่เป็นหัวข้อย่อยอยู่แล้ว ทำเป็น <h2> หรือ <h3> ตามระดับ\n" +
+          "- รายการที่ขึ้นต้นด้วย - หรือ 1. 2. 3. ทำเป็น <ul><li> หรือ <ol><li>\n" +
+          "- ข้อความที่เป็นตาราง ทำเป็น <table><thead><tbody>\n" +
+          "- ลบแท็กขยะจาก Word ทิ้ง (<span style>, <font>, class แปลก ๆ, <div> ซ้อนเปล่า ๆ)\n" +
+          "- <img> ที่มีอยู่เดิมให้คงไว้ทั้ง src และ alt ห้ามลบ\n\n" +
+          "ใช้ได้เฉพาะแท็ก: p, h2, h3, ul, ol, li, strong, em, a, br, hr, blockquote, " +
+          "table, thead, tbody, tr, th, td, img, figure, figcaption\n" +
+          "ห้ามใส่ style, class, script, iframe และห้ามครอบด้วย <html> หรือ <body>\n\n" +
+          "เนื้อหาเดิม:\n" +
+          html,
+      },
+    ],
+    "page_html",
+    PAGE_HTML_SCHEMA as unknown as Record<string, unknown>,
+    12000,
   );
 }

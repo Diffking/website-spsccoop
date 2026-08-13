@@ -60,6 +60,8 @@ export async function POST(request: Request) {
   }
 
   const isPdf = file.type === "application/pdf";
+  // รูปในหน้าเนื้อหาอ่านเต็มความกว้างคอลัมน์ ย่อเหลือ 600px จะเบลอ ให้ใหญ่กว่าที่อื่น
+  const maxEdge = folder === "page_images" ? 1200 : MAX_EDGE;
   const limit = isPdf ? MAX_PDF_BYTES : MAX_BYTES;
   if (file.size > limit) {
     return NextResponse.json(
@@ -86,7 +88,7 @@ export async function POST(request: Request) {
     }
   } else {
     try {
-      const shrunk = await shrink(original, file.type);
+      const shrunk = await shrink(original, file.type, maxEdge);
       bytes = shrunk.bytes;
       size = { width: shrunk.width, height: shrunk.height };
     } catch (error) {
@@ -120,7 +122,7 @@ export async function POST(request: Request) {
       storedOn: remote ? "ftp" : "local",
       width: size.width,
       height: size.height,
-      maxEdge: MAX_EDGE,
+      maxEdge,
       originalBytes: original.byteLength,
       storedBytes: bytes.byteLength,
       note,

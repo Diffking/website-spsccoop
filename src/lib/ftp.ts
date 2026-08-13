@@ -21,6 +21,7 @@ export const FOLDERS = {
   newsletter: "จดหมายข่าว",
   resultreport: "รายงานกิจการ",
   member_docs: "เอกสารแนะนำสมาชิก",
+  page_images: "รูปในหน้าเนื้อหา",
 } as const;
 
 /**

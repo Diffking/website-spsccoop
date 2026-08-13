@@ -16,6 +16,8 @@ export const MAX_EDGE = 600;
 export async function shrink(
   input: Buffer<ArrayBuffer>,
   mimeType: string,
+  /** ด้านยาวสุดที่ยอมให้เหลือ — รูปในหน้าเนื้อหาใช้ค่ามากกว่านี้เพราะกินพื้นที่อ่านเต็มคอลัมน์ */
+  maxEdge: number = MAX_EDGE,
 ): Promise<{ bytes: Buffer<ArrayBuffer>; width: number; height: number }> {
   // GIF ปล่อยผ่าน — ย่อแล้วภาพเคลื่อนไหวมักเสีย และแทบไม่มีใครอัป GIF เป็นประกาศ
   if (mimeType === "image/gif") {
@@ -26,7 +28,7 @@ export async function shrink(
   const pipeline = sharp(input)
     // กล้องมือถือฝังทิศทางไว้ใน EXIF ถ้าไม่หมุนตามจะได้ภาพตะแคง
     .rotate()
-    .resize({ width: MAX_EDGE, height: MAX_EDGE, fit: "inside", withoutEnlargement: true });
+    .resize({ width: maxEdge, height: maxEdge, fit: "inside", withoutEnlargement: true });
 
   const output =
     mimeType === "image/png"
