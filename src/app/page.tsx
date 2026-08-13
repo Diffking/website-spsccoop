@@ -125,10 +125,13 @@ export default async function Home() {
           />
         )}
         {show.services && <Services items={services} bg={bg.services} />}
-        {show.recommend && (
-          <Recommend cards={recommends} features={memberFeatures} bg={bg.recommend} />
+        {/* สองอันนี้เป็นเรื่องของสมาชิกชุดเดียวกัน ใช้พื้นหลังสีเดียวจะได้ดูเป็นก้อนเดียว */}
+        {show.member && (
+          <>
+            <Recommend cards={recommends} features={memberFeatures} bg={bg.member} />
+            <MemberCorner links={memberLinks} bg={bg.member} />
+          </>
         )}
-        {show.memberCorner && <MemberCorner links={memberLinks} bg={bg.memberCorner} />}
         {show.calendar && <CoopCalendar holidays={holidays} events={calendar} bg={bg.calendar} />}
         {show.officers && <OfficerService items={officers} bg={bg.officers} />}
       </main>
