@@ -116,12 +116,14 @@ export default function EbookReader({ src, title }: { src: string; title: string
     return () => window.removeEventListener("resize", check);
   }, [wide]);
 
-  /** คู่หน้าที่กำลังเปิดอยู่ — หน้าปกอยู่เดี่ยว ๆ ที่เหลือจับคู่ (2,3) (4,5) เหมือนหนังสือจริง */
+  /**
+   * คู่หน้าที่กำลังเปิดอยู่ — หน้าปกอยู่เดี่ยว ๆ เหมือนหนังสือจริง
+   * ที่เหลือกางเป็นคู่โดยยึดหน้าที่เปิดอยู่เป็นหน้าซ้าย เลื่อนทีละหน้าได้ (2,3) → (3,4)
+   */
   const openPages = useMemo(() => {
     if (!spread) return [page];
     if (page === 1) return [1];
-    const left = page % 2 === 0 ? page : page - 1;
-    return left + 1 <= pages ? [left, left + 1] : [left];
+    return page + 1 <= pages ? [page, page + 1] : [page];
   }, [spread, page, pages]);
 
   const draw = useCallback(async () => {
@@ -215,21 +217,16 @@ export default function EbookReader({ src, title }: { src: string; title: string
     };
   }, [pages, draw]);
 
-  const step = openPages.length > 1 ? 2 : 1;
-  const next = useCallback(
-    () => setPage((p) => Math.min(pages || 1, p === 1 && spread ? 2 : p + step)),
-    [pages, spread, step],
-  );
-  const prev = useCallback(
-    () => setPage((p) => (spread ? (p <= 2 ? 1 : p - 2) : Math.max(1, p - 1))),
-    [spread],
-  );
+  /** เดินหน้า/ถอยหลังทีละหน้าเสมอ แม้ตอนกางสองหน้า — กด 1 ที ขยับ 1 หน้า */
+  const next = useCallback(() => setPage((p) => Math.min(pages || 1, p + 1)), [pages]);
+  const prev = useCallback(() => setPage((p) => Math.max(1, p - 1)), []);
 
   // ปุ่มลูกศรซ้าย/ขวาเปลี่ยนหน้าได้เหมือนอ่านหนังสือ
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") next();
-      if (e.key === "ArrowLeft") prev();
+      // ทิศเดียวกับปุ่มบนจอ — ซ้ายคือพลิกไปข้างหน้า ขวาคือย้อนกลับ
+      if (e.key === "ArrowLeft") next();
+      if (e.key === "ArrowRight") prev();
       if (e.key === "Escape") setWide(false);
     };
     window.addEventListener("keydown", onKey);
@@ -301,17 +298,29 @@ export default function EbookReader({ src, title }: { src: string; title: string
     <div className={wide ? "fixed inset-0 z-[60] flex flex-col bg-gray-900/95 p-3" : ""}>
       {/* แถบเครื่องมือ */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        {/*
+          พลิกกระดาษจริงคือดันจากขวาไปซ้าย ปุ่มจึงเรียงตามนั้น —
+          ลูกศรซ้าย = พลิกไปหน้าถัดไป · ลูกศรขวา = พลิกกลับหน้าก่อน
+          ทิศเดียวกับการลาก (ลากซ้าย = ไปข้างหน้า) จะได้ไม่สับสนกันเอง
+        */}
         <div className="flex items-center gap-2">
-          <button onClick={prev} disabled={page <= 1} aria-label="หน้าก่อนหน้า" className={button}>
+          <button
+            onClick={next}
+            disabled={pages === 0 || page >= pages}
+            aria-label="หน้าถัดไป"
+            title="หน้าถัดไป"
+            className={button}
+          >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <span className="rounded-full bg-white px-3 py-1.5 text-sm tabular-nums text-gray-600 shadow-sm ring-1 ring-black/5">
             หน้า {label} / {pages || "…"}
           </span>
           <button
-            onClick={next}
-            disabled={pages === 0 || openPages[openPages.length - 1] >= pages}
-            aria-label="หน้าถัดไป"
+            onClick={prev}
+            disabled={page <= 1}
+            aria-label="หน้าก่อนหน้า"
+            title="หน้าก่อนหน้า"
             className={button}
           >
             <ChevronRight className="h-4 w-4" />
@@ -405,7 +414,7 @@ export default function EbookReader({ src, title }: { src: string; title: string
 
         {pages > 1 && (
           <span className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/45 px-3 py-1 text-[11px] text-white">
-            ลากซ้าย-ขวา หรือกดลูกศร เพื่อเปลี่ยนหน้า
+            ลากไปซ้าย (หรือกดลูกศรซ้าย) = หน้าถัดไป · ลากไปขวา = ย้อนกลับ
           </span>
         )}
       </div>
