@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
+import { KINDS } from "@/lib/announcementKinds";
 import { COMMITTEE_PHOTO_SCALES } from "@/lib/committee";
 import {
   DEFAULT_HOME_SECTIONS,
@@ -67,11 +68,17 @@ export async function PUT(request: Request) {
       const n = Math.trunc(Number(value));
       return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
     };
+    // โควตาป้ายแยกตามหมวด — รับเฉพาะหมวดที่รู้จัก ที่เหลือใช้ค่าตั้งต้น
+    const counts = { ...DEFAULT_TICKER.badgeCounts };
+    for (const kind of KINDS) {
+      counts[kind] = clamp(t.badgeCounts?.[kind], 0, 30, DEFAULT_TICKER.badgeCounts[kind]);
+    }
+
     await saveSetting("ticker", {
       auto: t.auto ?? DEFAULT_TICKER.auto,
       limit: clamp(t.limit, 1, 30, DEFAULT_TICKER.limit),
       badgeText: (t.badgeText ?? DEFAULT_TICKER.badgeText).trim().slice(0, 12),
-      badgeCount: clamp(t.badgeCount, 0, 30, DEFAULT_TICKER.badgeCount),
+      badgeCounts: counts,
       badgeBlink: t.badgeBlink ?? DEFAULT_TICKER.badgeBlink,
       secondsPerItem: clamp(t.secondsPerItem, 3, 30, DEFAULT_TICKER.secondsPerItem),
     } satisfies TickerSettings);

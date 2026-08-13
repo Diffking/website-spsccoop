@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { getTickerSettings } from "@/lib/settings";
-import { announcementLine, type Kind } from "@/lib/announcementKinds";
+import { announcementLine, KINDS, type Kind } from "@/lib/announcementKinds";
 import type { CalendarEvent } from "@/data/home";
 
 /**
@@ -50,36 +50,67 @@ export type TickerEntry = {
   href: string | null;
   /** คำบนป้ายหน้าข้อความ เช่น New — null = ไม่ติดป้าย */
   badge: string | null;
+  /** หมวดของประกาศ — ใช้เลือกสีป้าย · null = ข้อความที่พิมพ์เองไม่ได้มาจากประกาศ */
+  kind: Kind | null;
 };
 
 /**
  * ข้อความที่จะวิ่งจริง = ประกาศล่าสุดที่ดึงมาเอง + ข้อความที่พิมพ์เพิ่มไว้เอง (ถ้ามี)
  *
- * เอาประกาศขึ้นก่อนเพราะป้าย "New" ติดให้ n รายการแรก ซึ่งต้องหมายถึงประกาศที่ใหม่ที่สุด
- * ไม่ใช่ข้อความประจำที่ปักไว้นาน ๆ
+ * เอาประกาศขึ้นก่อน เพราะป้าย "New" ให้เฉพาะรายการต้น ๆ ของแต่ละหมวด
+ * ซึ่งต้องหมายถึงประกาศที่ใหม่ที่สุด ไม่ใช่ข้อความประจำที่ปักไว้นาน ๆ
+ *
+ * โควตาป้ายนับแยกหมวด (ตั้งได้ที่ /admin/home/ticker) — ประกาศออกถี่กว่าอีกสองหมวดมาก
+ * ถ้านับรวมกันป้ายจะไปกองที่ประกาศจนจดหมายข่าว/รายงานกิจการไม่เคยได้ป้ายเลย
  */
 export async function getTickerEntries(): Promise<TickerEntry[]> {
   const settings = await getTickerSettings();
+  const label = settings.badgeText.trim();
 
-  const auto = settings.auto
-    ? (await getAnnouncements(Math.max(1, Math.min(30, settings.limit)))).map((a) => ({
-        text: announcementLine(a.kind, a.number, a.title, a.hideNumber),
-        href: a.href && a.href !== "#" ? a.href : null,
-        badge: null as string | null,
-      }))
+  /** ให้ป้ายไปแล้วกี่ตัวในหมวดนั้น — เดินไล่ตามลำดับที่จะวิ่งจริง */
+  const given: Record<Kind, number> = { ANNOUNCEMENT: 0, NEWSLETTER: 0, REPORT: 0 };
+
+  const rows = settings.auto
+    ? await getAnnouncements(Math.max(1, Math.min(30, settings.limit)))
     : [];
 
-  const manual = (await getTickerItems()).map((text) => ({
+  /**
+   * เติมหมวดที่ไม่ติดมากับชุดล่าสุดรวม — รายงานกิจการออกปีละฉบับ
+   * ประกาศใหม่ ๆ ไม่กี่ใบก็เบียดตกจาก 10 อันดับแรกแล้ว ทั้งที่ตั้งใจให้มีป้ายส้มวิ่งอยู่
+   */
+  if (settings.auto) {
+    for (const kind of KINDS) {
+      const quota = settings.badgeCounts[kind] ?? 0;
+      const have = rows.filter((r) => r.kind === kind).length;
+      if (quota <= 0 || have >= quota) continue;
+
+      const extra = await getAnnouncements(quota, kind);
+      const ids = new Set(rows.map((r) => r.id));
+      rows.push(...extra.filter((r) => !ids.has(r.id)).slice(0, quota - have));
+    }
+  }
+
+  const auto: TickerEntry[] = rows.map((a) => {
+    const quota = settings.badgeCounts[a.kind] ?? 0;
+    const badge = label && given[a.kind] < quota ? label : null;
+    if (badge) given[a.kind] += 1;
+
+    return {
+      text: announcementLine(a.kind, a.number, a.title, a.hideNumber),
+      href: a.href && a.href !== "#" ? a.href : null,
+      badge,
+      kind: a.kind,
+    };
+  });
+
+  const manual: TickerEntry[] = (await getTickerItems()).map((text) => ({
     text,
     href: null,
-    badge: null as string | null,
+    badge: null,
+    kind: null,
   }));
 
-  const entries = [...auto, ...manual];
-  const label = settings.badgeText.trim();
-  if (!label || settings.badgeCount <= 0) return entries;
-
-  return entries.map((entry, i) => (i < settings.badgeCount ? { ...entry, badge: label } : entry));
+  return [...auto, ...manual];
 }
 
 /**

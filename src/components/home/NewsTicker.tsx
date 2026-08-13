@@ -1,5 +1,6 @@
 import { Megaphone } from "lucide-react";
 import { getTickerEntries, type TickerEntry } from "@/lib/content";
+import { KIND_BADGE_CLASS } from "@/lib/announcementKinds";
 import { getTickerSettings } from "@/lib/settings";
 
 /**
@@ -14,10 +15,11 @@ function Item({ entry, blink }: { entry: TickerEntry; blink: boolean }) {
   const body = (
     <>
       {entry.badge ? (
+        // สีป้ายบอกหมวด — แดง=ประกาศ · เหลือง=จดหมายข่าว · ส้ม=รายงานกิจการ
         <span
-          className={`rounded-full bg-accent-red px-2 py-0.5 text-[11px] font-bold uppercase leading-none text-white ${
-            blink ? "animate-blink" : ""
-          }`}
+          className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase leading-none ${
+            entry.kind ? KIND_BADGE_CLASS[entry.kind] : "bg-accent-red text-white"
+          } ${blink ? "animate-blink" : ""}`}
         >
           {entry.badge}
         </span>

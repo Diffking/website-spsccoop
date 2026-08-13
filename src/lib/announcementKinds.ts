@@ -87,6 +87,25 @@ export function readerHref(kind: Kind, id: string, fileUrl: string | null): stri
   return KIND_EBOOK[kind] && isPdf ? `/ebook/${id}/` : file;
 }
 
+/**
+ * สีป้าย "New" บนข่าววิ่ง แยกตามหมวด — ผู้อ่านกวาดตาผ่านก็รู้ว่าเป็นเรื่องประเภทไหน
+ * แดง = ประกาศ · เหลือง = จดหมายข่าว · ส้ม = รายงานกิจการ (ใช้สีชุดเดิมของเว็บ)
+ *
+ * เหลืองกับส้มใช้ตัวอักษรสีเข้ม ตัวขาวบนพื้นสองสีนี้จางจนอ่านยากบนป้ายเล็ก ๆ
+ */
+export const KIND_BADGE_CLASS: Record<Kind, string> = {
+  ANNOUNCEMENT: "bg-accent-red text-white",
+  NEWSLETTER: "bg-accent-amber text-gray-900",
+  REPORT: "bg-accent-orange text-gray-900",
+};
+
+/** สีล้วนของแต่ละหมวด ไว้ทำจุด/ตัวอย่างสีในหลังบ้าน */
+export const KIND_BADGE_SWATCH: Record<Kind, string> = {
+  ANNOUNCEMENT: "#e23744",
+  NEWSLETTER: "#f5b100",
+  REPORT: "#ff7a00",
+};
+
 /** โฟลเดอร์ปลายทางฝั่ง FTP ของแต่ละหมวด — ต้องตรงกับ FOLDERS ใน src/lib/ftp.ts */
 export const KIND_FOLDER: Record<Kind, "Declar" | "newsletter" | "resultreport"> = {
   ANNOUNCEMENT: "Declar",

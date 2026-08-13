@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { DEFAULT_COMMITTEE_PHOTO_SCALE } from "@/lib/committee";
+import type { Kind } from "@/lib/announcementKinds";
 import {
   fillHomeSections,
   fillHomeTones,
@@ -46,8 +47,12 @@ export type TickerSettings = {
   limit: number;
   /** คำบนป้าย เช่น New · ใหม่ · ด่วน — เว้นว่าง = ไม่ติดป้าย */
   badgeText: string;
-  /** ติดป้ายให้กี่รายการแรก · 0 = ไม่ติดเลย */
-  badgeCount: number;
+  /**
+   * ติดป้ายให้กี่รายการแรก "ของแต่ละหมวด" · 0 = หมวดนั้นไม่ติดป้าย
+   * แยกตามหมวดเพราะประกาศออกถี่กว่าจดหมายข่าว/รายงานกิจการมาก
+   * ถ้านับรวมกันทั้งหมด ป้ายจะไปกองอยู่ที่ประกาศหมดจนอีกสองหมวดไม่เคยได้ป้ายเลย
+   */
+  badgeCounts: Record<Kind, number>;
   /** ให้ป้ายกระพริบ */
   badgeBlink: boolean;
   /**
@@ -107,7 +112,7 @@ export const DEFAULT_TICKER: TickerSettings = {
   auto: true,
   limit: 10,
   badgeText: "New",
-  badgeCount: 3,
+  badgeCounts: { ANNOUNCEMENT: 3, NEWSLETTER: 1, REPORT: 1 },
   badgeBlink: true,
   secondsPerItem: 9,
 };
@@ -144,7 +149,12 @@ export const getRates = () => getSetting<InterestRates>("interestRates", DEFAULT
 /** ค่าที่บันทึกไว้อาจเก่ากว่าโครงปัจจุบัน เติมค่าที่ขาดจากค่าตั้งต้นให้เสมอ */
 export async function getTickerSettings(): Promise<TickerSettings> {
   const saved = await getSetting<Partial<TickerSettings>>("ticker", DEFAULT_TICKER);
-  return { ...DEFAULT_TICKER, ...saved };
+  return {
+    ...DEFAULT_TICKER,
+    ...saved,
+    // merge ตื้น ๆ ไม่พอ — ค่าที่บันทึกไว้ก่อนแยกป้ายตามหมวดยังไม่มีคีย์นี้เลย
+    badgeCounts: { ...DEFAULT_TICKER.badgeCounts, ...(saved?.badgeCounts ?? {}) },
+  };
 }
 
 /**
