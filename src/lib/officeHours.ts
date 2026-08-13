@@ -73,7 +73,9 @@ export type OfficeStatus = {
   open: boolean;
   /** ข้อความบนป้าย เช่น "เปิดทำการ" · "ปิดทำการ" · "วันหยุดสหกรณ์" */
   label: string;
-  /** คำอธิบายเพิ่มตอนเอาเมาส์ชี้ */
+  /** ข้อความสั้นต่อท้ายป้าย เช่น "ถึง 16:30 น." — ให้รู้เวลาปิดโดยไม่ต้องเอาเมาส์ชี้ */
+  note: string;
+  /** คำอธิบายเต็มตอนเอาเมาส์ชี้ */
   detail: string;
 };
 
@@ -94,20 +96,39 @@ export function officeStatus(
   const span = `${hours.open} – ${hours.close} น.`;
 
   if (holidayToday) {
-    return { open: false, label: "วันหยุดสหกรณ์", detail: holidayToday };
+    return {
+      open: false,
+      label: "วันหยุดสหกรณ์",
+      note: holidayToday,
+      detail: `วันนี้สหกรณ์ปิดทำการ — ${holidayToday}`,
+    };
   }
   if (!hours.days.includes(now.getDay())) {
     return {
       open: false,
       label: "ปิดทำการ",
+      note: `เปิด${describeDays(hours.days)} ${hours.open} น.`,
       detail: `วัน${DAY_NAMES[now.getDay()]}ไม่ใช่วันทำการ · ${describeOfficeHours(hours)}`,
     };
   }
 
   const minutes = now.getHours() * 60 + now.getMinutes();
   const inside = minutes >= toMinutes(hours.open) && minutes < toMinutes(hours.close);
+  if (inside) {
+    return {
+      open: true,
+      label: "เปิดทำการ",
+      note: `ถึง ${hours.close} น.`,
+      detail: `วันนี้เปิด ${span}`,
+    };
+  }
 
-  return inside
-    ? { open: true, label: "เปิดทำการ", detail: `วันนี้เปิด ${span}` }
-    : { open: false, label: "นอกเวลาทำการ", detail: `วันนี้เปิด ${span}` };
+  // ยังไม่ถึงเวลาเปิด กับเลิกไปแล้ว คนละความหมายกัน บอกให้ตรง จะได้รู้ว่าควรรอหรือมาพรุ่งนี้
+  const beforeOpen = minutes < toMinutes(hours.open);
+  return {
+    open: false,
+    label: "นอกเวลาทำการ",
+    note: beforeOpen ? `เปิด ${hours.open} น.` : `เปิดอีกครั้ง ${hours.open} น.`,
+    detail: `วันนี้เปิด ${span}`,
+  };
 }

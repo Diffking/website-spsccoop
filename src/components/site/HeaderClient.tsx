@@ -3,10 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronRight, Clock, Menu, X, Minus, Plus } from "lucide-react";
+import { CalendarOff, ChevronDown, ChevronRight, Clock, Menu, X, Minus, Plus } from "lucide-react";
 import { useIsClient } from "@/lib/useIsClient";
 import type { NavNode, SiteBrand } from "@/lib/nav";
 import { officeStatus, type OfficeHours } from "@/lib/officeHours";
+import type { NextHoliday } from "@/lib/content";
 import logo from "@/data/asset/logo_vector.svg";
 
 const THAI_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
@@ -15,7 +16,15 @@ const THAI_MONTHS = [
   "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
 ];
 
-function ThaiClock({ hours, holidayToday }: { hours: OfficeHours; holidayToday: string | null }) {
+function ThaiClock({
+  hours,
+  holidayToday,
+  nextHoliday,
+}: {
+  hours: OfficeHours;
+  holidayToday: string | null;
+  nextHoliday: NextHoliday | null;
+}) {
   const isClient = useIsClient();
   const [tick, setTick] = useState<Date | null>(null);
   useEffect(() => {
@@ -35,15 +44,33 @@ function ThaiClock({ hours, holidayToday }: { hours: OfficeHours; holidayToday: 
         <Clock className="h-3.5 w-3.5" /> {time}
       </span>
       <span className="hidden sm:inline">{dateStr}</span>
-      {/* เปิด/ปิดจริงตามวันเวลาทำการที่ตั้งไว้ และวันหยุดสหกรณ์ — เดิมขึ้น "เปิดทำการ" ค้างตลอด */}
+      {/*
+        เปิด/ปิดจริงตามวันเวลาทำการที่ตั้งไว้ และวันหยุดสหกรณ์ — เดิมขึ้น "เปิดทำการ" ค้างตลอด
+        ต่อท้ายด้วยเวลาปิด/เวลาเปิด จะได้รู้เลยโดยไม่ต้องเอาเมาส์ชี้
+      */}
       <span
         title={status.detail}
-        className={`hidden rounded-full px-2 py-0.5 text-[11px] md:inline ${
+        className={`hidden items-center gap-1 rounded-full px-2 py-0.5 text-[11px] md:inline-flex ${
           status.open ? "bg-emerald-500/90" : "bg-black/30"
         }`}
       >
         {status.label}
+        {status.note && <span className="opacity-80">· {status.note}</span>}
       </span>
+
+      {/* วันหยุดครั้งถัดไป — เตือนล่วงหน้าว่าสหกรณ์จะปิดวันไหน (ไม่มีวันหยุดข้างหน้า = ไม่ขึ้น) */}
+      {!holidayToday && nextHoliday && (
+        <span
+          title={`วันหยุดถัดไป ${nextHoliday.date} — ${nextHoliday.title}`}
+          className="hidden items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[11px] lg:inline-flex"
+        >
+          <CalendarOff className="h-3 w-3" />
+          หยุด {nextHoliday.date}
+          <span className="opacity-80">
+            {nextHoliday.inDays === 1 ? "· พรุ่งนี้" : `· อีก ${nextHoliday.inDays} วัน`}
+          </span>
+        </span>
+      )}
     </span>
   );
 }
@@ -76,11 +103,13 @@ export default function HeaderClient({
   brand,
   hours,
   holidayToday,
+  nextHoliday,
 }: {
   nav: NavNode[];
   brand: SiteBrand;
   hours: OfficeHours;
   holidayToday: string | null;
+  nextHoliday: NextHoliday | null;
 }) {
   const [open, setOpen] = useState(false);
   const [openSub, setOpenSub] = useState<string | null>(null);
@@ -106,7 +135,7 @@ export default function HeaderClient({
           </Link>
           <div className="flex items-center gap-3">
             <div className="hidden sm:block">
-              <ThaiClock hours={hours} holidayToday={holidayToday} />
+              <ThaiClock hours={hours} holidayToday={holidayToday} nextHoliday={nextHoliday} />
             </div>
             <FontSizeControl />
           </div>
