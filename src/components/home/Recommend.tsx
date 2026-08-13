@@ -88,24 +88,33 @@ export default function Recommend({
         </div>
 
         {/*
-          แถวที่ 2: บริการย่อย 3 คอลัมน์
+          แถวที่ 2: การ์ดคิวอาร์โค้ด / ลิงก์โซเชียล — แถวละ 3 ใบ
           ใบไหนแนบรูปคิวอาร์ไว้ (เพิ่มเพื่อนไลน์ / แฟนเพจ) จะกางเป็นการ์ดแนวตั้ง
           โชว์คิวอาร์ 200×200 ให้สแกนจากจอได้เลย ที่เหลือเป็นการ์ดแถวเดียวเหมือนเดิม
+
+          ใช้ flex ไม่ใช่ตาราง 3 ช่องตายตัว — มีไม่ครบ 3 ใบจะได้จัดกลางแถว
+          ไม่ใช่กองไปทางซ้ายแล้วเหลือช่องว่างค้างทางขวา
         */}
         <div
-          className={`mt-5 grid gap-5 md:grid-cols-3 ${
+          className={`mt-5 flex flex-wrap justify-center gap-5 ${
             // ปกติยืดให้สูงเท่ากันทั้งแถวจะดูเป็นระเบียบกว่า
             // แต่พอมีใบที่มีคิวอาร์ ใบธรรมดาจะถูกยืดตามจนโล่งกลางการ์ด — ให้สูงตามเนื้อแทน
-            features.some((f) => f.imageUrl) ? "items-start" : ""
+            features.some((f) => f.imageUrl) ? "items-start" : "items-stretch"
           }`}
         >
           {features.map((f, i) => {
             const tone = FEATURE_THEME[f.theme ?? "blue"] ?? FEATURE_THEME.blue;
             return (
-              <Reveal key={f.id} delay={i * 0.08}>
+              // กว้าง 80% ของช่องในตาราง 3 คอลัมน์ (หัก gap 2 ช่อง × 1.25rem ก่อนหาร)
+              // ย่อลงจากเดิม 20% ตามที่ขอ — จัดกลางแถวอยู่แล้วจึงไม่เหลือช่องโหว่
+              <Reveal
+                key={f.id}
+                delay={i * 0.08}
+                className="w-full md:w-[calc((100%-2.5rem)/3*0.8)]"
+              >
                 <MaybeLink
                   href={f.href}
-                  className={`group flex h-full gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 transition hover:-translate-y-1 hover:shadow-md ${tone.ring} ${
+                  className={`group flex h-full gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 transition hover:-translate-y-1 hover:shadow-md ${tone.ring} ${
                     f.imageUrl ? "flex-col items-center text-center" : "items-center"
                   }`}
                 >
@@ -131,14 +140,14 @@ export default function Recommend({
 
                   {f.imageUrl ? (
                     <>
-                      {/* ขนาดตายตัว 200×200 — คิวอาร์เล็กกว่านี้กล้องมือถือจับยาก */}
+                      {/* ขนาดตายตัว 160×160 (ย่อจาก 200 ลง 20%) — เล็กกว่านี้กล้องมือถือเริ่มจับยาก */}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={f.imageUrl}
                         alt={`คิวอาร์โค้ด ${f.title}`}
-                        width={200}
-                        height={200}
-                        className={`h-[200px] w-[200px] max-w-full rounded-xl bg-white object-contain p-1 ring-2 ${tone.qr}`}
+                        width={160}
+                        height={160}
+                        className={`h-[160px] w-[160px] max-w-full rounded-xl bg-white object-contain p-1 ring-2 ${tone.qr}`}
                       />
                       {f.href && f.href !== "#" && (
                         <span className={`inline-flex items-center gap-1 text-sm font-medium ${tone.link}`}>
