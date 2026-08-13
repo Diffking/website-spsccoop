@@ -22,12 +22,18 @@ export default function MemberCorner({ links, bg = "bg-white" }: { links: Item[]
                 ความรู้สำหรับการเป็นสมาชิกสหกรณ์ การเข้าถึงบริการต่าง ๆ และสิทธิประโยชน์ที่คุณจะได้รับจากการเป็นสมาชิก
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            {/*
+              เรียงชิดขวาเสมอ ไม่ใช่ตาราง 3 ช่องตายตัว — เหลือปุ่มไม่ครบ 3
+              ช่องที่ว่างจะค้างอยู่ทางขวา ทำให้ปุ่มดูลอยไม่ชิดขอบการ์ด
+              จอแคบขึ้นบรรทัดใหม่ได้ และวางชิดซ้ายแทนเพราะบล็อกนี้เต็มความกว้าง
+            */}
+            <div className="flex flex-wrap justify-start gap-3 md:justify-end">
               {links.map((m) => (
                 <MaybeLink
                   key={m.id}
                   href={m.href}
-                  className="flex flex-col items-center gap-2 rounded-xl bg-white/20 px-4 py-3 text-center text-xs font-medium ring-1 ring-white/25 backdrop-blur transition hover:bg-white/30"
+                  // กว้างเท่ากันทุกปุ่ม ไม่ยืดตามความยาวชื่อ จะได้ดูเป็นชุดเดียวกัน
+                  className="flex w-24 flex-col items-center gap-2 rounded-xl bg-white/20 px-3 py-3 text-center text-xs font-medium ring-1 ring-white/25 backdrop-blur transition hover:bg-white/30"
                 >
                   {/* ปุ่มพวกนี้อยู่ฝั่งขวาซึ่งเป็นช่วงเขียวเข้ม ใช้เขียวเข้มด้วยจะเป็นชุดเดียวกัน */}
                   <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-emerald-700">
