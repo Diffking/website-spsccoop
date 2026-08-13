@@ -196,6 +196,7 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
  * ความสูงคงที่ตาม perPage ไม่ว่าหน้านั้นจะมีกี่แถว การ์ดจึงไม่กระตุกตอนเปลี่ยนหน้า
  */
 function RateCard({ rates }: { rates: InterestRates }) {
+  const reduce = useReducedMotion();
   const perPage = Math.max(1, Math.min(20, rates.perPage ?? 5));
   const autoSeconds = rates.autoSeconds ?? 5;
 
@@ -253,23 +254,35 @@ function RateCard({ rates }: { rates: InterestRates }) {
 
       <p className="mt-4 text-xs text-gray-400">อัตราดอกเบี้ย (ต่อปี)</p>
 
-      {/* ความสูงล็อกตาม perPage — แถวละ 46px จะได้ไม่ขยับตอนหน้าสุดท้ายมีไม่ครบ */}
-      <ul
-        style={{ minHeight: perPage * 46 }}
-        className="mt-2 flex-1 divide-y divide-gray-100"
-      >
-        {current.rows.map((r, i) => (
-          // ชื่อรายการซ้ำกันได้ (เจ้าหน้าที่พิมพ์เอง) จึงผูก key กับลำดับด้วย
-          <li key={`${r.label}-${i}`} className="flex items-center justify-between gap-3 py-2.5">
-            <span className="min-w-0 flex-1 truncate text-sm text-gray-600" title={r.label}>
-              {r.label}
-            </span>
-            <span className={`shrink-0 text-lg font-bold ${valueColor}`}>
-              {r.rate} <span className="text-sm font-medium text-gray-400">%</span>
-            </span>
-          </li>
-        ))}
-      </ul>
+      {/*
+        ความสูงล็อกตาม perPage — แถวละ 46px จะได้ไม่ขยับตอนหน้าสุดท้ายมีไม่ครบ
+        เปลี่ยนหน้าแบบค่อย ๆ จาง ไม่ใช่สลับทันที — เดิมตัวเลขกระพริบเปลี่ยนวูบเดียวจนสะดุดตา
+        (เครื่องที่ตั้งค่าลดการเคลื่อนไหวไว้จะสลับทันทีเหมือนเดิม)
+      */}
+      <div style={{ minHeight: perPage * 46 }} className="relative mt-2 flex-1">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.ul
+            key={index}
+            initial={{ opacity: 0, y: reduce ? 0 : 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: reduce ? 0 : -6 }}
+            transition={{ duration: reduce ? 0 : 0.45, ease: "easeOut" }}
+            className="divide-y divide-gray-100"
+          >
+            {current.rows.map((r, i) => (
+              // ชื่อรายการซ้ำกันได้ (เจ้าหน้าที่พิมพ์เอง) จึงผูก key กับลำดับด้วย
+              <li key={`${r.label}-${i}`} className="flex items-center justify-between gap-3 py-2.5">
+                <span className="min-w-0 flex-1 truncate text-sm text-gray-600" title={r.label}>
+                  {r.label}
+                </span>
+                <span className={`shrink-0 text-lg font-bold ${valueColor}`}>
+                  {r.rate} <span className="text-sm font-medium text-gray-400">%</span>
+                </span>
+              </li>
+            ))}
+          </motion.ul>
+        </AnimatePresence>
+      </div>
 
       {pages.length > 1 && (
         <div className="mt-2 flex items-center justify-center gap-1.5">
