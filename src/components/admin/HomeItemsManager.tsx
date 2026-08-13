@@ -51,6 +51,7 @@ export default function HomeItemsManager({
   items,
   fields,
   titleLabel = "ชื่อรายการ",
+  fieldLabels,
   grouped = false,
 }: {
   section: Section;
@@ -59,9 +60,12 @@ export default function HomeItemsManager({
   items: Item[];
   fields: Field[];
   titleLabel?: string;
+  /** เปลี่ยนชื่อช่องบางช่องเฉพาะส่วนนี้ เช่น "รูป" → "คิวอาร์โค้ด" */
+  fieldLabels?: Partial<Record<Field, string>>;
   /** แบ่งกลุ่มตามประเภท (ใช้กับ "บริการของเรา") */
   grouped?: boolean;
 }) {
+  const labelOf = (field: Field) => fieldLabels?.[field] ?? FIELD_META[field].label;
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploadingFor, setUploadingFor] = useState<string | "new" | null>(null);
@@ -238,7 +242,7 @@ export default function HomeItemsManager({
         {fields.map((field) =>
           field === "imageUrl" ? (
             <div key={field} className="mt-2.5">
-              <span className="text-xs text-gray-500">{FIELD_META[field].label}</span>
+              <span className="text-xs text-gray-500">{labelOf(field)}</span>
               <div className="mt-1 flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -272,7 +276,7 @@ export default function HomeItemsManager({
           ) : (
             <label key={field} className="mt-2.5 block">
               <span className="text-xs text-gray-500">
-                {FIELD_META[field].label}
+                {labelOf(field)}
                 {FIELD_META[field].hint && (
                   <span className="ml-1 text-gray-400">({FIELD_META[field].hint})</span>
                 )}
@@ -449,7 +453,7 @@ export default function HomeItemsManager({
                       ) : (
                         <label key={field} className="block">
                           <span className="text-[11px] text-gray-400">
-                            {FIELD_META[field].label}
+                            {labelOf(field)}
                           </span>
                           <input
                             defaultValue={item[field] ?? ""}

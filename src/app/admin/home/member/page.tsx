@@ -29,11 +29,16 @@ export default async function Page() {
       />
 
       <h2 className="mb-2 mt-8 text-sm font-semibold text-brand-700">การ์ดบริการย่อย</h2>
+      <p className="mb-2 text-xs text-gray-500">
+        ใช้ทำปุ่มเพิ่มเพื่อนไลน์ หรือลิงก์แฟนเพจก็ได้ — แนบรูปคิวอาร์โค้ดไว้
+        การ์ดใบนั้นจะโชว์คิวอาร์ขนาด 200×200 บนหน้าแรกให้สแกนจากจอได้เลย
+      </p>
       <HomeItemsManager
         section="memberFeatures"
         items={features}
-        fields={["subtitle", "icon", "href"]}
+        fields={["subtitle", "icon", "href", "imageUrl"]}
         titleLabel="หัวข้อการ์ด"
+        fieldLabels={{ imageUrl: "คิวอาร์โค้ด (ไม่ใส่ก็ได้)" }}
       />
 
       <h2 className="mb-2 mt-8 text-sm font-semibold text-brand-700">ปุ่มลิงก์</h2>
