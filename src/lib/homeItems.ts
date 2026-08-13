@@ -34,12 +34,14 @@ export type Item = {
   href: string | null;
   imageUrl: string | null;
   theme: string | null;
+  /** ใช้เฉพาะ "บริการของเรา" — member | committee | staff */
+  category: string | null;
   published: boolean;
 };
 
 type Seed = Omit<Item, "id" | "published">;
 
-const blank = { subtitle: null, icon: null, href: null, imageUrl: null, theme: null };
+const blank = { subtitle: null, icon: null, href: null, imageUrl: null, theme: null, category: null };
 
 /** ค่าตั้งต้นของแต่ละส่วน = ของที่แสดงอยู่บนเว็บตอนนี้ */
 export const DEFAULTS: Record<Section, Seed[]> = {
@@ -96,6 +98,7 @@ export async function getItems(section: Section): Promise<Item[]> {
         href: r.href,
         imageUrl: r.imageUrl,
         theme: r.theme,
+        category: r.category,
         published: r.published,
       }));
     }
@@ -132,6 +135,7 @@ export async function getItemsForAdmin(section: Section): Promise<Item[]> {
     href: r.href,
     imageUrl: r.imageUrl,
     theme: r.theme,
+    category: r.category,
     published: r.published,
   }));
 }

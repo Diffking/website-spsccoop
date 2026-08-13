@@ -50,6 +50,7 @@ export async function PATCH(request: Request, { params }: Params) {
       ...(body.href !== undefined ? { href: text("href") } : {}),
       ...(body.imageUrl !== undefined ? { imageUrl: text("imageUrl") } : {}),
       ...(body.theme !== undefined ? { theme: text("theme") } : {}),
+      ...(body.category !== undefined ? { category: text("category") } : {}),
       ...(body.published !== undefined ? { published: Boolean(body.published) } : {}),
     },
   });

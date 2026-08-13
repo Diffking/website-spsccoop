@@ -14,7 +14,7 @@ export default async function Page() {
       <h1 className="mb-1 text-xl font-bold text-gray-800">บริการของเรา</h1>
       <p className="mb-5 text-sm text-gray-500">แถวไอคอนบริการกลางหน้าแรก</p>
 
-      <HomeItemsManager section="services" items={items} fields={["icon", "href"]} titleLabel="ชื่อบริการ" />
+      <HomeItemsManager grouped section="services" items={items} fields={["icon", "href"]} titleLabel="ชื่อบริการ" />
     </main>
   );
 }

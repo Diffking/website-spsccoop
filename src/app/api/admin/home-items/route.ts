@@ -77,6 +77,7 @@ export async function POST(request: Request) {
       href: String(body.href ?? "").trim() || null,
       imageUrl: String(body.imageUrl ?? "").trim() || null,
       theme: String(body.theme ?? "").trim() || null,
+      category: String(body.category ?? "").trim() || null,
       sortOrder: (last?.sortOrder ?? 0) + 1,
     },
   });

@@ -107,6 +107,8 @@ model HomeItem {
   imageUrl  String?
   /// ใช้เฉพาะการ์ดแนะนำ: blue | green | orange
   theme     String?
+  /// ใช้เฉพาะ "บริการของเรา" — จัดกลุ่มบริการ: member | committee | staff (ว่าง = ไม่จัดกลุ่ม)
+  category  String?
   sortOrder Int      @default(0)
   published Boolean  @default(true)
   createdAt DateTime @default(now())

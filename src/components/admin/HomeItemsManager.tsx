@@ -15,6 +15,14 @@ import {
   GripVertical,
 } from "lucide-react";
 import type { Item, Section } from "@/lib/homeItems";
+import IconPicker from "@/components/admin/IconPicker";
+import TabBar from "@/components/ui/TabBar";
+import {
+  SERVICE_CATEGORIES,
+  DEFAULT_CATEGORY,
+  categoryOf,
+  type ServiceCategory,
+} from "@/lib/serviceCategories";
 import UploadProgress from "@/components/admin/UploadProgress";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
 
@@ -43,6 +51,7 @@ export default function HomeItemsManager({
   items,
   fields,
   titleLabel = "ชื่อรายการ",
+  grouped = false,
 }: {
   section: Section;
   /** โฟลเดอร์ปลายทางฝั่ง FTP — ไม่ส่ง = โฟลเดอร์เริ่มต้น */
@@ -50,6 +59,8 @@ export default function HomeItemsManager({
   items: Item[];
   fields: Field[];
   titleLabel?: string;
+  /** แบ่งกลุ่มตามประเภท (ใช้กับ "บริการของเรา") */
+  grouped?: boolean;
 }) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -72,6 +83,8 @@ export default function HomeItemsManager({
     setFromServer(incoming);
     setList(items);
   }
+  /** ประเภทที่กำลังดูอยู่ — เพิ่มรายการใหม่จะเข้าประเภทนี้ให้เลย */
+  const [tab, setTab] = useState<ServiceCategory>(DEFAULT_CATEGORY);
   const [dragId, setDragId] = useState<string | null>(null);
   /** id ของแถวที่กดค้างที่จุดจับ — ลากได้เฉพาะตอนนี้ ไม่งั้นแก้ช่องข้อความในแถวไม่ได้ */
   const [handleOn, setHandleOn] = useState<string | null>(null);
@@ -160,10 +173,12 @@ export default function HomeItemsManager({
     const ok = await call("/api/admin/home-items/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section, ...draft }),
+      body: JSON.stringify({ section, ...(grouped ? { category: tab } : {}), ...draft }),
     });
-    if (ok) setDraft({});
+    if (ok) setDraft(grouped ? { category: tab } : {});
   }
+
+  const visible = grouped ? list.filter((i) => categoryOf(i.category) === tab) : list;
 
   return (
     <div className="space-y-4">
@@ -180,9 +195,32 @@ export default function HomeItemsManager({
         }}
       />
 
+      {grouped && (
+        <TabBar
+          layoutId="service-category-tab"
+          value={tab}
+          onChange={(next) => {
+            setTab(next);
+            setDraft((d) => ({ ...d, category: next }));
+          }}
+          items={SERVICE_CATEGORIES.map((c) => ({
+            value: c.key,
+            label: c.label,
+            count: list.filter((i) => categoryOf(i.category) === c.key).length,
+          }))}
+        />
+      )}
+
       {/* ฟอร์มเพิ่ม */}
       <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-        <h2 className="font-semibold text-gray-800">เพิ่มรายการ</h2>
+        <h2 className="font-semibold text-gray-800">
+          เพิ่มรายการ
+          {grouped && (
+            <span className="ml-1.5 text-sm font-normal text-gray-500">
+              ใน {SERVICE_CATEGORIES.find((c) => c.key === tab)?.label}
+            </span>
+          )}
+        </h2>
 
         <label className="mt-3 block">
           <span className="text-xs text-gray-500">{titleLabel}</span>
@@ -222,6 +260,10 @@ export default function HomeItemsManager({
                   />
                 )}
               </div>
+            </div>
+          ) : field === "icon" ? (
+            <div key={field} className="mt-2.5">
+              <IconPicker value={draft.icon ?? ""} onChange={(name) => set("icon", name)} />
             </div>
           ) : (
             <label key={field} className="mt-2.5 block">
@@ -263,13 +305,13 @@ export default function HomeItemsManager({
           รายการทั้งหมด <span className="text-sm font-normal text-gray-400">({items.length})</span>
         </h2>
 
-        {list.length === 0 ? (
+        {visible.length === 0 ? (
           <p className="mt-4 rounded-xl bg-gray-50 py-8 text-center text-sm text-gray-400">
             ยังไม่มีรายการ
           </p>
         ) : (
           <>
-          {list.length > 1 && (
+          {visible.length > 1 && (
             <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
               <GripVertical className="h-3.5 w-3.5 text-gray-400" />
               ลากที่จุดจับเพื่อจัดลำดับ — บนสุดขึ้นก่อนบนหน้าเว็บ
@@ -277,7 +319,7 @@ export default function HomeItemsManager({
           )}
           <ul className="mt-2 space-y-3">
             <AnimatePresence initial={false}>
-              {list.map((item, i) => (
+              {visible.map((item, i) => (
                 <motion.li
                   key={item.id}
                   layout
@@ -348,7 +390,7 @@ export default function HomeItemsManager({
                     </button>
                     <button
                       onClick={() => patch(item.id, { move: "down" })}
-                      disabled={busy || i === list.length - 1}
+                      disabled={busy || i === visible.length - 1}
                       title="เลื่อนลง"
                       className="shrink-0 rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30"
                     >
@@ -393,6 +435,13 @@ export default function HomeItemsManager({
                           )}
                           {item.imageUrl ? "เปลี่ยนรูป" : "เพิ่มรูป"}
                         </button>
+                      ) : field === "icon" ? (
+                        <div key={field} className="sm:col-span-2">
+                          <IconPicker
+                            value={item.icon ?? ""}
+                            onChange={(name) => patch(item.id, { icon: name })}
+                          />
+                        </div>
                       ) : (
                         <label key={field} className="block">
                           <span className="text-[11px] text-gray-400">
@@ -409,6 +458,23 @@ export default function HomeItemsManager({
                           />
                         </label>
                       ),
+                    )}
+
+                    {grouped && (
+                      <label className="block">
+                        <span className="text-[11px] text-gray-400">ประเภท</span>
+                        <select
+                          value={categoryOf(item.category)}
+                          onChange={(e) => patch(item.id, { category: e.target.value })}
+                          className="mt-0.5 w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-brand-400"
+                        >
+                          {SERVICE_CATEGORIES.map((c) => (
+                            <option key={c.key} value={c.key}>
+                              {c.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                     )}
                   </div>
                 </motion.li>
