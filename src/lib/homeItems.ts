@@ -145,32 +145,55 @@ export async function getItemsForAdmin(section: Section): Promise<Item[]> {
 
 /* ── ปฏิทินกิจกรรม ── */
 
+/** ประเภทกิจกรรมบนปฏิทิน — วันหยุดมาจากอีกตาราง ไม่นับในนี้ */
+export const EVENT_TYPES = ["mobile", "project", "seminar"] as const;
+export type EventType = (typeof EVENT_TYPES)[number];
+export const isEventType = (v: unknown): v is EventType =>
+  typeof v === "string" && (EVENT_TYPES as readonly string[]).includes(v);
+
 export type EventItem = {
   id: string;
   day: number;
-  type: "mobile" | "project";
+  /** วันที่เต็มแบบ "YYYY-MM-DD" — ว่าง = รายการเก่าที่ระบุแค่วันที่ในเดือน */
+  date: string;
+  type: EventType;
   title: string;
   place: string | null;
   time: string | null;
   published: boolean;
 };
 
+/** วันที่แบบไทย "YYYY-MM-DD" ของค่าที่เก็บเป็นเที่ยงคืนเวลาไทย */
+const thaiYmd = (d: Date) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(d);
+
+/**
+ * กิจกรรมที่จะขึ้นปฏิทินหน้าแรก — ปฏิทินโชว์ทีละเดือน จึงคัดเฉพาะเดือนนี้
+ *
+ * รายการที่ระบุวันที่เต็มไว้ ขึ้นเฉพาะเดือน/ปีของมันจริง ๆ
+ * ส่วนรายการเก่าที่มีแต่เลขวัน (ยังไม่เคยแก้ให้ระบุวันที่) ขึ้นทุกเดือนเหมือนเดิม
+ */
 export async function getCalendarEvents(): Promise<EventItem[]> {
+  const month = thaiYmd(new Date()).slice(0, 7); // "2026-08"
+
   try {
     const rows = await db.calendarEvent.findMany({
       where: { published: true },
       orderBy: { day: "asc" },
     });
     if (rows.length > 0) {
-      return rows.map((r) => ({
-        id: r.id,
-        day: r.day,
-        type: r.type === "mobile" ? "mobile" : "project",
-        title: r.title,
-        place: r.place,
-        time: r.time,
-        published: r.published,
-      }));
+      return rows
+        .map((r) => ({
+          id: r.id,
+          day: r.day,
+          date: r.date ? thaiYmd(r.date) : "",
+          type: isEventType(r.type) ? r.type : "project",
+          title: r.title,
+          place: r.place,
+          time: r.time,
+          published: r.published,
+        }))
+        .filter((e) => !e.date || e.date.startsWith(month));
     }
   } catch (error) {
     console.error("อ่านกิจกรรมปฏิทินไม่ได้:", error);
@@ -182,7 +205,8 @@ export async function getCalendarEvents(): Promise<EventItem[]> {
     .map((e, i) => ({
       id: `default-${i}`,
       day: e.day,
-      type: e.type === "mobile" ? "mobile" : "project",
+      date: "",
+      type: isEventType(e.type) ? e.type : "project",
       title: e.title,
       place: e.place ?? null,
       time: e.time ?? null,
@@ -207,11 +231,15 @@ export async function getCalendarEventsForAdmin(): Promise<EventItem[]> {
     });
   }
 
-  const rows = await db.calendarEvent.findMany({ orderBy: { day: "asc" } });
+  // เรียงตามวันที่จริงก่อน รายการที่ยังไม่ระบุวันที่ไปต่อท้าย
+  const rows = await db.calendarEvent.findMany({
+    orderBy: [{ date: { sort: "asc", nulls: "last" } }, { day: "asc" }],
+  });
   return rows.map((r) => ({
     id: r.id,
     day: r.day,
-    type: r.type === "mobile" ? "mobile" : "project",
+    date: r.date ? thaiYmd(r.date) : "",
+    type: isEventType(r.type) ? r.type : "project",
     title: r.title,
     place: r.place,
     time: r.time,

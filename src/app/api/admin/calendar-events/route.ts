@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
+import { isEventType } from "@/lib/homeItems";
+import { parseThaiDate } from "@/app/api/admin/holidays/route";
 
 /** เพิ่มกิจกรรมบนปฏิทินหน้าแรก */
 export async function POST(request: Request) {
@@ -8,13 +10,18 @@ export async function POST(request: Request) {
   if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-  const day = Number(body.day);
   const title = String(body.title ?? "").trim();
-  const type = body.type === "mobile" ? "mobile" : "project";
+  const type = isEventType(body.type) ? body.type : "project";
 
-  if (!Number.isInteger(day) || day < 1 || day > 31) {
-    return NextResponse.json({ error: "วันที่ต้องเป็นตัวเลข 1-31" }, { status: 400 });
+  // เก็บวันที่เต็ม แล้วแยกเลขวันไว้ให้ปฏิทินหน้าแรกใช้วางลงช่อง — คิดตามเวลาไทยเสมอ
+  const date = parseThaiDate(String(body.date ?? ""));
+  if (!date) {
+    return NextResponse.json({ error: "เลือกวันที่ก่อน" }, { status: 400 });
   }
+  const day = Number(
+    new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", day: "numeric" }).format(date),
+  );
+
   if (!title) {
     return NextResponse.json({ error: "ชื่อกิจกรรมห้ามว่าง" }, { status: 400 });
   }
@@ -22,6 +29,7 @@ export async function POST(request: Request) {
   const item = await db.calendarEvent.create({
     data: {
       day,
+      date,
       type,
       title,
       place: String(body.place ?? "").trim() || null,

@@ -3,17 +3,22 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-import { Plus, Trash2, Eye, EyeOff, Loader2, Bus, FolderKanban } from "lucide-react";
+import { Plus, Trash2, Eye, EyeOff, Loader2, Bus, FolderKanban, Presentation } from "lucide-react";
 import type { EventItem } from "@/lib/homeItems";
+import ThaiDatePicker, { thaiDateLabel, todayValue } from "@/components/admin/ThaiDatePicker";
 
 const TYPES = [
   { key: "mobile", label: "รถโมบาย", icon: Bus, tone: "text-brand-600" },
   { key: "project", label: "โครงการ", icon: FolderKanban, tone: "text-purple-600" },
+  { key: "seminar", label: "สัมมนา", icon: Presentation, tone: "text-accent-green" },
 ] as const;
 
 export default function CalendarEventsManager({ items }: { items: EventItem[] }) {
   const router = useRouter();
-  const [draft, setDraft] = useState<Record<string, string>>({ type: "project" });
+  const [draft, setDraft] = useState<Record<string, string>>({
+    type: "project",
+    date: todayValue(),
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,7 +51,7 @@ export default function CalendarEventsManager({ items }: { items: EventItem[] })
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(draft),
     });
-    if (ok) setDraft({ type: "project" });
+    if (ok) setDraft({ type: "project", date: todayValue() });
   }
 
   return (
@@ -54,22 +59,19 @@ export default function CalendarEventsManager({ items }: { items: EventItem[] })
       <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
         <h2 className="font-semibold text-gray-800">เพิ่มกิจกรรม</h2>
         <p className="mt-0.5 text-xs text-gray-500">
-          ปฏิทินหน้าแรกแสดงทีละเดือน ใส่เฉพาะวันที่ในเดือน (1-31) —
-          วันหยุดทำการอยู่คนละเมนู ที่ &ldquo;วันหยุด&rdquo;
+          เลือกวันที่จากปฏิทิน (เดือนไทย ปี พ.ศ.) — หน้าแรกจะขึ้นเฉพาะกิจกรรมของเดือนนั้น
+          · วันหยุดทำการอยู่คนละเมนู ที่ &ldquo;วันหยุด&rdquo;
         </p>
 
-        <div className="mt-3 grid gap-2.5 sm:grid-cols-[6rem_1fr]">
-          <label className="block">
+        <div className="mt-3 grid gap-2.5 sm:grid-cols-[11rem_1fr]">
+          <div className="block">
             <span className="text-xs text-gray-500">วันที่</span>
-            <input
-              type="number"
-              min={1}
-              max={31}
-              value={draft.day ?? ""}
-              onChange={(e) => set("day", e.target.value)}
-              className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+            <ThaiDatePicker
+              value={draft.date ?? ""}
+              onChange={(next) => set("date", next)}
+              className="mt-1"
             />
-          </label>
+          </div>
           <label className="block">
             <span className="text-xs text-gray-500">ชื่อกิจกรรม</span>
             <input
@@ -155,8 +157,11 @@ export default function CalendarEventsManager({ items }: { items: EventItem[] })
                     transition={{ duration: 0.22, ease: "easeOut" }}
                     className="flex items-center gap-3 py-3"
                   >
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gray-50 text-sm font-bold tabular-nums text-gray-700">
-                      {item.day}
+                    <span className="grid h-12 w-14 shrink-0 place-items-center rounded-xl bg-gray-50 leading-none text-gray-700">
+                      <span className="text-base font-bold tabular-nums">{item.day}</span>
+                      <span className="mt-0.5 text-[10px] text-gray-500">
+                        {item.date ? thaiDateLabel(item.date, true).split(" ").slice(1).join(" ") : "ทุกเดือน"}
+                      </span>
                     </span>
                     <span className="min-w-0 flex-1">
                       <span
@@ -174,6 +179,12 @@ export default function CalendarEventsManager({ items }: { items: EventItem[] })
                       </span>
                     </span>
 
+                    <ThaiDatePicker
+                      value={item.date}
+                      onChange={(next) => next && patch(item.id, { date: next })}
+                      placeholder="ระบุวันที่"
+                      className="w-40 shrink-0"
+                    />
                     <button
                       onClick={() => patch(item.id, { published: !item.published })}
                       disabled={busy}

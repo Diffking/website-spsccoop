@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
-import { CalendarX, Bus, FolderKanban, MapPin, Clock, ChevronLeft, ChevronRight, RotateCcw, CalendarDays } from "lucide-react";
+import { CalendarX, Bus, FolderKanban, Presentation, MapPin, Clock, ChevronLeft, ChevronRight, RotateCcw, CalendarDays } from "lucide-react";
 import SectionHeading from "@/components/ui/SectionHeading";
 import type { CalendarEvent } from "@/data/home";
 import { useIsClient } from "@/lib/useIsClient";
@@ -11,6 +11,7 @@ const TYPE = {
   holiday: { color: "bg-accent-red", ring: "ring-accent-red/30", Icon: CalendarX, label: "วันหยุด" },
   mobile: { color: "bg-brand-400", ring: "ring-brand-400/30", Icon: Bus, label: "รถโมบาย" },
   project: { color: "bg-purple-500", ring: "ring-purple-500/30", Icon: FolderKanban, label: "โครงการ" },
+  seminar: { color: "bg-accent-green", ring: "ring-accent-green/30", Icon: Presentation, label: "สัมมนา" },
 } as const;
 
 const THAI_MONTHS = [

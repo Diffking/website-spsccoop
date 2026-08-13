@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ThaiDatePicker from "@/components/admin/ThaiDatePicker";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { Plus, Trash2, Eye, EyeOff, Loader2, CalendarOff } from "lucide-react";
@@ -86,15 +87,10 @@ export default function HolidaysManager({ items }: { items: HolidayRow[] }) {
         </p>
 
         <div className="mt-3 grid gap-2.5 sm:grid-cols-[10rem_1fr]">
-          <label className="block">
+          <div className="block">
             <span className="text-xs text-gray-500">วันที่</span>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
-            />
-          </label>
+            <ThaiDatePicker value={date} onChange={setDate} className="mt-1" />
+          </div>
           <label className="block">
             <span className="text-xs text-gray-500">ชื่อวันหยุด</span>
             <input

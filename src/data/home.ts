@@ -159,7 +159,7 @@ export const memberLinks = [
 
 export type CalendarEvent = {
   day: number; // วันที่ในเดือน (แสดงเฉพาะเดือนปัจจุบัน)
-  type: "holiday" | "mobile" | "project";
+  type: "holiday" | "mobile" | "project" | "seminar";
   title: string; // ทำอะไร
   place?: string; // ที่ไหน
   time?: string; // เวลา
