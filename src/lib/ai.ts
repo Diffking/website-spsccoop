@@ -330,7 +330,8 @@ export function formatPageHtml(html: string, title: string) {
           "ต้องคงไว้ทั้งก้อน ทั้ง class และ data-title ห้ามยุบ ห้ามแปลงเป็นหัวข้อ ห้ามสลับลำดับ " +
           "(นี่คือแท็บที่กดสลับได้บนหน้าเว็บ ยุบทิ้งแล้วหน้าพัง) " +
           "จัดรูปแบบได้เฉพาะ*ข้างใน*แต่ละ tab เท่านั้น\n" +
-          '- <div class="ebook"> (การ์ดไฟล์ PDF) คงไว้ทั้งก้อนเช่นกัน\n\n' +
+          '- <div class="ebook"> (การ์ดไฟล์ PDF), <div class="cards"> (การ์ดลิงก์) ' +
+          'และ <div class="people"> (ทำเนียบบุคลากร) คงไว้ทั้งก้อนเช่นกัน ห้ามยุบ ห้ามตัด class\n\n' +
           "ใช้ได้เฉพาะแท็ก: p, h2, h3, ul, ol, li, strong, em, a, br, hr, blockquote, " +
           "table, thead, tbody, tr, th, td, img, figure, figcaption\n" +
           "ห้ามใส่ style, script, iframe และห้ามครอบด้วย <html> หรือ <body>\n" +

@@ -6,6 +6,7 @@ import { Save, Trash2, Loader2, Eye, Pencil, Sparkles, Undo2 } from "lucide-reac
 import ContentToolbar from "@/components/admin/ContentToolbar";
 import PageContent from "@/components/site/PageContent";
 import Toggle from "@/components/ui/Toggle";
+import PeopleBuilder from "@/components/admin/PeopleBuilder";
 
 /** จำสวิตช์ AI ไว้ในเครื่องคนใช้ ไม่ใช่ในฐาน — เป็นความชอบส่วนตัวของแต่ละคน ไม่ใช่ค่าของเว็บ */
 const AI_FORMAT_KEY = "spsc_page_ai_format";
@@ -230,6 +231,9 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
           {status.text}
         </p>
       )}
+
+      {/* จัดทำเนียบบุคลากรเป็นช่อง ๆ แทนการพิมพ์ HTML เอง — เขียนกลับเข้าเนื้อหาให้เลย */}
+      <PeopleBuilder value={content} onChange={setContent} />
 
       {aiReady && (
         <div

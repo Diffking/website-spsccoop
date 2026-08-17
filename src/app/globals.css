@@ -222,6 +222,37 @@ body {
 .prose-page .tab.is-ready + .tab.is-ready { margin-top: 0; }
 .prose-page .tab[hidden] { display: none; }
 
+/* ---- ทำเนียบบุคลากร ----
+   รูปคนกลางกรอบ ชื่อกับตำแหน่งอยู่ใต้ภาพ · เลือกได้ว่าแถวละกี่คน (cols-2 ถึง cols-5)
+   จอแคบลดคอลัมน์ให้เองเป็น 2 แล้ว 1 — บังคับ 5 คอลัมน์บนมือถือรูปจะเล็กจนไม่เห็นหน้า */
+.prose-page .people {
+  display: grid; gap: 1.25rem; margin: 1.5rem 0;
+  grid-template-columns: repeat(var(--people-cols, 4), minmax(0, 1fr));
+}
+.prose-page .people.cols-2 { --people-cols: 2; }
+.prose-page .people.cols-3 { --people-cols: 3; }
+.prose-page .people.cols-4 { --people-cols: 4; }
+.prose-page .people.cols-5 { --people-cols: 5; }
+
+@media (max-width: 900px) { .prose-page .people { --people-cols: 3 !important; } }
+@media (max-width: 640px) { .prose-page .people { --people-cols: 2 !important; } }
+@media (max-width: 380px) { .prose-page .people { --people-cols: 1 !important; } }
+
+.prose-page .people .person { margin: 0; text-align: center; }
+.prose-page .people .person img {
+  display: block; width: 100%; margin: 0 auto;
+  aspect-ratio: 3 / 4; object-fit: cover; object-position: top center;
+  border-radius: .6rem; background: #f3f4f6;
+  box-shadow: 0 4px 14px rgb(15 83 144 / .12);
+}
+.prose-page .people .person figcaption { margin-top: .6rem; text-align: center; }
+.prose-page .people .person-name {
+  display: block; font-weight: 600; color: #1f2937; line-height: 1.45; font-size: .95rem;
+}
+.prose-page .people .person-role {
+  display: block; margin-top: .1rem; font-size: .82rem; color: #6b7280; line-height: 1.45;
+}
+
 /* ---- การ์ดลิงก์แบบตาราง ----
    ป้ายอักษรย่อสีเข้มด้านซ้าย + ชื่อกับคำอธิบายด้านขวา · ทั้งใบเป็นลิงก์เดียว
    ใช้แทนแท็ปเมนูได้เมื่อแต่ละหัวข้อเป็น "ลิงก์ไปที่อื่น" มากกว่าจะเป็นเนื้อหายาว ๆ */

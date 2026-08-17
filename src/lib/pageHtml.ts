@@ -28,6 +28,9 @@ const ALLOWED_CLASSES = new Set([
   "cards", "card", "card-badge", "card-text", "card-title", "card-sub",
   // สีของการ์ด
   "blue", "green", "amber", "pink", "purple", "teal",
+  // ทำเนียบบุคลากร (ดู .people ใน globals.css) — cols-N คือจำนวนคนต่อแถว
+  "people", "person", "person-name", "person-role",
+  "cols-2", "cols-3", "cols-4", "cols-5",
 ]);
 
 /** แอตทริบิวต์ที่ยอมให้ติดมากับแต่ละแท็ก — นอกจากนี้ตัดทิ้งหมด รวมถึง style และ on* ทุกตัว */
@@ -107,6 +110,9 @@ const KEEP_PATTERNS: { name: string; pattern: RegExp }[] = [
   { name: "หัวข้อแท็บ", pattern: /class="[^"]*\btab\b/gi },
   { name: "แถวรูป", pattern: /class="[^"]*\bimage-row\b/gi },
   { name: "การ์ดไฟล์ PDF", pattern: /class="[^"]*\bebook\b/gi },
+  { name: "การ์ดลิงก์", pattern: /class="[^"]*\bcards\b/gi },
+  { name: "ทำเนียบบุคลากร", pattern: /class="[^"]*\bpeople\b/gi },
+  { name: "รายชื่อในทำเนียบ", pattern: /class="[^"]*\bperson\b/gi },
 ];
 
 const count = (html: string, pattern: RegExp) => html.match(pattern)?.length ?? 0;
