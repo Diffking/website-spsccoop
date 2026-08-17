@@ -12,6 +12,7 @@ import {
   Crown,
   CalendarOff,
   FileStack,
+  Sparkles,
   Users,
   Search,
   Menu,
@@ -28,6 +29,7 @@ export type MenuKey =
   | "splash"
   | "holidays"
   | "pages"
+  | "designed"
   | "seo"
   | "users";
 
@@ -100,6 +102,13 @@ const ITEMS: {
     icon: FileStack,
     label: "หน้าเนื้อหา",
     desc: "ประวัติความเป็นมา วิสัยทัศน์ ระเบียบข้อบังคับ",
+  },
+  {
+    key: "designed",
+    href: "/admin/designed",
+    icon: Sparkles,
+    label: "หน้าออกแบบอัตโนมัติ",
+    desc: "หน้าที่ระบบจัดหน้าให้เอง เช่น ติดต่อเรา",
   },
   {
     key: "seo",
