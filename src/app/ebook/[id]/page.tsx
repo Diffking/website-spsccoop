@@ -36,7 +36,8 @@ export default async function EbookPage({ params }: { params: Promise<{ id: stri
     <>
       <PageTracker />
       <Header />
-      <main className="mx-auto w-full max-w-5xl px-4 py-8">
+      {/* กว้างเท่าหัวเว็บกับหน้าแรก — หน้าอ่านหนังสือยิ่งกว้าง ตัวหนังสือในหน้ายิ่งใหญ่ */}
+      <main className="mx-auto w-full max-w-6xl px-4 py-8">
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-brand-600"
