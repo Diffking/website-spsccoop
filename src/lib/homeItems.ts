@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { localAsset } from "@/lib/assetFallback";
 import {
   committees,
   memberFeatures,
@@ -99,7 +100,7 @@ export async function getItems(section: Section): Promise<Item[]> {
         subtitle: r.subtitle,
         icon: r.icon,
         href: r.href,
-        imageUrl: r.imageUrl,
+        imageUrl: localAsset(r.imageUrl) || null,
         theme: r.theme,
         category: r.category,
         published: r.published,
@@ -136,7 +137,7 @@ export async function getItemsForAdmin(section: Section): Promise<Item[]> {
     subtitle: r.subtitle,
     icon: r.icon,
     href: r.href,
-    imageUrl: r.imageUrl,
+    imageUrl: localAsset(r.imageUrl) || null,
     theme: r.theme,
     category: r.category,
     published: r.published,

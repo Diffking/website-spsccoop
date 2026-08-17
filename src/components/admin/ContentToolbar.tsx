@@ -17,6 +17,8 @@ import {
   FileText,
   PanelsTopLeft,
   LayoutGrid,
+  UserSquare2,
+  Users,
 } from "lucide-react";
 import UploadProgress from "@/components/admin/UploadProgress";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
@@ -162,6 +164,25 @@ const TOOLS: Tool[] = [
       "</div>",
   },
   {
+    icon: Users,
+    group: "block",
+    title: "ทำเนียบบุคลากร (โครงพร้อมตัวอย่าง)",
+    kind: "block",
+    // ใส่ตัวอย่าง 1 คนไว้ในโครงเลย พร้อมบอกว่าเพิ่มคนยังไง เปลี่ยนจำนวนคอลัมน์ตรงไหน
+    block:
+      '<div class="people cols-3">\n' +
+      "  <!-- คอลัมน์: เปลี่ยน cols-3 เป็น cols-2 / cols-4 / cols-5 ได้ -->\n" +
+      "  <!-- เพิ่มคน: ก๊อป <figure> ทั้งก้อนด้านล่างมาต่อ · รูปควรเป็นรูปถ่าย 1 นิ้ว -->\n" +
+      '  <figure class="person">\n' +
+      '    <img src="/uploads/ใส่ชื่อไฟล์รูป.jpg" alt="ชื่อ-นามสกุล">\n' +
+      "    <figcaption>\n" +
+      '      <span class="person-name">ชื่อ-นามสกุล</span>\n' +
+      '      <span class="person-role">ตำแหน่ง</span>\n' +
+      "    </figcaption>\n" +
+      "  </figure>\n" +
+      "</div>",
+  },
+  {
     icon: PanelsTopLeft,
     group: "block",
     title: "แท็ปเมนู (สลับหัวข้อ)",
@@ -182,6 +203,7 @@ const TOOLS: Tool[] = [
 export default function ContentToolbar({ textarea, value, onChange, folder = "page_images" }: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
   const pdfInput = useRef<HTMLInputElement>(null);
+  const personInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<{ phase: UploadPhase | null; percent: number; name: string }>(
     { phase: null, percent: 0, name: "" },
@@ -273,6 +295,53 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
     });
   }
 
+  /**
+   * อัปรูปบุคคล — ย่อ 400px พอสำหรับกรอบ 1 นิ้ว และวางเป็น <figure class="person">
+   * ใส่ในกริดทำเนียบก็ได้ วางเดี่ยว ๆ ก็ได้ ขนาดกรอบเท่ากันทั้งสองแบบ
+   */
+  async function uploadPeople(files: File[]) {
+    setError(null);
+    setHint(null);
+    setUploading(true);
+
+    const done: { url: string; name: string }[] = [];
+    for (const [i, file] of files.entries()) {
+      setProgress({
+        phase: "upload",
+        percent: 0,
+        name: files.length > 1 ? `${file.name} (${i + 1}/${files.length})` : file.name,
+      });
+
+      const form = new FormData();
+      form.append("file", file);
+      form.append("folder", folder);
+      form.append("maxEdge", "400");
+      const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", form, (percent, phase) =>
+        setProgress((p) => ({ ...p, percent, phase })),
+      );
+      if (!result.ok) {
+        setError(`${file.name}: ${result.error}`);
+        break;
+      }
+      done.push({ url: result.data.url, name: file.name.replace(/\.[^.]+$/, "") });
+    }
+
+    setUploading(false);
+    if (done.length === 0) return;
+
+    const figures = done
+      .map(
+        (d) =>
+          `  <figure class="person">\n    <img src="${d.url}" alt="${d.name}">\n` +
+          `    <figcaption>\n      <span class="person-name">${d.name}</span>\n` +
+          `      <span class="person-role">ตำแหน่ง</span>\n    </figcaption>\n  </figure>`,
+      )
+      .join("\n");
+
+    insert(`<div class="people cols-3">\n${figures}\n</div>`);
+    setHint(`แทรกรูปบุคคล ${done.length} คน (กรอบ 1 นิ้ว) — แก้ชื่อกับตำแหน่งในเนื้อหา แล้วกดบันทึก`);
+  }
+
   /** โครง <figure> ของรูปหนึ่งใบ — alt ตั้งจากชื่อไฟล์ไปก่อน แก้ทีหลังได้ */
   function figureOf(url: string, name: string, cls: string, indent = "  ") {
     const attr = cls ? ` class="${cls}"` : "";
@@ -319,7 +388,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
    * อัปได้ทีละหลายไฟล์ — เลือกไฟล์เดียวได้รูปเดี่ยว เลือกหลายไฟล์ได้แถวรูปเรียงข้างกัน
    * อัปเรียงทีละไฟล์ ไม่ยิงพร้อมกัน เพราะแถบความคืบหน้ามีอันเดียวและ FTP ก็รับทีละไฟล์อยู่ดี
    */
-  async function uploadMany(files: File[]) {
+  async function uploadMany(files: File[], maxEdge = 600) {
     setError(null);
     setHint(null);
     setUploading(true);
@@ -335,6 +404,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
       const form = new FormData();
       form.append("file", file);
       form.append("folder", folder);
+      form.append("maxEdge", String(maxEdge));
       const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", form, (percent, phase) =>
         setProgress((p) => ({ ...p, percent, phase })),
       );
@@ -369,6 +439,19 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
 
   return (
     <div className="border-b border-gray-100 bg-gray-50 px-2 py-1.5">
+      <input
+        ref={personInput}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          if (files.length > 0) void uploadPeople(files);
+          e.target.value = "";
+        }}
+      />
+
       <input
         ref={pdfInput}
         type="file"
@@ -480,7 +563,22 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
           ) : (
             <ImagePlus className="h-3.5 w-3.5" />
           )}
-          แทรกรูป
+          แทรกรูป 600px
+        </button>
+
+        <button
+          type="button"
+          onClick={() => personInput.current?.click()}
+          disabled={uploading}
+          title="อัปรูปบุคคล ย่อให้พอดีกรอบรูปถ่าย 1 นิ้ว พร้อมช่องใส่ชื่อและตำแหน่ง"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-700 transition hover:bg-brand-100 disabled:opacity-60"
+        >
+          {uploading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <UserSquare2 className="h-3.5 w-3.5" />
+          )}
+          แทรกรูปบุคคล 1 นิ้ว
         </button>
 
         <span className="h-5 w-px bg-gray-200" />

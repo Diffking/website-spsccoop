@@ -9,6 +9,7 @@ import BackToTop from "@/components/ui/BackToTop";
 import { currentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { pageMetadata } from "@/lib/seo";
+import { localAssetsInHtml } from "@/lib/assetFallback";
 
 /**
  * หน้าเนื้อหาทั่วไป — ประวัติความเป็นมา วิสัยทัศน์ ระเบียบ ฯลฯ
@@ -87,7 +88,7 @@ export default async function ContentPage({ params }: Params) {
         </p>
 
         <PageContent
-          html={page.body}
+          html={localAssetsInHtml(page.body)}
           className="mt-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 md:p-8"
         />
       </main>

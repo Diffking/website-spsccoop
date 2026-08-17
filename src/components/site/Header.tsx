@@ -1,5 +1,6 @@
 import HeaderClient from "@/components/site/HeaderClient";
 import { getBrand, getNav } from "@/lib/nav";
+import { localAsset } from "@/lib/assetFallback";
 import { getHolidayToday, getNextHoliday } from "@/lib/content";
 import { getOfficeHours } from "@/lib/settings";
 
@@ -16,7 +17,7 @@ export default async function Header() {
   return (
     <HeaderClient
       nav={nav}
-      brand={brand}
+      brand={{ ...brand, logoUrl: localAsset(brand.logoUrl) }}
       hours={hours}
       holidayToday={holidayToday}
       nextHoliday={nextHoliday}

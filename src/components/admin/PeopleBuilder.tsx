@@ -30,9 +30,18 @@ function parsePeople(html: string): { people: Person[]; columns: number } {
   const columns = Number(/\bcols-(\d)\b/.exec(block.className)?.[1] ?? DEFAULT_COLUMNS);
   const doc = new DOMParser().parseFromString(`<div>${block.inner}</div>`, "text/html");
 
-  const people = Array.from(doc.querySelectorAll(".person")).map((el) => ({
+  // รับทั้งแบบที่ใส่ class="person" และ figure เปล่าที่วางในกริด (คนพิมพ์เองมักไม่ใส่ class)
+  const nodes = doc.querySelectorAll(".person").length
+    ? doc.querySelectorAll(".person")
+    : doc.querySelectorAll("figure");
+
+  const people = Array.from(nodes).map((el) => ({
     src: el.querySelector("img")?.getAttribute("src") ?? "",
-    name: el.querySelector(".person-name")?.textContent?.trim() ?? "",
+    // ไม่มี .person-name ก็ใช้ข้อความใน figcaption ทั้งก้อนเป็นชื่อไปก่อน
+    name:
+      el.querySelector(".person-name")?.textContent?.trim() ??
+      el.querySelector("figcaption")?.textContent?.trim() ??
+      "",
     role: el.querySelector(".person-role")?.textContent?.trim() ?? "",
   }));
 

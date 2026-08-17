@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Save, Trash2, Loader2, Eye, Pencil, Sparkles, Undo2 } from "lucide-react";
 import ContentToolbar from "@/components/admin/ContentToolbar";
 import PageContent from "@/components/site/PageContent";
+import { localAssetsInHtml } from "@/lib/assetFallback";
 import Toggle from "@/components/ui/Toggle";
 import PeopleBuilder from "@/components/admin/PeopleBuilder";
 
@@ -218,7 +219,7 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
            * ใช้คอมโพเนนต์ตัวเดียวกับหน้าเว็บจริง — เดิมพรีวิววาด HTML ดิบ ๆ
            * แท็ปเมนูจึงไม่ขึ้นเป็นแท็บให้กด เห็นเป็นก้อนเรียงกันเฉย ๆ ไม่ตรงกับของจริง
            */
-          <PageContent html={content} className="min-h-[16rem] p-4" />
+          <PageContent html={localAssetsInHtml(content)} className="min-h-[16rem] p-4" />
         )}
       </div>
 

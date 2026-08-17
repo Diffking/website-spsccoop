@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getTickerSettings } from "@/lib/settings";
 import { announcementLine, KINDS, type Kind } from "@/lib/announcementKinds";
+import { localAsset } from "@/lib/assetFallback";
 import type { CalendarEvent } from "@/data/home";
 
 /**
@@ -214,7 +215,7 @@ export async function getSlides(): Promise<SlideItem[]> {
     });
     return rows.map((r) => ({
       id: r.id,
-      src: r.imageUrl,
+      src: localAsset(r.imageUrl),
       title: r.title,
       desc: r.caption ?? "",
       href: r.href ?? "#",
@@ -243,7 +244,7 @@ export async function getAnnouncements(take = 20, kind?: Kind): Promise<Announce
       hideNumber: r.hideNumber,
       date: thaiDate.format(r.publishedAt),
       // ยังไม่มีหน้ารายละเอียดประกาศ — ถ้าไม่มีไฟล์แนบก็ยังไม่ต้องลิงก์ไปไหน
-      href: r.fileUrl ?? "#",
+      href: localAsset(r.fileUrl) || "#",
     }));
   } catch (error) {
     console.error("อ่านประกาศไม่ได้:", error);

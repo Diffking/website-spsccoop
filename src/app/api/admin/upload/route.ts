@@ -60,8 +60,17 @@ export async function POST(request: Request) {
   }
 
   const isPdf = file.type === "application/pdf";
-  // รูปในหน้าเนื้อหาอ่านเต็มความกว้างคอลัมน์ ย่อเหลือ 600px จะเบลอ ให้ใหญ่กว่าที่อื่น
-  const maxEdge = folder === "page_images" ? 1200 : MAX_EDGE;
+  /*
+   * ขนาดที่ย่อ — ฝั่งหน้าเว็บส่งมาได้ว่าจะเอาเท่าไหร่ (รูปทั่วไป 600 · รูปบุคคล 1 นิ้ว 400)
+   * ไม่ส่งมาก็ใช้ค่าตามโฟลเดอร์เหมือนเดิม
+   */
+  const asked = Math.trunc(Number(form?.get("maxEdge") ?? 0));
+  const maxEdge =
+    Number.isFinite(asked) && asked >= 200 && asked <= 2000
+      ? asked
+      : folder === "page_images"
+        ? 1200
+        : MAX_EDGE;
   const limit = isPdf ? MAX_PDF_BYTES : MAX_BYTES;
   if (file.size > limit) {
     return NextResponse.json(
