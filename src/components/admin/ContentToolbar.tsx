@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import UploadProgress from "@/components/admin/UploadProgress";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
-import { findBlocks } from "@/lib/htmlBlocks";
+import { findBlocks, type HtmlBlock } from "@/lib/htmlBlocks";
 import { parsePersonFile, sortByFileOrder } from "@/lib/personName";
 import { tidyPeopleHtml } from "@/lib/peopleHtml";
 
@@ -144,30 +144,6 @@ const TOOLS: Tool[] = [
   },
   { icon: Minus, group: "text", title: "เส้นคั่น", kind: "block", block: "<hr>" },
   {
-    icon: LayoutGrid,
-    group: "block",
-    title: "การ์ดลิงก์ (เรียงเป็นตาราง)",
-    kind: "block",
-    // class ของการ์ด = สี (blue/green/amber/pink/purple/teal) · เพิ่มการ์ดก็ก๊อป <a> ทั้งก้อน
-    block:
-      '<div class="cards">\n' +
-      '  <a class="card blue" href="#">\n' +
-      '    <span class="card-badge">แผน</span>\n' +
-      '    <span class="card-text">\n' +
-      '      <span class="card-title">ชื่อหัวข้อ</span>\n' +
-      '      <span class="card-sub">คำอธิบายสั้น ๆ</span>\n' +
-      "    </span>\n" +
-      "  </a>\n" +
-      '  <a class="card green" href="#">\n' +
-      '    <span class="card-badge">รายงาน</span>\n' +
-      '    <span class="card-text">\n' +
-      '      <span class="card-title">ชื่อหัวข้อ</span>\n' +
-      '      <span class="card-sub">คำอธิบายสั้น ๆ</span>\n' +
-      "    </span>\n" +
-      "  </a>\n" +
-      "</div>",
-  },
-  {
     icon: Users,
     group: "block",
     title: "ทำเนียบบุคลากร (โครงพร้อมตัวอย่าง)",
@@ -206,15 +182,50 @@ const TOOLS: Tool[] = [
   },
 ];
 
-/** ความกว้างแผงเลือกชนิดรูป (w-72) — ใช้คำนวณว่าจะกางไปทางไหน */
+/** ความกว้างแผงที่กางจากปุ่ม — ใช้หนีบไม่ให้เลยขอบจอ */
 const MENU_WIDTH = 288;
+
+/** จำนวนคอลัมน์ที่เลือกได้ของการ์ดลิงก์ — มากกว่า 4 การ์ดจะแคบจนอ่านชื่อไม่ออก */
+const CARD_COLS = [2, 3, 4];
+
+/**
+ * โครงการ์ดลิงก์ — class ของการ์ด = สี (blue/green/amber/pink/purple/teal)
+ * เพิ่มการ์ดก็ก๊อป <a> ทั้งก้อน · cols-N คือจำนวนการ์ดต่อแถว
+ */
+function cardsBlock(cols: number) {
+  const card = (color: string, badge: string) =>
+    `  <a class="card ${color}" href="#">\n` +
+    `    <span class="card-badge">${badge}</span>\n` +
+    '    <span class="card-text">\n' +
+    '      <span class="card-title">ชื่อหัวข้อ</span>\n' +
+    '      <span class="card-sub">คำอธิบายสั้น ๆ</span>\n' +
+    "    </span>\n" +
+    "  </a>";
+
+  // ใส่การ์ดตัวอย่างให้เต็มแถวพอดี จะได้เห็นเลยว่าเลือกกี่คอลัมน์แล้วหน้าตาเป็นยังไง
+  const samples = [
+    ["blue", "แผน"],
+    ["green", "รายงาน"],
+    ["amber", "ระเบียบ"],
+    ["purple", "ประกาศ"],
+  ].slice(0, cols);
+
+  return (
+    `<div class="cards cols-${cols}">\n` +
+    "  <!-- คอลัมน์: เปลี่ยน cols-" +
+    cols +
+    " เป็น cols-2 / cols-3 / cols-4 ได้ -->\n" +
+    "  <!-- เพิ่มการ์ด: ก๊อป <a> ทั้งก้อนมาต่อ · สี: blue green amber pink purple teal -->\n" +
+    samples.map(([color, badge]) => card(color, badge)).join("\n") +
+    "\n</div>"
+  );
+}
 
 export default function ContentToolbar({ textarea, value, onChange, folder = "page_images" }: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
   const pdfInput = useRef<HTMLInputElement>(null);
   const personInput = useRef<HTMLInputElement>(null);
   const menuBox = useRef<HTMLDivElement>(null);
-  const menuButton = useRef<HTMLButtonElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<{ phase: UploadPhase | null; percent: number; name: string }>(
     { phase: null, percent: 0, name: "" },
@@ -224,8 +235,10 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
   const [layout, setLayout] = useState<string>("");
   /** แทรกของลงแท็บไหน — "" = ตรงตำแหน่งเคอร์เซอร์เหมือนเดิม */
   const [target, setTarget] = useState<string>("");
-  /** เมนูเลือกชนิดรูปตอนกดปุ่มแทรกรูป */
-  const [imageMenu, setImageMenu] = useState(false);
+  /** แผงที่กางอยู่ตอนนี้ — เปิดได้ทีละอัน */
+  const [openMenu, setOpenMenu] = useState<null | "image" | "cards">(null);
+  /** การ์ดลิงก์ที่จะสร้างใหม่ ให้แถวละกี่ใบ */
+  const [cardsCols, setCardsCols] = useState(3);
   /** มุมบนซ้ายของแผง วัดจากจอ (position: fixed) — ตั้งตอนกดปุ่ม */
   const [menuAt, setMenuAt] = useState({ top: 0, left: 0 });
   /** ทำเนียบที่จะสร้างใหม่ ให้แถวละกี่คน */
@@ -248,18 +261,34 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
   /** จำนวนคนในแต่ละกลุ่ม — เอาไว้โชว์บนปุ่มเลือกกลุ่มให้รู้ว่ากลุ่มไหนคือกลุ่มไหน */
   const groupSizes = peopleBlocks.map((b) => (b.inner.match(/class="person"/g) ?? []).length);
 
-  /** เปลี่ยนจำนวนคนต่อแถวของกลุ่มที่กำลังแก้ — ยังไม่มีทำเนียบเลยก็แค่จำไว้ใช้ตอนแทรกครั้งถัดไป */
-  function changeColumns(n: number) {
-    setPeopleCols(n);
-    if (!activeBlock) return;
+  /** การ์ดลิงก์ในหน้านี้ — แก้ก้อนล่างสุด (ก้อนที่เพิ่งแทรก) */
+  const cardsBlocks = findBlocks(value, "cards");
+  const activeCards = cardsBlocks.at(-1) ?? null;
+  const currentCardCols = Number(
+    /\bcols-(\d)\b/.exec(activeCards?.className ?? "")?.[1] ?? cardsCols,
+  );
 
-    const openEnd = value.indexOf(">", activeBlock.start) + 1;
-    const openTag = value.slice(activeBlock.start, openEnd);
+  /** เขียนเลขคอลัมน์ลงแท็กเปิดของก้อนที่ระบุ — ใช้ร่วมกันทั้งทำเนียบและการ์ดลิงก์ */
+  function applyCols(block: HtmlBlock, n: number) {
+    const openEnd = value.indexOf(">", block.start) + 1;
+    const openTag = value.slice(block.start, openEnd);
     const nextTag = /\bcols-\d\b/.test(openTag)
       ? openTag.replace(/\bcols-\d\b/, `cols-${n}`)
       : openTag.replace(/class="([^"]*)"/, `class="$1 cols-${n}"`);
 
-    onChange(value.slice(0, activeBlock.start) + nextTag + value.slice(openEnd));
+    onChange(value.slice(0, block.start) + nextTag + value.slice(openEnd));
+  }
+
+  /** เปลี่ยนจำนวนคนต่อแถวของกลุ่มที่กำลังแก้ — ยังไม่มีทำเนียบเลยก็แค่จำไว้ใช้ตอนแทรกครั้งถัดไป */
+  function changeColumns(n: number) {
+    setPeopleCols(n);
+    if (activeBlock) applyCols(activeBlock, n);
+  }
+
+  /** เปลี่ยนจำนวนการ์ดต่อแถว — ยังไม่มีการ์ดก็จำไว้ใช้ตอนแทรกครั้งถัดไป */
+  function changeCardCols(n: number) {
+    setCardsCols(n);
+    if (activeCards) applyCols(activeCards, n);
   }
 
   /**
@@ -312,15 +341,16 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
    * ปิดทิ้งเมื่อเลื่อนจอ ย่อ-ขยายหน้าต่าง กด Esc หรือคลิกที่อื่น จะได้ไม่ลอยผิดที่
    */
   useEffect(() => {
-    if (!imageMenu) return;
+    if (!openMenu) return;
 
-    const close = () => setImageMenu(false);
+    const close = () => setOpenMenu(null);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
     };
     const onDown = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (menuBox.current?.contains(target) || menuButton.current?.contains(target)) return;
+      const target = e.target as HTMLElement;
+      // กดในแผงเอง หรือกดปุ่มที่เปิดแผง (ปุ่มมีตัวสลับเปิด-ปิดของมันเองอยู่แล้ว) ไม่ต้องปิดซ้ำ
+      if (menuBox.current?.contains(target) || target.closest?.("[data-menu-btn]")) return;
       close();
     };
 
@@ -335,7 +365,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("mousedown", onDown);
     };
-  }, [imageMenu]);
+  }, [openMenu]);
 
   /** ช่วงที่จะเขียนทับ — ไม่เคยแตะช่องพิมพ์เลยถือว่าอยากต่อท้าย */
   function range() {
@@ -629,6 +659,78 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
           </button>
         ))}
 
+        {/* การ์ดลิงก์ต้องเลือกจำนวนคอลัมน์ก่อนแทรก เลยแยกออกมามีแผงของตัวเอง */}
+        <div className="relative">
+          <button
+            data-menu-btn
+            type="button"
+            title="การ์ดลิงก์ (เรียงเป็นตาราง)"
+            aria-label="การ์ดลิงก์"
+            onClick={(e) => {
+              const box = e.currentTarget.getBoundingClientRect();
+              setMenuAt({
+                top: box.bottom + 4,
+                left: Math.max(8, Math.min(box.left, window.innerWidth - MENU_WIDTH - 16)),
+              });
+              setOpenMenu((v) => (v === "cards" ? null : "cards"));
+            }}
+            className={`grid h-8 w-8 place-items-center rounded-lg transition hover:bg-white hover:text-brand-600 hover:shadow-sm ${
+              openMenu === "cards" ? "bg-white text-brand-600 shadow-sm" : "text-gray-500"
+            }`}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+
+          {openMenu === "cards" && (
+            <div
+              ref={menuBox}
+              style={{ top: menuAt.top, left: menuAt.left, width: MENU_WIDTH }}
+              className="fixed z-50 max-h-[70vh] overflow-y-auto rounded-xl bg-white p-2 shadow-xl ring-1 ring-black/10"
+            >
+              <p className="px-1 text-sm font-medium text-gray-800">การ์ดลิงก์</p>
+              <p className="px-1 text-xs text-gray-500">
+                การ์ดใบหนึ่งคือลิงก์หนึ่งลิงก์ · เลือกก่อนว่าจะให้แถวละกี่ใบ
+              </p>
+
+              <div className="mt-2 flex items-center gap-1.5 px-1">
+                <span className="text-xs text-gray-500">การ์ดต่อแถว</span>
+                {CARD_COLS.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => changeCardCols(n)}
+                    className={`h-7 w-8 rounded-lg text-xs font-medium transition ${
+                      currentCardCols === n
+                        ? "bg-brand-600 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setOpenMenu(null);
+                  insert(cardsBlock(cardsCols));
+                  setHint(`แทรกการ์ดลิงก์ แถวละ ${cardsCols} ใบ — แก้ชื่อกับลิงก์ในเนื้อหา`);
+                }}
+                className="mt-2 w-full rounded-lg bg-brand-50 px-2 py-1.5 text-xs font-medium text-brand-700 transition hover:bg-brand-100"
+              >
+                แทรกการ์ดลิงก์ {cardsCols} คอลัมน์
+              </button>
+
+              {activeCards && (
+                <p className="mt-1.5 px-1 text-[11px] text-emerald-700">
+                  หน้านี้มีการ์ดอยู่แล้ว — กดเลขด้านบนเพื่อเปลี่ยนจำนวนต่อแถวได้ทันที
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
         <span className="h-5 w-px bg-gray-200" />
 
         <span className="text-[11px] font-medium text-gray-400">รูปภาพ</span>
@@ -669,7 +771,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
         {/* ปุ่มเดียว กดแล้วค่อยเลือกว่าเป็นรูปทั่วไปหรือรูปบุคคล — ย่อคนละขนาดกัน */}
         <div className="relative">
           <button
-            ref={menuButton}
+            data-menu-btn
             type="button"
             onClick={(e) => {
               const box = e.currentTarget.getBoundingClientRect();
@@ -679,7 +781,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
                 top: box.bottom + 4,
                 left: Math.max(8, Math.min(box.left, window.innerWidth - MENU_WIDTH - 16)),
               });
-              setImageMenu((v) => !v);
+              setOpenMenu((v) => (v === "image" ? null : "image"));
             }}
             disabled={uploading}
             className="inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-700 transition hover:bg-brand-100 disabled:opacity-60"
@@ -690,10 +792,10 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
               <ImagePlus className="h-3.5 w-3.5" />
             )}
             แทรกรูป
-            <ChevronDown className={`h-3 w-3 transition ${imageMenu ? "rotate-180" : ""}`} />
+            <ChevronDown className={`h-3 w-3 transition ${openMenu === "image" ? "rotate-180" : ""}`} />
           </button>
 
-          {imageMenu && (
+          {openMenu === "image" && (
             <div
               ref={menuBox}
               style={{ top: menuAt.top, left: menuAt.left, width: MENU_WIDTH }}
@@ -702,7 +804,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
               <button
                 type="button"
                 onClick={() => {
-                  setImageMenu(false);
+                  setOpenMenu(null);
                   fileInput.current?.click();
                 }}
                 className="flex w-full items-start gap-2 rounded-lg p-2 text-left transition hover:bg-gray-50"
@@ -720,7 +822,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
                 <button
                   type="button"
                   onClick={() => {
-                    setImageMenu(false);
+                    setOpenMenu(null);
                     personInput.current?.click();
                   }}
                   className="flex w-full items-start gap-2 text-left"
@@ -780,7 +882,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
                   <button
                     type="button"
                     onClick={() => {
-                      setImageMenu(false);
+                      setOpenMenu(null);
                       tidyPeople();
                     }}
                     className="mt-2 ml-6 rounded-lg bg-emerald-50 px-2 py-1.5 text-[11px] font-medium text-emerald-700 transition hover:bg-emerald-100"
