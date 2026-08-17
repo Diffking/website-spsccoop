@@ -13,8 +13,14 @@ const ALLOWED = new Set([
   "p", "h2", "h3", "h4", "ul", "ol", "li", "strong", "em", "b", "i", "u",
   "a", "br", "hr", "blockquote",
   "table", "thead", "tbody", "tr", "th", "td",
-  "img", "figure", "figcaption",
+  "img", "figure", "figcaption", "div",
 ]);
+
+/**
+ * class ที่ยอมให้ติดมาได้ — ใช้คุมการวางรูปเท่านั้น (ดู .prose-page ใน globals.css)
+ * นอกรายการนี้ตัดทิ้งหมด กัน class แปลกปลอมมาทับสไตล์ของเว็บ
+ */
+const ALLOWED_CLASSES = new Set(["left", "right", "small", "wide", "image-row"]);
 
 /** แอตทริบิวต์ที่ยอมให้ติดมากับแต่ละแท็ก — นอกจากนี้ตัดทิ้งหมด รวมถึง style และ on* ทุกตัว */
 const ALLOWED_ATTRS: Record<string, string[]> = {
@@ -22,6 +28,8 @@ const ALLOWED_ATTRS: Record<string, string[]> = {
   img: ["src", "alt", "width", "height"],
   th: ["colspan", "rowspan"],
   td: ["colspan", "rowspan"],
+  figure: ["class"],
+  div: ["class"],
 };
 
 /** ค่า href/src ที่ยอมรับ — กัน javascript: และ data: ที่ใช้ยิงสคริปต์ได้ */
@@ -43,6 +51,10 @@ function cleanAttrs(tag: string, raw: string): string {
     let value = match[3] ?? match[4] ?? "";
     if (name === "href" || name === "src") {
       value = safeUrl(value);
+      if (!value) continue;
+    }
+    if (name === "class") {
+      value = value.split(/\s+/).filter((c) => ALLOWED_CLASSES.has(c)).join(" ");
       if (!value) continue;
     }
     out.push(`${name}="${value.replace(/"/g, "&quot;")}"`);

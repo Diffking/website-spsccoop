@@ -81,13 +81,15 @@ body {
 .prose-page { color: #374151; }
 .prose-page > * + * { margin-top: 1rem; }
 
+/* หัวข้อขึ้นบรรทัดใหม่เสมอ ไม่ไปแทรกข้าง ๆ รูปที่ลอยอยู่ (clear: both) */
 .prose-page h2 {
   font-size: 1.375rem; font-weight: 700; color: #0f5390; line-height: 1.5;
   margin-top: 2.25rem; padding-left: .75rem; border-left: 4px solid #1c7fca;
+  clear: both;
 }
 .prose-page h3 {
   font-size: 1.125rem; font-weight: 600; color: #1f2937; line-height: 1.6;
-  margin-top: 1.75rem;
+  margin-top: 1.75rem; clear: both;
 }
 .prose-page h2 + *, .prose-page h3 + * { margin-top: .6rem; }
 .prose-page p { line-height: 1.95; text-align: justify; text-justify: inter-word; }
@@ -121,6 +123,35 @@ body {
 .prose-page figcaption {
   margin-top: .5rem; text-align: center; font-size: .85rem; color: #6b7280;
 }
+
+/* ---- การวางรูป: ใส่ class ที่ <figure> (แถบเครื่องมือในหลังบ้านเลือกให้) ----
+   ไม่ใส่อะไร = เต็มความกว้างกึ่งกลาง · small = ย่อลง · left/right = ข้อความไหลรอบ */
+.prose-page figure.small img { max-width: 20rem; }
+.prose-page figure.left,
+.prose-page figure.right { max-width: 45%; }
+.prose-page figure.left { float: left; margin: .35rem 1.5rem 1rem 0; }
+.prose-page figure.right { float: right; margin: .35rem 0 1rem 1.5rem; }
+.prose-page figure.left img,
+.prose-page figure.right img { margin: 0; width: 100%; }
+
+/* ปิดท้ายด้วยการล้าง float — ไม่งั้นรูปที่ลอยอยู่จะทะลุออกนอกกรอบขาวของเนื้อหา */
+.prose-page::after { content: ""; display: block; clear: both; }
+
+/* จอแคบไม่ต้องให้ข้อความไหลรอบ เหลือคอลัมน์เดียวอ่านง่ายกว่า */
+@media (max-width: 640px) {
+  .prose-page figure.left,
+  .prose-page figure.right {
+    float: none; max-width: 100%; margin: 1.5rem 0;
+  }
+}
+
+/* แถวรูปหลายใบเรียงข้างกัน — จอแคบตกลงมาเรียงเองตามพื้นที่ */
+.prose-page .image-row {
+  display: grid; gap: .75rem; margin: 1.5rem 0;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+.prose-page .image-row figure { margin: 0; }
+.prose-page .image-row img { margin: 0; width: 100%; }
 
 /* ตารางกว้างเกินจอ — PageContent ห่อด้วย .table-scroll ให้เอง เลื่อนในกรอบไม่ดันทั้งหน้า */
 .table-scroll { overflow-x: auto; margin: 1.5rem 0; }

@@ -36,6 +36,17 @@ type Props = {
   folder?: string;
 };
 
+/**
+ * การวางรูปในเนื้อหา — ค่าที่ใส่คือ class ของ <figure> (สไตล์อยู่ที่ .prose-page ใน globals.css)
+ * ต้องตรงกับ ALLOWED_CLASSES ใน src/lib/pageHtml.ts ไม่งั้นตัวกรองจะตัดทิ้งตอน AI จัดรูปแบบ
+ */
+const LAYOUTS = [
+  { key: "", label: "เต็มความกว้าง" },
+  { key: "small", label: "ขนาดเล็ก" },
+  { key: "left", label: "ชิดซ้าย ข้อความไหลรอบ" },
+  { key: "right", label: "ชิดขวา ข้อความไหลรอบ" },
+] as const;
+
 type Tool =
   | { icon: typeof Bold; title: string; kind: "wrap"; before: string; after: string; sample: string }
   | { icon: typeof Bold; title: string; kind: "block"; block: string };
@@ -92,6 +103,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
   );
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
+  const [layout, setLayout] = useState<string>("");
 
   /**
    * ตำแหน่งเคอร์เซอร์ล่าสุดในช่องพิมพ์ — null = ยังไม่เคยคลิกในช่องเลย
@@ -166,28 +178,64 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
     });
   }
 
-  async function upload(file: File) {
+  /** โครง <figure> ของรูปหนึ่งใบ — alt ตั้งจากชื่อไฟล์ไปก่อน แก้ทีหลังได้ */
+  function figureOf(url: string, name: string, cls: string, indent = "  ") {
+    const attr = cls ? ` class="${cls}"` : "";
+    const alt = name.replace(/\.[^.]+$/, "").replace(/"/g, "");
+    return (
+      `<figure${attr}>\n${indent}  <img src="${url}" alt="${alt}">\n` +
+      `${indent}  <figcaption>คำบรรยายภาพ</figcaption>\n${indent}</figure>`
+    );
+  }
+
+  /**
+   * อัปได้ทีละหลายไฟล์ — เลือกไฟล์เดียวได้รูปเดี่ยว เลือกหลายไฟล์ได้แถวรูปเรียงข้างกัน
+   * อัปเรียงทีละไฟล์ ไม่ยิงพร้อมกัน เพราะแถบความคืบหน้ามีอันเดียวและ FTP ก็รับทีละไฟล์อยู่ดี
+   */
+  async function uploadMany(files: File[]) {
     setError(null);
     setHint(null);
     setUploading(true);
-    setProgress({ phase: "upload", percent: 0, name: file.name });
 
-    const form = new FormData();
-    form.append("file", file);
-    form.append("folder", folder);
-    const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", form, (percent, phase) =>
-      setProgress((p) => ({ ...p, percent, phase })),
-    );
-    setUploading(false);
+    const done: { url: string; name: string }[] = [];
+    for (const [i, file] of files.entries()) {
+      setProgress({
+        phase: "upload",
+        percent: 0,
+        name: files.length > 1 ? `${file.name} (${i + 1}/${files.length})` : file.name,
+      });
 
-    if (!result.ok) {
-      setError(result.error);
-      return;
+      const form = new FormData();
+      form.append("file", file);
+      form.append("folder", folder);
+      const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", form, (percent, phase) =>
+        setProgress((p) => ({ ...p, percent, phase })),
+      );
+
+      if (!result.ok) {
+        setUploading(false);
+        setError(`${file.name}: ${result.error}`);
+        if (done.length === 0) return;
+        break;
+      }
+      done.push({ url: result.data.url, name: file.name });
     }
-    setHint("แทรกรูปลงในเนื้อหาแล้ว — ต้องกดบันทึกด้านล่างด้วย รูปถึงจะขึ้นบนหน้าเว็บจริง");
-    // ใส่เป็น figure เพื่อให้มีที่เขียนคำบรรยายใต้ภาพ · alt ต้องกรอกเองเพื่อคนใช้โปรแกรมอ่านหน้าจอ
-    insert(
-      `<figure>\n  <img src="${result.data.url}" alt="${file.name.replace(/\.[^.]+$/, "")}">\n  <figcaption>คำบรรยายภาพ</figcaption>\n</figure>`,
+    setUploading(false);
+    if (done.length === 0) return;
+
+    // ใส่เป็น figure เพื่อให้มีที่เขียนคำบรรยายใต้ภาพ · alt มีไว้ให้คนใช้โปรแกรมอ่านหน้าจอ
+    const block =
+      done.length === 1
+        ? figureOf(done[0].url, done[0].name, layout)
+        : `<div class="image-row">\n  ${done
+            .map((d) => figureOf(d.url, d.name, "", "  "))
+            .join("\n  ")}\n</div>`;
+
+    insert(block);
+    setHint(
+      done.length === 1
+        ? "แทรกรูปลงในเนื้อหาแล้ว — ต้องกดบันทึกด้านล่างด้วย รูปถึงจะขึ้นบนหน้าเว็บจริง"
+        : `แทรก ${done.length} รูปเรียงเป็นแถวแล้ว — ต้องกดบันทึกด้านล่างด้วย`,
     );
   }
 
@@ -197,10 +245,11 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
         ref={fileInput}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/gif"
+        multiple
         className="hidden"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) void upload(file);
+          const files = Array.from(e.target.files ?? []);
+          if (files.length > 0) void uploadMany(files);
           e.target.value = "";
         }}
       />
@@ -224,6 +273,20 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
         ))}
 
         <span className="mx-1 h-5 w-px bg-gray-200" />
+
+        <select
+          value={layout}
+          onChange={(e) => setLayout(e.target.value)}
+          aria-label="การวางรูป"
+          title="เลือกก่อนกดแทรกรูป — เลือกหลายไฟล์พร้อมกันจะได้แถวรูปเรียงข้างกันแทน"
+          className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-600 outline-none focus:border-brand-400"
+        >
+          {LAYOUTS.map((l) => (
+            <option key={l.key} value={l.key}>
+              {l.label}
+            </option>
+          ))}
+        </select>
 
         <button
           type="button"

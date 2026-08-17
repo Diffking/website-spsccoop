@@ -322,10 +322,13 @@ export function formatPageHtml(html: string, title: string) {
           "- รายการที่ขึ้นต้นด้วย - หรือ 1. 2. 3. ทำเป็น <ul><li> หรือ <ol><li>\n" +
           "- ข้อความที่เป็นตาราง ทำเป็น <table><thead><tbody>\n" +
           "- ลบแท็กขยะจาก Word ทิ้ง (<span style>, <font>, class แปลก ๆ, <div> ซ้อนเปล่า ๆ)\n" +
-          "- <img> ที่มีอยู่เดิมให้คงไว้ทั้ง src และ alt ห้ามลบ\n\n" +
+          "- <img> ที่มีอยู่เดิมให้คงไว้ทั้ง src และ alt ห้ามลบ\n" +
+          '- <figure> และ <div class="image-row"> ที่มีอยู่เดิม ให้คงทั้งโครงและค่า class ไว้เป๊ะ ๆ ' +
+          "(class พวก left/right/small/image-row คือคำสั่งจัดวางรูป ลบแล้วรูปเพี้ยนทั้งหน้า)\n\n" +
           "ใช้ได้เฉพาะแท็ก: p, h2, h3, ul, ol, li, strong, em, a, br, hr, blockquote, " +
           "table, thead, tbody, tr, th, td, img, figure, figcaption\n" +
-          "ห้ามใส่ style, class, script, iframe และห้ามครอบด้วย <html> หรือ <body>\n\n" +
+          "ห้ามใส่ style, script, iframe และห้ามครอบด้วย <html> หรือ <body>\n" +
+          "class ใส่ได้เฉพาะที่ติดมากับเนื้อหาเดิมเท่านั้น ห้ามคิดขึ้นเอง\n\n" +
           "เนื้อหาเดิม:\n" +
           html,
       },
