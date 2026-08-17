@@ -63,7 +63,7 @@ export default async function Footer() {
 
           {/* ทางเข้าหน้าติดต่อเรา — แผนที่ เส้นทาง และเลขที่บัญชีอยู่ในนั้นทั้งหมด */}
           <Link
-            href="/contact/"
+            href="/about/contact/"
             className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-brand-200 transition hover:text-white"
           >
             <Navigation className="h-4 w-4" /> แผนที่ เส้นทาง และเลขที่บัญชี

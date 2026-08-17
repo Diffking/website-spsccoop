@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, FilePlus2, Loader2, Plus, RotateCcw, Save, SquareArrowOutUpRight, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, FilePlus2, GripVertical, Loader2, Plus, RotateCcw, Save, SquareArrowOutUpRight, Trash2 } from "lucide-react";
 import type { NavNode } from "@/lib/nav";
 import { linkStatus, STATUS_STYLE, toSlug, type LinkStatus } from "@/lib/siteRoutes";
+import { moveNode, type DropMode } from "@/lib/navTree";
 
 /** หน้าเนื้อหาที่มีอยู่ในฐาน — ใช้เช็คว่าเมนูชี้ไปหน้าที่มีจริงไหม */
 export type PageRef = { id: string; slug: string; title: string; published: boolean };
@@ -60,6 +61,10 @@ function Row({
   onRemove,
   onAddChild,
   onCreatePage,
+  dragPath,
+  onDragStart,
+  onDragEnd,
+  onDrop,
 }: {
   node: NavNode;
   path: number[];
@@ -72,8 +77,15 @@ function Row({
   onRemove: (path: number[]) => void;
   onAddChild: (path: number[]) => void;
   onCreatePage: (href: string, label: string) => void;
+  /** เมนูที่กำลังลากอยู่ — null = ไม่ได้ลากอะไร */
+  dragPath: number[] | null;
+  onDragStart: (path: number[]) => void;
+  onDragEnd: () => void;
+  onDrop: (to: number[], mode: DropMode) => void;
 }) {
   const [open, setOpen] = useState(depth === 0);
+  /** ลากมาค้างอยู่เหนือแถวนี้ตรงไหน — null = ไม่ได้ค้างอยู่ */
+  const [over, setOver] = useState<DropMode | null>(null);
   const index = path[path.length - 1];
   const children = node.children ?? [];
 
@@ -81,9 +93,79 @@ function Row({
   const style = STATUS_STYLE[status];
   const page = pages.find((p) => p.slug === toSlug(node.href));
 
+  /* ลากทับตัวเองหรือลูกตัวเองไม่ได้ — กิ่งจะหลุดหายไปทั้งกิ่ง */
+  const dragging = dragPath !== null;
+  const selfOrChild =
+    dragPath !== null &&
+    path.length >= dragPath.length &&
+    dragPath.every((v, i) => path[i] === v);
+
+  /** ชี้ค้างตรงไหนของแถว = วางแบบไหน — บนสุด/ล่างสุดคือสลับตำแหน่ง ตรงกลางคือเข้าไปเป็นเมนูย่อย */
+  function modeAt(event: React.DragEvent): DropMode {
+    const box = event.currentTarget.getBoundingClientRect();
+    const ratio = (event.clientY - box.top) / box.height;
+    const canNest = depth < MAX_DEPTH - 1;
+    if (ratio < 0.3) return "before";
+    if (ratio > 0.7) return "after";
+    return canNest ? "inside" : ratio < 0.5 ? "before" : "after";
+  }
+
+  const dropStyle =
+    over === "inside"
+      ? "ring-2 ring-brand-400 bg-brand-50"
+      : over === "before"
+        ? "border-t-4 border-brand-500"
+        : over === "after"
+          ? "border-b-4 border-brand-500"
+          : "";
+
   return (
     <li className="rounded-xl bg-white ring-1 ring-black/5">
-      <div className="flex flex-wrap items-center gap-2 p-2.5">
+      {/*
+        เป้าวางคือ "แถวหัว" ไม่ใช่ li ทั้งก้อน — เมนูที่กางเมนูย่อยอยู่ li จะสูงมาก
+        ถ้าวัดจาก li ตำแหน่งกลาง (= ทำให้เป็นเมนูย่อย) จะไปตกอยู่กลางกองเมนูย่อยแทน
+      */}
+      <div
+        onDragOver={(event) => {
+          if (!dragging || selfOrChild) return;
+          // ต้องกัน default ทุกครั้ง ไม่งั้นเบราว์เซอร์ถือว่าตรงนี้วางไม่ได้แล้วขึ้นไอคอนห้าม
+          event.preventDefault();
+          event.stopPropagation();
+          const next = modeAt(event);
+          setOver((current) => (current === next ? current : next));
+        }}
+        onDragLeave={(event) => {
+          event.stopPropagation();
+          setOver(null);
+        }}
+        onDrop={(event) => {
+          if (!dragging || selfOrChild) return;
+          event.preventDefault();
+          event.stopPropagation();
+          const mode = modeAt(event);
+          setOver(null);
+          if (mode === "inside") setOpen(true);
+          onDrop(path, mode);
+        }}
+        className={`flex flex-wrap items-center gap-2 rounded-xl p-2.5 transition ${dropStyle} ${
+          selfOrChild && dragging ? "opacity-40" : ""
+        }`}
+      >
+        {/* จับตรงนี้ลากไปวางตรงไหนก็ได้ — ลากทั้งกิ่งไปพร้อมกัน */}
+        <span
+          draggable
+          onDragStart={(event) => {
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", path.join("-"));
+            onDragStart(path);
+          }}
+          onDragEnd={onDragEnd}
+          title="ลากเพื่อย้ายเมนู — วางตรงกลางอีกเมนูเพื่อให้เป็นเมนูย่อย"
+          className="grid h-7 w-5 shrink-0 cursor-grab place-items-center text-gray-300 transition hover:text-gray-500 active:cursor-grabbing"
+        >
+          <GripVertical className="h-4 w-4" />
+        </span>
+
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -201,6 +283,10 @@ function Row({
               onRemove={onRemove}
               onAddChild={onAddChild}
               onCreatePage={onCreatePage}
+              dragPath={dragPath}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onDrop={onDrop}
             />
           ))}
         </ul>
@@ -219,6 +305,8 @@ export default function NavMenuEditor({
   const [nav, setNav] = useState<NavNode[]>(initial);
   const [pages, setPages] = useState<PageRef[]>(initialPages);
   const [creating, setCreating] = useState<string | null>(null);
+  /** เมนูที่กำลังลาก — เก็บเป็น path เพราะต้องรู้ว่าลากมาจากชั้นไหน */
+  const [dragPath, setDragPath] = useState<number[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
@@ -272,6 +360,14 @@ export default function NavMenuEditor({
     );
   const addTop = () => setNav((n) => [...n, { label: "เมนูใหม่", href: "/" }]);
 
+  /** วางเมนูที่ลากมา — ย้ายไม่ได้ (เช่นลากลงในตัวเอง หรือลึกเกิน 3 ชั้น) ก็ไม่เปลี่ยนอะไร */
+  function drop(to: number[], mode: DropMode) {
+    const from = dragPath;
+    setDragPath(null);
+    if (!from) return;
+    setNav((n) => moveNode(n, from, to, mode, MAX_DEPTH) ?? n);
+  }
+
   async function save() {
     setBusy(true);
     setStatus(null);
@@ -297,7 +393,9 @@ export default function NavMenuEditor({
         <div>
           <h2 className="font-semibold text-gray-800">เมนูนำทาง</h2>
           <p className="text-xs text-gray-500">
-            ลึกได้ 3 ชั้น · เมนูที่มีเมนูย่อยจะเว้นลิงก์ไว้ก็ได้ (เป็นหัวข้อกางเมนูย่อยเฉย ๆ)
+            ลากที่จุดจับ ⠿ ไปวางได้ทุกที่ — วางตรงกลางอีกเมนูคือเข้าไปเป็นเมนูย่อยของเมนูนั้น
+            วางขอบบน/ขอบล่างคือแทรกก่อน/หลัง · ลึกได้ 3 ชั้น ·
+            เมนูที่มีเมนูย่อยจะเว้นลิงก์ไว้ก็ได้ (เป็นหัวข้อกางเมนูย่อยเฉย ๆ)
           </p>
           {missing > 0 && (
             <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-600">
@@ -345,6 +443,10 @@ export default function NavMenuEditor({
             onRemove={remove}
             onAddChild={addChild}
             onCreatePage={createPage}
+            dragPath={dragPath}
+            onDragStart={setDragPath}
+            onDragEnd={() => setDragPath(null)}
+            onDrop={drop}
           />
         ))}
       </ul>
