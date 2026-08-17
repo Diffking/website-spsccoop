@@ -49,6 +49,41 @@ const LAYOUTS = [
   { key: "right", label: "ชิดขวา ข้อความไหลรอบ" },
 ] as const;
 
+/** แท็บที่เจอในเนื้อหา — insertAt คือตำแหน่งก่อน </div> ปิดแท็บนั้น */
+type TabSlot = { title: string; insertAt: number };
+
+/**
+ * ไล่หาแท็บทั้งหมดในเนื้อหา เพื่อให้เลือกได้ว่าจะแทรกของลงแท็บไหน
+ *
+ * ต้องนับ <div> ซ้อนเองทีละตัว หา </div> ที่คู่กันจริง ๆ ไม่ใช่ตัวแรกที่เจอ —
+ * ในแท็บมี <figure> หรือ <div class="image-row"> ซ้อนอยู่ได้ ถ้าจับผิดตัว
+ * ของที่แทรกจะไปโผล่กลางแท็บแล้วโครงพัง
+ *
+ * class="tab" กับ class="tabs" ไม่ชนกันเพราะ \b บังคับให้จบคำพอดี
+ */
+function findTabs(html: string): TabSlot[] {
+  const slots: TabSlot[] = [];
+  const opening = /<div\b[^>]*\bclass="[^"]*\btab\b[^"]*"[^>]*>/gi;
+  const anyDiv = /<div\b[^>]*>|<\/div>/gi;
+
+  let match: RegExpExecArray | null;
+  while ((match = opening.exec(html)) !== null) {
+    const title = /data-title="([^"]*)"/i.exec(match[0])?.[1] ?? `แท็บที่ ${slots.length + 1}`;
+
+    let depth = 1;
+    anyDiv.lastIndex = match.index + match[0].length;
+    let inner: RegExpExecArray | null;
+    while ((inner = anyDiv.exec(html)) !== null) {
+      depth += inner[0] === "</div>" ? -1 : 1;
+      if (depth === 0) {
+        slots.push({ title, insertAt: inner.index });
+        break;
+      }
+    }
+  }
+  return slots;
+}
+
 type Tool =
   | { icon: typeof Bold; title: string; kind: "wrap"; before: string; after: string; sample: string }
   | { icon: typeof Bold; title: string; kind: "block"; block: string };
@@ -122,6 +157,10 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [layout, setLayout] = useState<string>("");
+  /** แทรกของลงแท็บไหน — "" = ตรงตำแหน่งเคอร์เซอร์เหมือนเดิม */
+  const [target, setTarget] = useState<string>("");
+
+  const tabs = findTabs(value);
 
   /**
    * ตำแหน่งเคอร์เซอร์ล่าสุดในช่องพิมพ์ — null = ยังไม่เคยคลิกในช่องเลย
@@ -174,12 +213,16 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
     });
   }
 
-  /** แทรกโครงหลายบรรทัด (ตาราง เส้นคั่น รูป) ที่ตำแหน่งเคอร์เซอร์ */
+  /**
+   * แทรกโครงหลายบรรทัด (ตาราง เส้นคั่น รูป ไฟล์ PDF)
+   * ปกติลงตรงตำแหน่งเคอร์เซอร์ · เลือกแท็บไว้ก็ไปต่อท้ายในแท็บนั้นให้เอง
+   */
   function insert(block: string) {
     const el = textarea.current;
     if (!el) return;
 
-    const at = range().start;
+    const slot = tabs[Number(target)];
+    const at = target !== "" && slot ? slot.insertAt : range().start;
     const before = value.slice(0, at);
     const lead = before && !before.endsWith("\n") ? "\n" : "";
     const next = `${before}${lead}${block}\n${value.slice(at)}`;
@@ -190,6 +233,8 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
       const to = at + lead.length + block.length;
       el.setSelectionRange(to, to);
       caret.current = to;
+      // เลื่อนช่องพิมพ์ไปให้เห็นบรรทัดที่เพิ่งแทรก โดยเฉพาะตอนแทรกลงแท็บที่อยู่ไกลจากที่มองอยู่
+      el.scrollTop = Math.max(0, (to / Math.max(value.length, 1)) * el.scrollHeight - el.clientHeight / 2);
       // เลื่อนช่องพิมพ์ไปตรงที่เพิ่งแทรก ไม่งั้นแทรกท้ายบทความยาว ๆ แล้วไม่เห็นว่าอะไรเกิดขึ้น
       el.blur();
       el.focus();
@@ -233,7 +278,8 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
         `  <a href="${read}">เปิดอ่านแบบ E-Book</a>\n` +
         `  <a href="${result.data.url}">ดาวน์โหลด PDF</a>\n</div>`,
     );
-    setHint("แนบไฟล์ PDF แล้ว — ต้องกดบันทึกด้านล่างด้วย ถึงจะขึ้นบนหน้าเว็บจริง");
+    const where = tabs[Number(target)] ? ` ในแท็บ “${tabs[Number(target)].title}”` : "";
+    setHint(`แนบไฟล์ PDF แล้ว${where} — ต้องกดบันทึกด้านล่างด้วย ถึงจะขึ้นบนหน้าเว็บจริง`);
   }
 
   /**
@@ -280,10 +326,11 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
             .join("\n  ")}\n</div>`;
 
     insert(block);
+    const where = tabs[Number(target)] ? ` ในแท็บ “${tabs[Number(target)].title}”` : "";
     setHint(
       done.length === 1
-        ? "แทรกรูปลงในเนื้อหาแล้ว — ต้องกดบันทึกด้านล่างด้วย รูปถึงจะขึ้นบนหน้าเว็บจริง"
-        : `แทรก ${done.length} รูปเรียงเป็นแถวแล้ว — ต้องกดบันทึกด้านล่างด้วย`,
+        ? `แทรกรูปแล้ว${where} — ต้องกดบันทึกด้านล่างด้วย รูปถึงจะขึ้นบนหน้าเว็บจริง`
+        : `แทรก ${done.length} รูปเรียงเป็นแถวแล้ว${where} — ต้องกดบันทึกด้านล่างด้วย`,
     );
   }
 
@@ -333,6 +380,25 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
         ))}
 
         <span className="mx-1 h-5 w-px bg-gray-200" />
+
+        {/* มีแท็บในหน้านี้ถึงจะขึ้น — เลือกแล้วของที่แทรกจะไปต่อท้ายในแท็บนั้นให้เลย
+            ไม่ต้องไปวางเคอร์เซอร์ในโค้ดเอง */}
+        {tabs.length > 0 && (
+          <select
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            aria-label="แทรกลงในแท็บ"
+            title="เลือกว่าจะแทรกรูป/ไฟล์/ตาราง ลงในแท็บไหน"
+            className="rounded-lg border border-brand-200 bg-brand-50 px-2 py-1.5 text-xs font-medium text-brand-800 outline-none focus:border-brand-400"
+          >
+            <option value="">แทรกตรงเคอร์เซอร์</option>
+            {tabs.map((tab, i) => (
+              <option key={`${tab.title}-${i}`} value={String(i)}>
+                ลงแท็บ: {tab.title}
+              </option>
+            ))}
+          </select>
+        )}
 
         <select
           value={layout}
