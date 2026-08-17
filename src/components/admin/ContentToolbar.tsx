@@ -85,18 +85,20 @@ function findTabs(html: string): TabSlot[] {
   return slots;
 }
 
-type Tool =
+type Tool = { group: "text" | "block" } & (
   | { icon: typeof Bold; title: string; kind: "wrap"; before: string; after: string; sample: string }
-  | { icon: typeof Bold; title: string; kind: "block"; block: string };
+  | { icon: typeof Bold; title: string; kind: "block"; block: string }
+);
 
 /** ปุ่มบนแถบเครื่องมือ — เก็บเป็นข้อมูลล้วน ไม่ผูกกับ state ของคอมโพเนนต์ */
 const TOOLS: Tool[] = [
-  { icon: Heading2, title: "หัวข้อใหญ่", kind: "wrap", before: "<h2>", after: "</h2>", sample: "หัวข้อใหญ่" },
-  { icon: Heading3, title: "หัวข้อย่อย", kind: "wrap", before: "<h3>", after: "</h3>", sample: "หัวข้อย่อย" },
-  { icon: Bold, title: "ตัวหนา", kind: "wrap", before: "<strong>", after: "</strong>", sample: "ข้อความ" },
-  { icon: Italic, title: "ตัวเอียง", kind: "wrap", before: "<em>", after: "</em>", sample: "ข้อความ" },
+  { icon: Heading2, group: "text", title: "หัวข้อใหญ่", kind: "wrap", before: "<h2>", after: "</h2>", sample: "หัวข้อใหญ่" },
+  { icon: Heading3, group: "text", title: "หัวข้อย่อย", kind: "wrap", before: "<h3>", after: "</h3>", sample: "หัวข้อย่อย" },
+  { icon: Bold, group: "text", title: "ตัวหนา", kind: "wrap", before: "<strong>", after: "</strong>", sample: "ข้อความ" },
+  { icon: Italic, group: "text", title: "ตัวเอียง", kind: "wrap", before: "<em>", after: "</em>", sample: "ข้อความ" },
   {
     icon: Link2,
+    group: "text",
     title: "ลิงก์",
     kind: "wrap",
     before: '<a href="https://">',
@@ -105,18 +107,21 @@ const TOOLS: Tool[] = [
   },
   {
     icon: List,
+    group: "text",
     title: "รายการแบบจุด",
     kind: "block",
     block: "<ul>\n  <li>รายการที่ 1</li>\n  <li>รายการที่ 2</li>\n</ul>",
   },
   {
     icon: ListOrdered,
+    group: "text",
     title: "รายการแบบตัวเลข",
     kind: "block",
     block: "<ol>\n  <li>ข้อที่ 1</li>\n  <li>ข้อที่ 2</li>\n</ol>",
   },
   {
     icon: Quote,
+    group: "text",
     title: "ยกคำพูด",
     kind: "wrap",
     before: "<blockquote>",
@@ -125,14 +130,16 @@ const TOOLS: Tool[] = [
   },
   {
     icon: Table,
+    group: "text",
     title: "ตาราง",
     kind: "block",
     block:
       "<table>\n  <thead>\n    <tr><th>หัวข้อ 1</th><th>หัวข้อ 2</th></tr>\n  </thead>\n  <tbody>\n    <tr><td>ข้อมูล</td><td>ข้อมูล</td></tr>\n  </tbody>\n</table>",
   },
-  { icon: Minus, title: "เส้นคั่น", kind: "block", block: "<hr>" },
+  { icon: Minus, group: "text", title: "เส้นคั่น", kind: "block", block: "<hr>" },
   {
     icon: LayoutGrid,
+    group: "block",
     title: "การ์ดลิงก์ (เรียงเป็นตาราง)",
     kind: "block",
     // class ของการ์ด = สี (blue/green/amber/pink/purple/teal) · เพิ่มการ์ดก็ก๊อป <a> ทั้งก้อน
@@ -156,6 +163,7 @@ const TOOLS: Tool[] = [
   },
   {
     icon: PanelsTopLeft,
+    group: "block",
     title: "แท็ปเมนู (สลับหัวข้อ)",
     kind: "block",
     // data-title = ชื่อบนปุ่มแท็บ · เพิ่มแท็บก็ก๊อป <div class="tab"> ทั้งก้อนมาต่อ
@@ -386,8 +394,9 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
         }}
       />
 
-      <div className="flex flex-wrap items-center gap-0.5">
-        {TOOLS.map((tool) => (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <span className="text-[11px] font-medium text-gray-400">ข้อความ</span>
+        {TOOLS.filter((t) => t.group === "text").map((tool) => (
           <button
             key={tool.title}
             type="button"
@@ -404,7 +413,28 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
           </button>
         ))}
 
-        <span className="mx-1 h-5 w-px bg-gray-200" />
+        <span className="h-5 w-px bg-gray-200" />
+        <span className="text-[11px] font-medium text-gray-400">บล็อก</span>
+        {TOOLS.filter((t) => t.group === "block").map((tool) => (
+          <button
+            key={tool.title}
+            type="button"
+            title={tool.title}
+            aria-label={tool.title}
+            onClick={() =>
+              tool.kind === "wrap"
+                ? wrap(tool.before, tool.after, tool.sample)
+                : insert(tool.block)
+            }
+            className="grid h-8 w-8 place-items-center rounded-lg text-gray-500 transition hover:bg-white hover:text-brand-600 hover:shadow-sm"
+          >
+            <tool.icon className="h-4 w-4" />
+          </button>
+        ))}
+
+        <span className="h-5 w-px bg-gray-200" />
+
+        <span className="text-[11px] font-medium text-gray-400">รูปภาพ</span>
 
         {/* มีแท็บในหน้านี้ถึงจะขึ้น — เลือกแล้วของที่แทรกจะไปต่อท้ายในแท็บนั้นให้เลย
             ไม่ต้องไปวางเคอร์เซอร์ในโค้ดเอง */}
@@ -452,6 +482,9 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
           )}
           แทรกรูป
         </button>
+
+        <span className="h-5 w-px bg-gray-200" />
+        <span className="text-[11px] font-medium text-gray-400">ไฟล์</span>
 
         <button
           type="button"
