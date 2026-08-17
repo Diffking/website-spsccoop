@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { currentUser } from "@/lib/auth";
@@ -11,6 +12,8 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
   if (!user) redirect("/admin/");
 
   const { id } = await params;
+  // สวิตช์ AI ที่ผู้ใช้เลือกไว้ครั้งก่อน — ไม่เคยเลือก ถือว่าเปิด
+  const aiFormatDefault = (await cookies()).get("spsc_page_ai_format")?.value !== "0";
   const page = await db.page.findUnique({ where: { id } });
   if (!page) notFound();
 
@@ -35,6 +38,7 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
             published: page.published,
           }}
           aiReady={AI_READY}
+          aiFormatDefault={aiFormatDefault}
         />
       </main>
     </>

@@ -5,14 +5,20 @@ import { useRouter } from "next/navigation";
 import { Save, Trash2, Loader2, Eye, Pencil, Sparkles, Undo2 } from "lucide-react";
 import ContentToolbar from "@/components/admin/ContentToolbar";
 import PageContent from "@/components/site/PageContent";
+import Toggle from "@/components/ui/Toggle";
+
+/** จำสวิตช์ AI ไว้ในเครื่องคนใช้ ไม่ใช่ในฐาน — เป็นความชอบส่วนตัวของแต่ละคน ไม่ใช่ค่าของเว็บ */
+const AI_FORMAT_KEY = "spsc_page_ai_format";
 
 type Props = {
   page: { id: string; slug: string; title: string; body: string; published: boolean };
   /** ตั้งคีย์ AI ไว้ไหม — ไม่ได้ตั้งก็ซ่อนสวิตช์จัดรูปแบบไปเลย */
   aiReady?: boolean;
+  /** ค่าสวิตช์ AI ที่ผู้ใช้เลือกไว้ครั้งก่อน (อ่านจาก cookie ฝั่งเซิร์ฟเวอร์) */
+  aiFormatDefault?: boolean;
 };
 
-export default function PageEditor({ page, aiReady = false }: Props) {
+export default function PageEditor({ page, aiReady = false, aiFormatDefault = true }: Props) {
   const router = useRouter();
   const textarea = useRef<HTMLTextAreaElement>(null);
   const [title, setTitle] = useState(page.title);
@@ -24,8 +30,25 @@ export default function PageEditor({ page, aiReady = false }: Props) {
   const [busy, setBusy] = useState(false);
   /** กำลังรอ AI อยู่ — ใช้เปลี่ยนข้อความบนปุ่มและกันปิดหน้าไปก่อนบันทึกเสร็จ */
   const [formatting, setFormatting] = useState(false);
-  /** ให้ AI จัดรูปแบบตอนกดบันทึก */
-  const [autoFormat, setAutoFormat] = useState(aiReady);
+  /**
+   * ให้ AI จัดรูปแบบตอนกดบันทึกไหม — ค่าเริ่มต้นมาจาก cookie ที่ฝั่งเซิร์ฟเวอร์อ่านให้แล้ว
+   *
+   * เดิมเปิดใหม่ทุกครั้งที่เข้าหน้าแก้ไข ปิดไปแล้วพอกลับมาก็เปิดเองอีก
+   * ซึ่งอันตรายกับหน้าที่จัดโครงเสร็จแล้ว (เคยโดน AI ยุบแท็ปเมนูทิ้งมาแล้ว)
+   *
+   * ใช้ cookie ไม่ใช่ localStorage เพราะเซิร์ฟเวอร์อ่านได้ตั้งแต่ตอน render
+   * สวิตช์จึงขึ้นถูกตั้งแต่วินาทีแรก ไม่กระพริบจากเปิดเป็นปิดหลังโหลดเสร็จ
+   */
+  const [autoFormat, setAutoFormat] = useState(aiFormatDefault);
+
+  const changeAutoFormat = (next: boolean) => {
+    setAutoFormat(next);
+    // เก็บไว้ 1 ปี — เป็นความชอบของคนใช้ ไม่ใช่ค่าของเว็บ จึงไม่เก็บลงฐาน
+    document.cookie = `${AI_FORMAT_KEY}=${next ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
+  };
+
+  /** เนื้อหามีโครงที่ AI อาจไปยุ่ง — เตือนไว้ก่อนกดบันทึก */
+  const hasStructure = /class="(tabs|tab|image-row|ebook)"|<img|<figure/i.test(content);
   /** เนื้อหาก่อน AI จัด — เก็บไว้ให้กดย้อนกลับได้ถ้าไม่ถูกใจ */
   const [beforeAi, setBeforeAi] = useState<string | null>(null);
 
@@ -209,23 +232,34 @@ export default function PageEditor({ page, aiReady = false }: Props) {
       )}
 
       {aiReady && (
-        <label className="flex items-start gap-2.5 rounded-xl bg-brand-50/70 px-3 py-2.5 text-sm text-gray-700 ring-1 ring-brand-100">
-          <input
-            type="checkbox"
+        <div
+          className={`rounded-xl px-3 py-2.5 ring-1 transition ${
+            autoFormat ? "bg-brand-50/70 ring-brand-100" : "bg-gray-50 ring-gray-200"
+          }`}
+        >
+          <Toggle
             checked={autoFormat}
-            onChange={(e) => setAutoFormat(e.target.checked)}
-            className="mt-0.5 h-4 w-4 accent-brand-600"
+            onChange={changeAutoFormat}
+            label="ให้ AI จัดรูปแบบให้ตอนบันทึก"
+            hint="จัดย่อหน้า หัวข้อ รายการ และลบแท็กขยะที่ติดมาจาก Word — จัดโครงอย่างเดียว ไม่แก้ถ้อยคำ · ไม่ถูกใจกดย้อนกลับได้"
           />
-          <span className="flex-1">
-            <span className="inline-flex items-center gap-1.5 font-medium text-brand-800">
-              <Sparkles className="h-4 w-4" /> ให้ AI จัดรูปแบบให้ตอนบันทึก
-            </span>
-            <span className="mt-0.5 block text-xs text-gray-500">
-              จัดย่อหน้า หัวข้อ รายการ และลบแท็กขยะที่ติดมาจาก Word — จัดโครงอย่างเดียว
-              ไม่แก้ถ้อยคำ · ไม่ถูกใจกดย้อนกลับได้
-            </span>
-          </span>
-        </label>
+
+          <p className="mt-2 pl-11 text-xs text-gray-500">
+            <Sparkles className="mr-1 inline h-3.5 w-3.5 text-brand-500" />
+            {autoFormat
+              ? "เปิดอยู่ — เหมาะกับตอนวางข้อความดิบจาก Word ครั้งแรก"
+              : "ปิดอยู่ — บันทึกเนื้อหาตามที่พิมพ์ทุกตัวอักษร"}
+            {" · "}
+            ระบบจำค่านี้ไว้ให้ เปิดหน้าอื่นก็ยังเป็นแบบเดียวกัน
+          </p>
+
+          {autoFormat && hasStructure && (
+            <p className="mt-1.5 pl-11 text-xs font-medium text-amber-700">
+              หน้านี้มีแท็ปเมนู/รูปที่จัดวางไว้แล้ว — ถ้า AI ทำโครงหาย ระบบจะไม่รับผลนั้น
+              แต่ถ้าจัดโครงเสร็จแล้วปิดสวิตช์ไว้จะชัวร์กว่า
+            </p>
+          )}
+        </div>
       )}
 
       <div className="flex items-center gap-2">
