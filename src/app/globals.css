@@ -74,6 +74,41 @@ body {
   .animate-blink { animation: none; }
 }
 
+/* ================= หน้าวันสำคัญ (splash) =================
+   ทั้งสามอันเป็นอนิเมชันวนช้า ๆ ไม่ใช่ของกระตุกดึงสายตา เพราะหน้านี้ใช้กับ
+   วันสำคัญของราชวงศ์เป็นหลัก ต้องสงบ · เครื่องที่ตั้งลดการเคลื่อนไหวจะนิ่งทั้งหมด */
+
+/* แสงนวลหลังภาพ หายใจเข้าออก */
+@keyframes splash-glow {
+  0%, 100% { opacity: .45; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: .85; transform: translate(-50%, -50%) scale(1.08); }
+}
+.splash-glow { animation: splash-glow 7s ease-in-out infinite; }
+
+/* เงาใต้ภาพขยับตาม ให้ภาพดูลอยอยู่เหนือพื้น ไม่แปะติดจอ */
+@keyframes splash-shadow {
+  0%, 100% {
+    box-shadow: 0 18px 40px -12px rgb(0 0 0 / .75), 0 0 34px -12px rgb(255 236 190 / .22);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow: 0 34px 64px -14px rgb(0 0 0 / .85), 0 0 66px -8px rgb(255 236 190 / .42);
+    transform: translateY(-6px);
+  }
+}
+.splash-image { animation: splash-shadow 7s ease-in-out infinite; }
+
+/* ปุ่มกระพริบช้า ๆ พร้อมวงแสงกระจายออก บอกว่ากดได้ */
+@keyframes splash-pulse {
+  0%, 100% { opacity: 1;   box-shadow: 0 0 0 0 rgb(253 230 138 / .35); }
+  50%      { opacity: .82; box-shadow: 0 0 0 12px rgb(253 230 138 / 0); }
+}
+.splash-button { animation: splash-pulse 3.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-glow, .splash-image, .splash-button { animation: none; }
+}
+
 /* ================= เนื้อหาที่พิมพ์จากหลังบ้าน (HTML) =================
    ใช้ทั้งหน้าเนื้อหาจริงและช่องพรีวิวในหลังบ้าน จะได้เห็นหน้าตาตรงกัน
    ระยะห่างคิดจาก "ก้อนถัดไปต้องรู้ว่าเป็นเรื่องเดียวกันหรือเรื่องใหม่"

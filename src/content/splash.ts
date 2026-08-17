@@ -24,6 +24,8 @@ export type SplashOccasion = {
   /** ข้อความเสริม — เว้นว่างได้ถ้าตัวหนังสืออยู่บนภาพอยู่แล้ว */
   headline: string;
   subtext: string;
+  /** สีพื้นหลัง — คีย์จาก SPLASH_BACKGROUNDS (ไม่ระบุ = ดำสนิท) */
+  bg?: string;
 };
 
 export type SplashContent = {

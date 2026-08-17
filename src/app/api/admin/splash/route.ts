@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { saveSetting } from "@/lib/settings";
 import type { SplashContent, SplashOccasion } from "@/content/splash";
+import { DEFAULT_SPLASH_BG, isSplashBackground } from "@/lib/splashTheme";
 
 const DATE_PATTERN = /^(?:\d{4}-)?\d{2}-\d{2}$/;
 
@@ -54,6 +55,8 @@ export async function PUT(request: Request) {
       alt: String(raw.alt ?? "").trim(),
       headline: String(raw.headline ?? "").trim(),
       subtext: String(raw.subtext ?? "").trim(),
+      // ค่าที่ไม่รู้จักถอยไปใช้พื้นดำ ดีกว่าปล่อยค่าแปลกลงฐานแล้วหน้าเว็บพื้นหาย
+      bg: isSplashBackground(raw.bg) ? raw.bg : DEFAULT_SPLASH_BG,
     });
   }
 

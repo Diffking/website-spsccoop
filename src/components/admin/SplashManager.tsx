@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Save, Loader2, Plus, Trash2, Eye, GripVertical } from "lucide-react";
 import type { SplashContent, SplashOccasion } from "@/content/splash";
+import { DEFAULT_SPLASH_BG, SPLASH_BACKGROUNDS } from "@/lib/splashTheme";
 
 const BLANK: SplashOccasion = {
   id: "",
@@ -13,6 +14,7 @@ const BLANK: SplashOccasion = {
   image: "",
   alt: "",
   headline: "",
+  bg: DEFAULT_SPLASH_BG,
   subtext: "",
 };
 
@@ -212,6 +214,32 @@ export default function SplashManager({ initial }: { initial: SplashContent }) {
                   className="mt-2 h-28 w-auto rounded-lg bg-gray-900 object-contain ring-1 ring-gray-200"
                 />
               )}
+
+              {/* พื้นหลังของหน้าวันสำคัญนี้ — แต่ละวันโทนภาพไม่เหมือนกัน เลือกแยกกันได้ */}
+              <div className="mt-2.5">
+                <span className="text-xs text-gray-500">สีพื้นหลังของหน้านี้</span>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {SPLASH_BACKGROUNDS.map((b) => (
+                    <button
+                      key={b.key}
+                      type="button"
+                      title={b.label}
+                      onClick={() => setOccasion(i, { bg: b.key })}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                        (o.bg ?? DEFAULT_SPLASH_BG) === b.key
+                          ? "bg-gray-900 text-white"
+                          : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      <span
+                        style={{ background: b.swatch }}
+                        className="h-3 w-3 rounded-full ring-1 ring-black/20"
+                      />
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <label className="mt-2.5 block">
                 <span className="text-xs text-gray-500">คำอธิบายรูป (สำหรับคนตาบอด/ตอนรูปโหลดไม่ขึ้น)</span>
