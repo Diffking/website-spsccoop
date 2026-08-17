@@ -114,13 +114,15 @@ export default function HeaderClient({
   const [open, setOpen] = useState(false);
   const [openSub, setOpenSub] = useState<string | null>(null);
 
-  const topBarClass = "flex h-full items-center gap-1 px-3 py-3 text-sm font-medium hover:bg-white/15 transition";
+  /* whitespace-nowrap: ชื่อเมนูไทยยาว ๆ ถูกหักขึ้นบรรทัดใหม่กลางคำแล้วแถบเมนูสูงสองเท่า ดูเหมือนซ้อนกัน */
+  const topBarClass =
+    "flex h-full items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium transition hover:bg-white/15";
 
   return (
     <header className="sticky top-0 z-50 shadow-sm">
       {/* แถบบน */}
       <div className="bg-gradient-to-r from-brand-700 to-brand-500 text-white text-xs md:text-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-1.5">
+        <div className="mx-auto flex max-w-344 items-center justify-between gap-3 px-4 py-1.5">
           <Link href="/" className="flex min-w-0 items-center gap-2">
             <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-white shadow ring-1 ring-black/5">
               {brand.logoUrl ? (
@@ -144,9 +146,15 @@ export default function HeaderClient({
 
       {/* แถบเมนู */}
       <nav className="bg-gradient-to-r from-brand-500 to-brand-400 text-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4">
-          <ul className="hidden lg:flex items-stretch">
-            {nav.map((item) => (
+        <div className="mx-auto flex max-w-344 items-center justify-between px-4">
+          {/* mx-auto: จอกว้างแล้วเมนูจะอยู่กลางแถบ ไม่ไปกองชิดซ้ายจนขวาโล่งครึ่งจอ
+              (บนมือถือปุ่มเมนูกับโลโก้ย่อยังทำงานเหมือนเดิม เพราะ ul ถูกซ่อน) */}
+          <ul className="hidden items-stretch lg:mx-auto lg:flex">
+            {nav.map((item, index) => {
+              // เมนูสองอันขวาสุดต้องกางเมนูย่อยไปทางซ้าย ไม่งั้นก้อนเมนูล้นออกนอกจอ
+              const alignRight = index >= nav.length - 2;
+
+              return (
               <li
                 key={item.label}
                 className="group relative"
@@ -166,7 +174,11 @@ export default function HeaderClient({
                   </span>
                 )}
                 {item.children && openSub === item.label && (
-                  <ul className="absolute left-0 top-full min-w-64 max-w-80 rounded-b-xl border-t-2 border-brand-400 bg-white py-2 text-gray-700 shadow-2xl ring-1 ring-black/5">
+                  <ul
+                    className={`absolute top-full z-20 w-max min-w-72 max-w-120 rounded-b-xl border-t-2 border-brand-400 bg-white py-2 text-gray-700 shadow-2xl ring-1 ring-black/5 ${
+                      alignRight ? "right-0" : "left-0"
+                    }`}
+                  >
                     {item.children.map((c) => (
                       <li key={c.label} className="group/sub relative px-1.5">
                         {c.children ? (
@@ -176,7 +188,11 @@ export default function HeaderClient({
                               <ChevronRight className="h-3.5 w-3.5 shrink-0 transition group-hover/sub:translate-x-0.5" />
                             </button>
                             {/* flyout ชั้นที่ 3 */}
-                            <ul className="invisible absolute left-full top-0 z-10 min-w-64 max-w-80 -translate-x-1 rounded-xl border-t-2 border-brand-400 bg-white py-2 text-gray-700 opacity-0 shadow-2xl ring-1 ring-black/5 transition-all duration-150 group-hover/sub:visible group-hover/sub:translate-x-0 group-hover/sub:opacity-100">
+                            <ul
+                              className={`invisible absolute top-0 z-10 w-max min-w-72 max-w-120 rounded-xl border-t-2 border-brand-400 bg-white py-2 text-gray-700 opacity-0 shadow-2xl ring-1 ring-black/5 transition-all duration-150 group-hover/sub:visible group-hover/sub:translate-x-0 group-hover/sub:opacity-100 ${
+                                alignRight ? "right-full translate-x-1" : "left-full -translate-x-1"
+                              }`}
+                            >
                               {c.children.map((g) => (
                                 <li key={g.label} className="px-1.5">
                                   <Link
@@ -202,7 +218,8 @@ export default function HeaderClient({
                   </ul>
                 )}
               </li>
-            ))}
+              );
+            })}
           </ul>
 
           {/* โลโก้ย่อบนมือถือ */}
