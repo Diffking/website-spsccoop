@@ -195,16 +195,15 @@ body {
 .prose-page .tabs { margin: 1.5rem 0; }
 
 /* แถบแท็บแบบขีดเส้นใต้ — เส้นเทาพาดยาวทั้งแถว แล้วเส้นสีทับเฉพาะแท็บที่เลือก
-   จอแคบเลื่อนแนวนอนได้ ไม่ตัดแท็บทิ้งและไม่ดันหน้าจนล้น */
+   ขึ้นบรรทัดใหม่เมื่อแท็บเยอะ ไม่เลื่อนแนวนอน — ชื่อแท็บภาษาไทยยาว พอมี 5-6 แท็บ
+   แบบเลื่อนจะซ่อนแท็บท้าย ๆ ไว้นอกจอโดยไม่มีอะไรบอกว่ายังมีต่อ */
 .prose-page .tab-buttons {
-  display: flex; gap: 2rem; margin-bottom: 1.25rem;
-  border-bottom: 1px solid #e5e7eb;
-  overflow-x: auto; scrollbar-width: none;
+  display: flex; flex-wrap: wrap; column-gap: 1.75rem; row-gap: 0;
+  margin-bottom: 1.25rem; border-bottom: 1px solid #e5e7eb;
 }
-.prose-page .tab-buttons::-webkit-scrollbar { display: none; }
 
 .prose-page .tab-button {
-  flex: 0 0 auto; white-space: nowrap; cursor: pointer;
+  flex: 0 0 auto; cursor: pointer;
   padding: .75rem .125rem; margin-bottom: -1px;
   font-size: .95rem; font-weight: 500; color: #6b7280;
   background: none; border: 0; border-bottom: 2px solid transparent;
