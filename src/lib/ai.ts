@@ -331,7 +331,10 @@ export function formatPageHtml(html: string, title: string) {
           "(นี่คือแท็บที่กดสลับได้บนหน้าเว็บ ยุบทิ้งแล้วหน้าพัง) " +
           "จัดรูปแบบได้เฉพาะ*ข้างใน*แต่ละ tab เท่านั้น\n" +
           '- <div class="ebook"> (การ์ดไฟล์ PDF), <div class="cards"> (การ์ดลิงก์) ' +
-          'และ <div class="people"> (ทำเนียบบุคลากร) คงไว้ทั้งก้อนเช่นกัน ห้ามยุบ ห้ามตัด class\n\n' +
+          'และ <div class="people"> (ทำเนียบบุคลากร) คงไว้ทั้งก้อนเช่นกัน ห้ามยุบ ห้ามตัด class\n' +
+          '- มี <div class="people"> หลายก้อนติดกันถือว่าตั้งใจ — แต่ละก้อนคือหนึ่งแถวที่คนต่อแถว' +
+          "ไม่เท่ากัน (เช่นแถวประธาน 3 คน แถวกรรมการ 4 คน) ห้ามรวมเป็นก้อนเดียว " +
+          "และห้ามแก้เลขใน class cols-2/3/4/5 เด็ดขาด\n\n" +
           "ใช้ได้เฉพาะแท็ก: p, h2, h3, ul, ol, li, strong, em, a, br, hr, blockquote, " +
           "table, thead, tbody, tr, th, td, img, figure, figcaption\n" +
           "ห้ามใส่ style, script, iframe และห้ามครอบด้วย <html> หรือ <body>\n" +

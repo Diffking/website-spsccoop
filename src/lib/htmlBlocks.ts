@@ -51,3 +51,22 @@ export function replaceBlock(html: string, name: string, block: string): string 
   if (!found) return html.trim() ? `${html.replace(/\s+$/, "")}\n${block}\n` : `${block}\n`;
   return html.slice(0, found.start) + block + html.slice(found.end);
 }
+
+/** หาทุกก้อนที่ class มีคำที่ระบุ — เรียงตามตำแหน่งในเนื้อหา */
+export function findBlocks(html: string, name: string): HtmlBlock[] {
+  const out: HtmlBlock[] = [];
+  let from = 0;
+
+  // ไล่ทีละก้อน โดยตัดส่วนที่หาไปแล้วออก แล้วบวก offset กลับเข้าไป
+  while (from < html.length) {
+    const found = findBlock(html.slice(from), name);
+    if (!found) break;
+    out.push({
+      ...found,
+      start: found.start + from,
+      end: found.end + from,
+    });
+    from += found.end;
+  }
+  return out;
+}

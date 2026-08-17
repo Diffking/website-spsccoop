@@ -224,15 +224,27 @@ body {
 
 /* ---- ทำเนียบบุคลากร ----
    รูปคนกลางกรอบ ชื่อกับตำแหน่งอยู่ใต้ภาพ · เลือกได้ว่าแถวละกี่คน (cols-2 ถึง cols-5)
-   จอแคบลดคอลัมน์ให้เองเป็น 2 แล้ว 1 — บังคับ 5 คอลัมน์บนมือถือรูปจะเล็กจนไม่เห็นหน้า */
+   จอแคบลดคอลัมน์ให้เองเป็น 2 แล้ว 1 — บังคับ 5 คอลัมน์บนมือถือรูปจะเล็กจนไม่เห็นหน้า
+
+   ใช้ flex ไม่ใช่ grid เพราะแถวสุดท้ายที่คนไม่เต็มแถวต้องอยู่กึ่งกลาง
+   (กริดจะดันไปชิดซ้าย เหลือช่องว่างข้างขวาแหว่ง ๆ)
+   หน้าเดียวมีได้หลายก้อน แต่ละก้อนตั้ง cols ของตัวเอง เช่นแถวประธาน 3 แล้วกรรมการ 4 */
 .prose-page .people {
-  display: grid; gap: 1.25rem; margin: 1.5rem 0;
-  grid-template-columns: repeat(var(--people-cols, 4), minmax(0, 1fr));
+  --people-gap: 1.25rem;
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: var(--people-gap); margin: 1.5rem 0;
+}
+.prose-page .people > * {
+  flex: 0 0 calc((100% - (var(--people-cols, 4) - 1) * var(--people-gap)) / var(--people-cols, 4));
+  max-width: calc((100% - (var(--people-cols, 4) - 1) * var(--people-gap)) / var(--people-cols, 4));
 }
 .prose-page .people.cols-2 { --people-cols: 2; }
 .prose-page .people.cols-3 { --people-cols: 3; }
 .prose-page .people.cols-4 { --people-cols: 4; }
 .prose-page .people.cols-5 { --people-cols: 5; }
+
+/* ก้อนที่ต่อกันคือทำเนียบชุดเดียวกัน — ให้ระยะห่างเท่าช่องไฟระหว่างแถว จะได้ดูเป็นตารางเดียว */
+.prose-page .people + .people { margin-top: 0; }
 
 @media (max-width: 900px) { .prose-page .people { --people-cols: 3 !important; } }
 @media (max-width: 640px) { .prose-page .people { --people-cols: 2 !important; } }

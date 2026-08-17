@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import UploadProgress from "@/components/admin/UploadProgress";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
-import { findBlock } from "@/lib/htmlBlocks";
+import { findBlocks } from "@/lib/htmlBlocks";
 
 /**
  * แถบเครื่องมือจัดข้อความสำหรับช่องเนื้อหา HTML — ใช้ซ้ำได้ทุกที่ที่พิมพ์เนื้อหาเป็น HTML
@@ -174,7 +174,9 @@ const TOOLS: Tool[] = [
     block:
       '<div class="people cols-3">\n' +
       "  <!-- คอลัมน์: เปลี่ยน cols-3 เป็น cols-2 / cols-4 / cols-5 ได้ -->\n" +
-      "  <!-- เพิ่มคน: ก๊อป <figure> ทั้งก้อนด้านล่างมาต่อ · รูปควรเป็นรูปถ่าย 1 นิ้ว -->\n" +
+      "  <!-- เพิ่มคน: ก๊อป <figure> ทั้งก้อนด้านล่างมาต่อ · รูปควรเป็นรูปถ่าย 1.5 นิ้ว -->\n" +
+      "  <!-- แถวละไม่เท่ากัน: วางก้อน people ต่อกันหลายก้อน เช่น cols-3 (ประธาน+รอง)\n" +
+      "       แล้วตามด้วย cols-4 (กรรมการ) — คนไม่เต็มแถวจะจัดกึ่งกลางให้เอง -->\n" +
       '  <figure class="person">\n' +
       '    <img src="/uploads/ใส่ชื่อไฟล์รูป.jpg" alt="ชื่อ-นามสกุล">\n' +
       "    <figcaption>\n" +
@@ -202,6 +204,9 @@ const TOOLS: Tool[] = [
   },
 ];
 
+/** ความกว้างแผงเลือกชนิดรูป (w-72) — ใช้คำนวณว่าจะกางไปทางไหน */
+const MENU_WIDTH = 288;
+
 export default function ContentToolbar({ textarea, value, onChange, folder = "page_images" }: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
   const pdfInput = useRef<HTMLInputElement>(null);
@@ -217,26 +222,40 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
   const [target, setTarget] = useState<string>("");
   /** เมนูเลือกชนิดรูปตอนกดปุ่มแทรกรูป */
   const [imageMenu, setImageMenu] = useState(false);
+  /** กางแผงไปทางซ้ายแทน เมื่อกางทางขวาแล้วจะล้นขอบจอ */
+  const [menuRight, setMenuRight] = useState(false);
   /** ทำเนียบที่จะสร้างใหม่ ให้แถวละกี่คน */
   const [peopleCols, setPeopleCols] = useState(3);
+  /** กำลังแก้ทำเนียบกลุ่มไหน — null = กลุ่มล่างสุด (กลุ่มที่เพิ่งแทรก) */
+  const [groupPick, setGroupPick] = useState<number | null>(null);
 
   const tabs = findTabs(value);
-  /** ในหน้านี้มีทำเนียบอยู่แล้วไหม — มีแล้วจะโชว์ปุ่มปรับจำนวนคนต่อแถวให้แก้ได้ทันที */
-  const peopleBlock = findBlock(value, "people");
-  const currentCols = Number(/\bcols-(\d)\b/.exec(peopleBlock?.className ?? "")?.[1] ?? peopleCols);
 
-  /** เปลี่ยนจำนวนคนต่อแถวของทำเนียบที่มีอยู่ — ยังไม่มีก็แค่จำไว้ใช้ตอนแทรกครั้งถัดไป */
+  /*
+   * ทำเนียบในหน้าเดียวมีได้หลายกลุ่ม แต่ละกลุ่มตั้งคนต่อแถวของตัวเองได้
+   * เช่นแถวประธาน/รองประธาน 3 คน แล้วกรรมการที่เหลือแถวละ 4 — คือคนละ <div class="people">
+   */
+  const peopleBlocks = findBlocks(value, "people");
+  const activeIndex =
+    groupPick !== null && groupPick < peopleBlocks.length ? groupPick : peopleBlocks.length - 1;
+  const activeBlock = peopleBlocks[activeIndex] ?? null;
+  const currentCols = Number(/\bcols-(\d)\b/.exec(activeBlock?.className ?? "")?.[1] ?? peopleCols);
+
+  /** จำนวนคนในแต่ละกลุ่ม — เอาไว้โชว์บนปุ่มเลือกกลุ่มให้รู้ว่ากลุ่มไหนคือกลุ่มไหน */
+  const groupSizes = peopleBlocks.map((b) => (b.inner.match(/class="person"/g) ?? []).length);
+
+  /** เปลี่ยนจำนวนคนต่อแถวของกลุ่มที่กำลังแก้ — ยังไม่มีทำเนียบเลยก็แค่จำไว้ใช้ตอนแทรกครั้งถัดไป */
   function changeColumns(n: number) {
     setPeopleCols(n);
-    if (!peopleBlock) return;
+    if (!activeBlock) return;
 
-    const openEnd = value.indexOf(">", peopleBlock.start) + 1;
-    const openTag = value.slice(peopleBlock.start, openEnd);
+    const openEnd = value.indexOf(">", activeBlock.start) + 1;
+    const openTag = value.slice(activeBlock.start, openEnd);
     const nextTag = /\bcols-\d\b/.test(openTag)
       ? openTag.replace(/\bcols-\d\b/, `cols-${n}`)
       : openTag.replace(/class="([^"]*)"/, `class="$1 cols-${n}"`);
 
-    onChange(value.slice(0, peopleBlock.start) + nextTag + value.slice(openEnd));
+    onChange(value.slice(0, activeBlock.start) + nextTag + value.slice(openEnd));
   }
 
   /**
@@ -362,7 +381,12 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
       .join("\n");
 
     insert(`<div class="people cols-${peopleCols}">\n${figures}\n</div>`);
-    setHint(`แทรกรูปบุคคล ${done.length} คน (กรอบ 1.5 นิ้ว) — แก้ชื่อกับตำแหน่งในเนื้อหา แล้วกดบันทึก`);
+    // กลุ่มใหม่อยู่ล่างสุดเสมอ — เลิกล็อกกลุ่มที่เลือกไว้ ปุ่มคนต่อแถวจะได้แก้กลุ่มที่เพิ่งแทรก
+    setGroupPick(null);
+    setHint(
+      `แทรกรูปบุคคล ${done.length} คน (กรอบ 1.5 นิ้ว) เป็นกลุ่มใหม่แถวละ ${peopleCols} คน — ` +
+        "แก้ชื่อกับตำแหน่งในเนื้อหา แล้วกดบันทึก",
+    );
   }
 
   /** โครง <figure> ของรูปหนึ่งใบ — alt ตั้งจากชื่อไฟล์ไปก่อน แก้ทีหลังได้ */
@@ -579,7 +603,12 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
         <div className="relative">
           <button
             type="button"
-            onClick={() => setImageMenu((v) => !v)}
+            onClick={(e) => {
+              // ปุ่มนี้มักอยู่ค่อนไปทางขวา ถ้ากางแผงไปทางขวาเสมอจะล้นขอบจอจนอ่านไม่ครบ
+              const box = e.currentTarget.getBoundingClientRect();
+              setMenuRight(box.left + MENU_WIDTH > window.innerWidth - 16);
+              setImageMenu((v) => !v);
+            }}
             disabled={uploading}
             className="inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-700 transition hover:bg-brand-100 disabled:opacity-60"
           >
@@ -593,7 +622,11 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
           </button>
 
           {imageMenu && (
-            <div className="absolute left-0 top-full z-40 mt-1 w-72 rounded-xl bg-white p-2 shadow-xl ring-1 ring-black/10">
+            <div
+              className={`absolute top-full z-40 mt-1 w-72 rounded-xl bg-white p-2 shadow-xl ring-1 ring-black/10 ${
+                menuRight ? "right-0" : "left-0"
+              }`}
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -631,6 +664,27 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
                   </span>
                 </button>
 
+                {/* มีทำเนียบหลายกลุ่มก็เลือกได้ว่าจะแก้กลุ่มไหน — กลุ่มละคนต่อแถวไม่เท่ากันได้ */}
+                {peopleBlocks.length > 1 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-6">
+                    <span className="text-xs text-gray-500">แก้กลุ่ม</span>
+                    {peopleBlocks.map((b, i) => (
+                      <button
+                        key={b.start}
+                        type="button"
+                        onClick={() => setGroupPick(i)}
+                        className={`rounded-lg px-2 py-1 text-[11px] font-medium transition ${
+                          activeIndex === i
+                            ? "bg-brand-600 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        {i + 1} · {groupSizes[i]} คน
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {/* เลือกคนต่อแถวตรงนี้เลย ไม่ต้องไปหาแผงแยกอีกที */}
                 <div className="mt-2 flex items-center gap-1.5 pl-6">
                   <span className="text-xs text-gray-500">คนต่อแถว</span>
@@ -649,9 +703,11 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
                     </button>
                   ))}
                 </div>
-                {peopleBlock && (
+                {activeBlock && (
                   <p className="mt-1.5 pl-6 text-[11px] text-emerald-700">
-                    หน้านี้มีทำเนียบอยู่แล้ว — กดเลขเพื่อเปลี่ยนจำนวนคนต่อแถวได้ทันที
+                    {peopleBlocks.length > 1
+                      ? `กำลังแก้กลุ่มที่ ${activeIndex + 1} — แทรกรูปบุคคลอีกครั้งจะได้กลุ่มใหม่ ตั้งคนต่อแถวแยกได้`
+                      : "หน้านี้มีทำเนียบอยู่แล้ว — แทรกรูปบุคคลอีกครั้งจะได้กลุ่มใหม่ ตั้งคนต่อแถวแยกกันได้"}
                   </p>
                 )}
               </div>
