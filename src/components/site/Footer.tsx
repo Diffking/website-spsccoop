@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Phone, Mail, Clock, Users, ExternalLink, Navigation } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Users, ExternalLink, Navigation, Printer } from "lucide-react";
 import { getItems } from "@/lib/homeItems";
 import { getBrand } from "@/lib/nav";
 import { getOfficeHours, getSiteInfo } from "@/lib/settings";
@@ -56,7 +56,8 @@ export default async function Footer() {
           <ul className="space-y-2.5 text-sm text-white/80">
             <li className="flex gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0" /> {info.address}</li>
             <li className="flex gap-2"><Phone className="h-4 w-4 shrink-0" /> {info.phone}</li>
-            <li className="flex gap-2"><Phone className="h-4 w-4 shrink-0" /> {info.fax}</li>
+            {/* แฟกซ์ใช้ไอคอนเครื่องแฟกซ์ ไม่ใช่หูโทรศัพท์ซ้ำกับเบอร์ด้านบน */}
+            <li className="flex gap-2"><Printer className="h-4 w-4 shrink-0" /> {info.fax}</li>
             <li className="flex gap-2"><Mail className="h-4 w-4 shrink-0" /> {info.email}</li>
           </ul>
 

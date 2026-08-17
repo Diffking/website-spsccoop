@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Save, Loader2, Plus, Trash2 } from "lucide-react";
 import type { BankAccount, SiteInfo } from "@/lib/settings";
+import { parseMapPoint } from "@/lib/mapPoint";
 
 /** ช่องที่เป็นข้อความบรรทัดเดียว — เลขบัญชีเป็นรายการ จัดการแยกด้านล่าง */
 const FIELDS: { key: keyof SiteInfo; label: string; hint?: string }[] = [
@@ -68,9 +69,35 @@ export default function SiteInfoForm({ initial }: { initial: SiteInfo }) {
               {field.hint && <span className="ml-1 text-xs text-gray-400">({field.hint})</span>}
               <input
                 value={(siteInfo[field.key] as string) ?? ""}
-                onChange={(e) => setSiteInfo({ ...siteInfo, [field.key]: e.target.value })}
+                onChange={(e) =>
+                  setSiteInfo({
+                    ...siteInfo,
+                    // ช่องพิกัดรับลิงก์กูเกิลแมปทั้งเส้นได้ แล้วดึงเฉพาะตัวเลขให้เอง
+                    [field.key]:
+                      field.key === "mapPoint" ? parseMapPoint(e.target.value) : e.target.value,
+                  })
+                }
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-base outline-none focus:border-brand-500"
               />
+
+              {field.key === "mapPoint" && (
+                <span className="mt-1 block text-xs text-gray-500">
+                  วิธีหา: เปิด{" "}
+                  <a
+                    href={`https://www.google.com/maps/search/${encodeURIComponent(siteInfo.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-brand-600 underline"
+                  >
+                    กูเกิลแมป
+                  </a>{" "}
+                  → คลิกขวาตรงตัวอาคารสหกรณ์ → กดตัวเลขพิกัดเพื่อคัดลอก → วางในช่องนี้
+                  (วางลิงก์ทั้งเส้นก็ได้ ระบบตัดเอาเฉพาะตัวเลขให้)
+                  <span className="mt-0.5 block text-amber-700">
+                    ไม่ใส่พิกัด กูเกิลจะเดาจากที่อยู่ ซึ่งบางครั้งไปลงร้านข้างเคียงแทนสหกรณ์
+                  </span>
+                </span>
+              )}
             </label>
           ))}
         </div>
