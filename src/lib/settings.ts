@@ -34,6 +34,28 @@ export type SiteInfo = {
   memberCount: string;
   /** ลิงก์เพจเฟซบุ๊ก — เว้นว่าง = ไม่แสดงปุ่มที่ท้ายเว็บ */
   facebook?: string;
+  /** ลิงก์เพิ่มเพื่อนไลน์ (https://lin.ee/... หรือ https://line.me/ti/p/...) */
+  line?: string;
+  /** ไอดีไลน์ที่โชว์ให้อ่าน เช่น @spsc-coop — คนละอย่างกับลิงก์ */
+  lineId?: string;
+  /**
+   * พิกัดสำนักงานสำหรับปักหมุดและนำทาง — "7.0123,100.4567"
+   * เว้นว่างจะใช้ที่อยู่เป็นคำค้นแทน (กูเกิลเดาตำแหน่งให้ อาจคลาดเคลื่อน)
+   */
+  mapPoint?: string;
+  /** เลขที่บัญชีธนาคารของสหกรณ์ — ใช้ที่หน้าติดต่อเรา */
+  bankAccounts?: BankAccount[];
+};
+
+export type BankAccount = {
+  /** ชื่อธนาคาร เช่น กรุงไทย */
+  bank: string;
+  /** สาขา */
+  branch: string;
+  /** ชื่อบัญชี */
+  name: string;
+  /** เลขที่บัญชี */
+  number: string;
 };
 
 export type InterestRates = {
@@ -80,6 +102,24 @@ export const DEFAULT_SITE_INFO: SiteInfo = {
   officeHours: "จันทร์ – ศุกร์ 08:30 – 16:30 น.",
   memberCount: "220,031",
   facebook: "",
+  line: "",
+  lineId: "@spsc-coop",
+  mapPoint: "",
+  // ตรงกับที่ประกาศไว้หน้าติดต่อเราของเว็บเดิม spsccoop.com/contact
+  bankAccounts: [
+    {
+      bank: "กรุงไทย",
+      branch: "สงขลา",
+      name: "สหกรณ์ออมทรัพย์สาธารณสุขสงขลา จำกัด",
+      number: "901-1-17337-6",
+    },
+    {
+      bank: "กรุงไทย",
+      branch: "โรงพยาบาลสงขลา",
+      name: "สหกรณ์ออมทรัพย์สาธารณสุขสงขลา จำกัด",
+      number: "980-0-35888-9",
+    },
+  ],
 };
 
 export const DEFAULT_RATES: InterestRates = {
@@ -158,7 +198,19 @@ export async function getHomeTones(): Promise<HomeTones> {
 export const getCommitteePhotoScale = () =>
   getSetting<number>("committeePhotoScale", DEFAULT_COMMITTEE_PHOTO_SCALE);
 
-export const getSiteInfo = () => getSetting<SiteInfo>("siteInfo", DEFAULT_SITE_INFO);
+/**
+ * ข้อมูลสหกรณ์ — เติมคีย์ที่ค่าที่บันทึกไว้ยังไม่มีจากค่าตั้งต้นเสมอ
+ * (แถวในฐานถูกบันทึกไว้ก่อนจะมีช่องไลน์ พิกัดแผนที่ และเลขบัญชี)
+ */
+export async function getSiteInfo(): Promise<SiteInfo> {
+  const saved = await getSetting<Partial<SiteInfo>>("siteInfo", DEFAULT_SITE_INFO);
+  return {
+    ...DEFAULT_SITE_INFO,
+    ...saved,
+    // บัญชีที่บันทึกไว้เป็นลิสต์ว่างถือว่าตั้งใจลบทิ้ง ไม่ต้องเอาค่าตั้งต้นมาแทน
+    bankAccounts: saved.bankAccounts ?? DEFAULT_SITE_INFO.bankAccounts,
+  };
+}
 export const getRates = () => getSetting<InterestRates>("interestRates", DEFAULT_RATES);
 
 /** ค่าที่บันทึกไว้อาจเก่ากว่าโครงปัจจุบัน เติมค่าที่ขาดจากค่าตั้งต้นให้เสมอ */

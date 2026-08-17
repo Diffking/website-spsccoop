@@ -1,4 +1,5 @@
-import { MapPin, Phone, Mail, Clock, Users, ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { MapPin, Phone, Mail, Clock, Users, ExternalLink, Navigation } from "lucide-react";
 import { getItems } from "@/lib/homeItems";
 import { getBrand } from "@/lib/nav";
 import { getOfficeHours, getSiteInfo } from "@/lib/settings";
@@ -58,6 +59,14 @@ export default async function Footer() {
             <li className="flex gap-2"><Phone className="h-4 w-4 shrink-0" /> {info.fax}</li>
             <li className="flex gap-2"><Mail className="h-4 w-4 shrink-0" /> {info.email}</li>
           </ul>
+
+          {/* ทางเข้าหน้าติดต่อเรา — แผนที่ เส้นทาง และเลขที่บัญชีอยู่ในนั้นทั้งหมด */}
+          <Link
+            href="/contact/"
+            className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-brand-200 transition hover:text-white"
+          >
+            <Navigation className="h-4 w-4" /> แผนที่ เส้นทาง และเลขที่บัญชี
+          </Link>
         </div>
 
         {/* เวลาทำการ */}
