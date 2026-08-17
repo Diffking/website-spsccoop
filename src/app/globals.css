@@ -272,7 +272,11 @@ body {
   margin: 1.5rem 0; padding: 1rem 1.25rem;
   border-radius: .75rem; background: #f5fbff; border: 1px solid #cfe6f8;
 }
-.prose-page .ebook .ebook-name { flex: 1 1 12rem; font-weight: 600; color: #0f5390; }
+/* ชื่อไฟล์ — ใส่สีพอให้แยกออกจากข้อความรอบ ๆ ไม่ต้องเด่นจนแย่งสายตาจากปุ่ม */
+.prose-page .ebook .ebook-name {
+  flex: 1 1 12rem; min-width: 0;
+  font-weight: 500; color: #1568b0; overflow-wrap: anywhere;
+}
 .prose-page .ebook a {
   border-radius: 9999px; padding: .45rem 1.1rem; font-size: .9rem;
   font-weight: 500; text-decoration: none; white-space: nowrap;

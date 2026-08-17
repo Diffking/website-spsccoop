@@ -295,7 +295,8 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
       return;
     }
 
-    const name = file.name.replace(/\.pdf$/i, "");
+    // โชว์ชื่อไฟล์เต็มรวมนามสกุล — คนอ่านจะได้รู้ทันทีว่าเป็นไฟล์อะไร ขนาดไหนควรคาดหวัง
+    const name = file.name;
     const read = `/read/?src=${encodeURIComponent(result.data.url)}&title=${encodeURIComponent(name)}`;
     insert(
       `<div class="ebook">\n  <span class="ebook-name">${name}</span>\n` +
