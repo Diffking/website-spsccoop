@@ -61,9 +61,10 @@ export default function PageContent({ html, className = "" }: { html: string; cl
           panel.hidden = i !== index;
           panel.classList.add("is-ready");
         });
-        Array.from(bar.children).forEach((button, i) =>
-          button.setAttribute("aria-selected", String(i === index)),
-        );
+        Array.from(bar.children).forEach((button, i) => {
+          button.setAttribute("aria-selected", String(i === index));
+          (button as HTMLElement).tabIndex = i === index ? 0 : -1;
+        });
       };
 
       panels.forEach((panel, i) => {
@@ -73,6 +74,16 @@ export default function PageContent({ html, className = "" }: { html: string; cl
         button.setAttribute("role", "tab");
         button.textContent = panel.dataset.title || `หัวข้อที่ ${i + 1}`;
         button.addEventListener("click", () => show(i));
+
+        // กดลูกศรซ้าย/ขวาเลื่อนแท็บได้ สำหรับคนที่ใช้คีย์บอร์ดอย่างเดียว
+        button.addEventListener("keydown", (e) => {
+          const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+          if (step === 0) return;
+          e.preventDefault();
+          const next = (i + step + panels.length) % panels.length;
+          show(next);
+          (bar.children[next] as HTMLElement).focus();
+        });
         bar.appendChild(button);
       });
 
