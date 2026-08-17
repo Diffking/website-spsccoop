@@ -188,6 +188,47 @@ body {
 .prose-page .image-row figure { margin: 0; }
 .prose-page .image-row img { margin: 0; width: 100%; }
 
+/* ---- แท็บเมนูในหน้าเนื้อหา ----
+   HTML ที่บันทึกไว้เป็นแค่ <div class="tabs"> ครอบ <div class="tab" data-title="...">
+   ปิด JavaScript อยู่จะเห็นทุกแท็บเรียงต่อกันพร้อมหัวข้อ อ่านได้ครบเหมือนเดิม
+   เปิด JavaScript แล้ว PageContent จะใส่ปุ่มให้แล้วซ่อนแท็บที่ไม่ได้เลือก */
+.prose-page .tabs { margin: 1.5rem 0; }
+.prose-page .tab-buttons {
+  display: flex; flex-wrap: wrap; gap: .375rem;
+  border-bottom: 2px solid #eaf4fc; padding-bottom: .5rem; margin-bottom: 1rem;
+}
+.prose-page .tab-button {
+  border-radius: 9999px; padding: .4rem 1rem; font-size: .9rem; font-weight: 500;
+  color: #4b5563; background: #f3f4f6; transition: all .2s; cursor: pointer;
+}
+.prose-page .tab-button:hover { background: #eaf4fc; color: #0f5390; }
+.prose-page .tab-button[aria-selected="true"] {
+  background: #1c7fca; color: #fff; box-shadow: 0 2px 8px rgb(28 127 202 / .35);
+}
+/* ยังไม่ถูกอัปเกรดเป็นแท็บ (ไม่มี JS) — โชว์ชื่อแท็บเป็นหัวข้อแทน จะได้รู้ว่าอันไหนเรื่องอะไร */
+.prose-page .tab:not(.is-ready)::before {
+  content: attr(data-title);
+  display: block; font-weight: 600; color: #0f5390; margin-bottom: .5rem;
+}
+.prose-page .tab + .tab { margin-top: 1.5rem; }
+.prose-page .tab.is-ready + .tab.is-ready { margin-top: 0; }
+.prose-page .tab[hidden] { display: none; }
+
+/* ---- การ์ดไฟล์ PDF ที่แนบในเนื้อหา ---- */
+.prose-page .ebook {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .75rem;
+  margin: 1.5rem 0; padding: 1rem 1.25rem;
+  border-radius: .75rem; background: #f5fbff; border: 1px solid #cfe6f8;
+}
+.prose-page .ebook .ebook-name { flex: 1 1 12rem; font-weight: 600; color: #0f5390; }
+.prose-page .ebook a {
+  border-radius: 9999px; padding: .45rem 1.1rem; font-size: .9rem;
+  font-weight: 500; text-decoration: none; white-space: nowrap;
+}
+.prose-page .ebook a:first-of-type { background: #1c7fca; color: #fff; }
+.prose-page .ebook a:first-of-type:hover { background: #1568b0; color: #fff; }
+.prose-page .ebook a:last-of-type { background: #fff; color: #1568b0; border: 1px solid #cfe6f8; }
+
 /* ตารางกว้างเกินจอ — PageContent ห่อด้วย .table-scroll ให้เอง เลื่อนในกรอบไม่ดันทั้งหน้า */
 .table-scroll { overflow-x: auto; margin: 1.5rem 0; }
 .prose-page table { width: 100%; border-collapse: collapse; font-size: .95rem; min-width: 30rem; }

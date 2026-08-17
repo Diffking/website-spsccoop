@@ -20,7 +20,11 @@ const ALLOWED = new Set([
  * class ที่ยอมให้ติดมาได้ — ใช้คุมการวางรูปเท่านั้น (ดู .prose-page ใน globals.css)
  * นอกรายการนี้ตัดทิ้งหมด กัน class แปลกปลอมมาทับสไตล์ของเว็บ
  */
-const ALLOWED_CLASSES = new Set(["left", "right", "small", "wide", "image-row"]);
+const ALLOWED_CLASSES = new Set([
+  "left", "right", "small", "wide", "image-row",
+  // แท็บเมนูและการ์ดเอกสาร PDF — PageContent เอาไปทำเป็นแท็บกดได้จริงตอนแสดงผล
+  "tabs", "tab", "ebook",
+]);
 
 /** แอตทริบิวต์ที่ยอมให้ติดมากับแต่ละแท็ก — นอกจากนี้ตัดทิ้งหมด รวมถึง style และ on* ทุกตัว */
 const ALLOWED_ATTRS: Record<string, string[]> = {
@@ -29,7 +33,8 @@ const ALLOWED_ATTRS: Record<string, string[]> = {
   th: ["colspan", "rowspan"],
   td: ["colspan", "rowspan"],
   figure: ["class"],
-  div: ["class"],
+  // data-title = ชื่อบนปุ่มแท็บ / ชื่อเอกสาร
+  div: ["class", "data-title"],
 };
 
 /** ค่า href/src ที่ยอมรับ — กัน javascript: และ data: ที่ใช้ยิงสคริปต์ได้ */

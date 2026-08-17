@@ -43,6 +43,44 @@ export default function PageContent({ html, className = "" }: { html: string; cl
       wrap.appendChild(table);
     });
 
+    /*
+     * แท็บเมนู — เนื้อหาที่บันทึกไว้เป็นแค่กล่องซ้อนกัน ตรงนี้คือที่ทำให้กดสลับได้จริง
+     * สร้างปุ่มจาก data-title ของแต่ละแท็บ แล้วซ่อนอันที่ไม่ได้เลือก
+     */
+    root.querySelectorAll<HTMLElement>(".tabs").forEach((group) => {
+      if (group.dataset.ready === "1") return;
+      const panels = Array.from(group.querySelectorAll<HTMLElement>(":scope > .tab"));
+      if (panels.length === 0) return;
+
+      const bar = document.createElement("div");
+      bar.className = "tab-buttons";
+      bar.setAttribute("role", "tablist");
+
+      const show = (index: number) => {
+        panels.forEach((panel, i) => {
+          panel.hidden = i !== index;
+          panel.classList.add("is-ready");
+        });
+        Array.from(bar.children).forEach((button, i) =>
+          button.setAttribute("aria-selected", String(i === index)),
+        );
+      };
+
+      panels.forEach((panel, i) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "tab-button";
+        button.setAttribute("role", "tab");
+        button.textContent = panel.dataset.title || `หัวข้อที่ ${i + 1}`;
+        button.addEventListener("click", () => show(i));
+        bar.appendChild(button);
+      });
+
+      group.prepend(bar);
+      group.dataset.ready = "1";
+      show(0);
+    });
+
     // เครื่องที่ตั้งค่าลดการเคลื่อนไหวไว้ ให้แสดงทันทีไม่ต้องมีอนิเมชัน
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 

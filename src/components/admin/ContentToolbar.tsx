@@ -14,6 +14,8 @@ import {
   Minus,
   Quote,
   Table,
+  FileText,
+  PanelsTopLeft,
 } from "lucide-react";
 import UploadProgress from "@/components/admin/UploadProgress";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
@@ -93,10 +95,26 @@ const TOOLS: Tool[] = [
       "<table>\n  <thead>\n    <tr><th>หัวข้อ 1</th><th>หัวข้อ 2</th></tr>\n  </thead>\n  <tbody>\n    <tr><td>ข้อมูล</td><td>ข้อมูล</td></tr>\n  </tbody>\n</table>",
   },
   { icon: Minus, title: "เส้นคั่น", kind: "block", block: "<hr>" },
+  {
+    icon: PanelsTopLeft,
+    title: "แท็ปเมนู (สลับหัวข้อ)",
+    kind: "block",
+    // data-title = ชื่อบนปุ่มแท็บ · เพิ่มแท็บก็ก๊อป <div class="tab"> ทั้งก้อนมาต่อ
+    block:
+      '<div class="tabs">\n' +
+      '  <div class="tab" data-title="หัวข้อที่ 1">\n' +
+      "    <p>เนื้อหาของหัวข้อที่ 1</p>\n" +
+      "  </div>\n" +
+      '  <div class="tab" data-title="หัวข้อที่ 2">\n' +
+      "    <p>เนื้อหาของหัวข้อที่ 2</p>\n" +
+      "  </div>\n" +
+      "</div>",
+  },
 ];
 
 export default function ContentToolbar({ textarea, value, onChange, folder = "page_images" }: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
+  const pdfInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<{ phase: UploadPhase | null; percent: number; name: string }>(
     { phase: null, percent: 0, name: "" },
@@ -188,6 +206,36 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
     );
   }
 
+  /** อัปไฟล์ PDF แล้ววางเป็นการ์ดให้กดอ่านแบบ E-Book ในหน้าเว็บ */
+  async function uploadPdf(file: File) {
+    setError(null);
+    setHint(null);
+    setUploading(true);
+    setProgress({ phase: "upload", percent: 0, name: file.name });
+
+    const form = new FormData();
+    form.append("file", file);
+    form.append("folder", "page_images");
+    const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", form, (percent, phase) =>
+      setProgress((p) => ({ ...p, percent, phase })),
+    );
+    setUploading(false);
+
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+
+    const name = file.name.replace(/\.pdf$/i, "");
+    const read = `/read/?src=${encodeURIComponent(result.data.url)}&title=${encodeURIComponent(name)}`;
+    insert(
+      `<div class="ebook">\n  <span class="ebook-name">${name}</span>\n` +
+        `  <a href="${read}">เปิดอ่านแบบ E-Book</a>\n` +
+        `  <a href="${result.data.url}">ดาวน์โหลด PDF</a>\n</div>`,
+    );
+    setHint("แนบไฟล์ PDF แล้ว — ต้องกดบันทึกด้านล่างด้วย ถึงจะขึ้นบนหน้าเว็บจริง");
+  }
+
   /**
    * อัปได้ทีละหลายไฟล์ — เลือกไฟล์เดียวได้รูปเดี่ยว เลือกหลายไฟล์ได้แถวรูปเรียงข้างกัน
    * อัปเรียงทีละไฟล์ ไม่ยิงพร้อมกัน เพราะแถบความคืบหน้ามีอันเดียวและ FTP ก็รับทีละไฟล์อยู่ดี
@@ -241,6 +289,18 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
 
   return (
     <div className="border-b border-gray-100 bg-gray-50 px-2 py-1.5">
+      <input
+        ref={pdfInput}
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void uploadPdf(file);
+          e.target.value = "";
+        }}
+      />
+
       <input
         ref={fileInput}
         type="file"
@@ -300,6 +360,21 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
             <ImagePlus className="h-3.5 w-3.5" />
           )}
           แทรกรูป
+        </button>
+
+        <button
+          type="button"
+          onClick={() => pdfInput.current?.click()}
+          disabled={uploading}
+          title="อัปไฟล์ PDF แล้ววางเป็นการ์ดให้กดอ่านแบบ E-Book"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-700 transition hover:bg-brand-100 disabled:opacity-60"
+        >
+          {uploading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <FileText className="h-3.5 w-3.5" />
+          )}
+          แนบ PDF
         </button>
       </div>
 
