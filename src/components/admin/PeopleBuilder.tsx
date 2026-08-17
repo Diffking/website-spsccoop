@@ -176,7 +176,9 @@ export default function PeopleBuilder({
                 {n}
               </button>
             ))}
-            <span className="text-xs text-gray-400">จอแคบจะลดคอลัมน์ให้เองอัตโนมัติ</span>
+            <span className="text-xs text-gray-400">
+              จอแคบจะลดคอลัมน์ให้เองอัตโนมัติ · รูปแสดงเป็นสัดส่วนรูปถ่าย 1 นิ้ว (2.5 × 3.2 ซม.)
+            </span>
           </div>
 
           {people.length > 0 && (

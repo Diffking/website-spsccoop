@@ -239,9 +239,11 @@ body {
 @media (max-width: 380px) { .prose-page .people { --people-cols: 1 !important; } }
 
 .prose-page .people .person { margin: 0; text-align: center; }
+/* สัดส่วนรูปถ่าย 1 นิ้ว (2.5 x 3.2 ซม.) — อัปรูป 1 นิ้วมาแล้วพอดีกรอบ ไม่โดนตัดหน้า
+   จำกัดความกว้างไว้ด้วย ไม่งั้นจอกว้าง ๆ กับ 2 คอลัมน์จะได้รูปใหญ่เกินจริง */
 .prose-page .people .person img {
-  display: block; width: 100%; margin: 0 auto;
-  aspect-ratio: 3 / 4; object-fit: cover; object-position: top center;
+  display: block; width: 100%; max-width: 11rem; margin: 0 auto;
+  aspect-ratio: 25 / 32; object-fit: cover; object-position: top center;
   border-radius: .6rem; background: #f3f4f6;
   box-shadow: 0 4px 14px rgb(15 83 144 / .12);
 }
