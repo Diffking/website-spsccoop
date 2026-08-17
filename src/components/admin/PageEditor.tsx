@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save, Trash2, Loader2, Eye, Pencil, Sparkles, Undo2 } from "lucide-react";
 import ContentToolbar from "@/components/admin/ContentToolbar";
@@ -21,10 +21,23 @@ export default function PageEditor({ page, aiReady = false }: Props) {
   const [tab, setTab] = useState<"edit" | "preview">("edit");
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  /** กำลังรอ AI อยู่ — ใช้เปลี่ยนข้อความบนปุ่มและกันปิดหน้าไปก่อนบันทึกเสร็จ */
+  const [formatting, setFormatting] = useState(false);
   /** ให้ AI จัดรูปแบบตอนกดบันทึก */
   const [autoFormat, setAutoFormat] = useState(aiReady);
   /** เนื้อหาก่อน AI จัด — เก็บไว้ให้กดย้อนกลับได้ถ้าไม่ถูกใจ */
   const [beforeAi, setBeforeAi] = useState<string | null>(null);
+
+  /**
+   * กันปิดแท็บ/กดย้อนกลับระหว่างกำลังบันทึก — งานที่ให้ AI จัดใช้เวลาถึงเกือบนาที
+   * ปิดหน้าไปตอนนั้นคือเสียทั้งรูปที่เพิ่งแทรกและที่พิมพ์ค้างไว้
+   */
+  useEffect(() => {
+    if (!busy) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [busy]);
 
   /**
    * ให้ AI จัดโครงเนื้อหา — คืน HTML ที่จัดแล้ว หรือ null ถ้าทำไม่สำเร็จ
@@ -49,8 +62,10 @@ export default function PageEditor({ page, aiReady = false }: Props) {
     let note = "";
 
     if (autoFormat && aiReady && content.trim()) {
-      setStatus({ kind: "ok", text: "กำลังให้ AI จัดรูปแบบ…" });
+      setFormatting(true);
+      setStatus({ kind: "ok", text: "กำลังให้ AI จัดรูปแบบ… อย่าเพิ่งปิดหน้านี้" });
       const formatted = await runFormat(content);
+      setFormatting(false);
       if (formatted) {
         setBeforeAi(content);
         setContent(formatted);
@@ -218,7 +233,7 @@ export default function PageEditor({ page, aiReady = false }: Props) {
           className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 font-medium text-white transition hover:bg-brand-700 disabled:opacity-60"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          บันทึก
+          {formatting ? "AI กำลังจัดรูปแบบ… (ไม่เกิน 1 นาที)" : busy ? "กำลังบันทึก…" : "บันทึก"}
         </button>
         {beforeAi !== null && (
           <button

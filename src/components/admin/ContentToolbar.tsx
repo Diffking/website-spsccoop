@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import {
   Bold,
   Heading2,
@@ -36,6 +36,54 @@ type Props = {
   folder?: string;
 };
 
+type Tool =
+  | { icon: typeof Bold; title: string; kind: "wrap"; before: string; after: string; sample: string }
+  | { icon: typeof Bold; title: string; kind: "block"; block: string };
+
+/** ปุ่มบนแถบเครื่องมือ — เก็บเป็นข้อมูลล้วน ไม่ผูกกับ state ของคอมโพเนนต์ */
+const TOOLS: Tool[] = [
+  { icon: Heading2, title: "หัวข้อใหญ่", kind: "wrap", before: "<h2>", after: "</h2>", sample: "หัวข้อใหญ่" },
+  { icon: Heading3, title: "หัวข้อย่อย", kind: "wrap", before: "<h3>", after: "</h3>", sample: "หัวข้อย่อย" },
+  { icon: Bold, title: "ตัวหนา", kind: "wrap", before: "<strong>", after: "</strong>", sample: "ข้อความ" },
+  { icon: Italic, title: "ตัวเอียง", kind: "wrap", before: "<em>", after: "</em>", sample: "ข้อความ" },
+  {
+    icon: Link2,
+    title: "ลิงก์",
+    kind: "wrap",
+    before: '<a href="https://">',
+    after: "</a>",
+    sample: "ข้อความลิงก์",
+  },
+  {
+    icon: List,
+    title: "รายการแบบจุด",
+    kind: "block",
+    block: "<ul>\n  <li>รายการที่ 1</li>\n  <li>รายการที่ 2</li>\n</ul>",
+  },
+  {
+    icon: ListOrdered,
+    title: "รายการแบบตัวเลข",
+    kind: "block",
+    block: "<ol>\n  <li>ข้อที่ 1</li>\n  <li>ข้อที่ 2</li>\n</ol>",
+  },
+  {
+    icon: Quote,
+    title: "ยกคำพูด",
+    kind: "wrap",
+    before: "<blockquote>",
+    after: "</blockquote>",
+    sample: "ข้อความที่ยกมา",
+  },
+  {
+    icon: Table,
+    title: "ตาราง",
+    kind: "block",
+    block:
+      "<table>\n  <thead>\n    <tr><th>หัวข้อ 1</th><th>หัวข้อ 2</th></tr>\n  </thead>\n  <tbody>\n    <tr><td>ข้อมูล</td><td>ข้อมูล</td></tr>\n  </tbody>\n</table>",
+  },
+  { icon: Minus, title: "เส้นคั่น", kind: "block", block: "<hr>" },
+];
+
 export default function ContentToolbar({ textarea, value, onChange, folder = "page_images" }: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -43,14 +91,47 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
     { phase: null, percent: 0, name: "" },
   );
   const [error, setError] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
+
+  /**
+   * ตำแหน่งเคอร์เซอร์ล่าสุดในช่องพิมพ์ — null = ยังไม่เคยคลิกในช่องเลย
+   *
+   * ตอนกดปุ่มบนแถบเครื่องมือ โฟกัสอยู่ที่ปุ่ม ไม่ใช่ช่องพิมพ์ ถ้าอ่าน selectionStart
+   * ตรง ๆ จะได้ 0 เสมอ ของที่แทรกเลยไปโผล่บนสุดของบทความแบบไม่มีใครคาดคิด
+   */
+  const caret = useRef<number | null>(null);
+
+  useEffect(() => {
+    const el = textarea.current;
+    if (!el) return;
+    const remember = () => {
+      caret.current = el.selectionStart;
+    };
+    for (const event of ["keyup", "mouseup", "blur", "input"]) {
+      el.addEventListener(event, remember);
+    }
+    return () => {
+      for (const event of ["keyup", "mouseup", "blur", "input"]) {
+        el.removeEventListener(event, remember);
+      }
+    };
+  }, [textarea]);
+
+  /** ช่วงที่จะเขียนทับ — ไม่เคยแตะช่องพิมพ์เลยถือว่าอยากต่อท้าย */
+  function range() {
+    const el = textarea.current;
+    if (!el) return { start: value.length, end: value.length };
+    const untouched = caret.current === null && el.selectionStart === 0 && el.selectionEnd === 0;
+    if (untouched) return { start: value.length, end: value.length };
+    return { start: el.selectionStart, end: el.selectionEnd };
+  }
 
   /** ครอบข้อความที่เลือกไว้ด้วยแท็ก — ไม่ได้เลือกอะไรก็ใส่ข้อความตัวอย่างแล้วไฮไลต์ให้ */
   function wrap(before: string, after: string, sample: string) {
     const el = textarea.current;
     if (!el) return;
 
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
+    const { start, end } = range();
     const picked = value.slice(start, end) || sample;
     const next = `${value.slice(0, start)}${before}${picked}${after}${value.slice(end)}`;
     onChange(next);
@@ -68,7 +149,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
     const el = textarea.current;
     if (!el) return;
 
-    const at = el.selectionStart;
+    const at = range().start;
     const before = value.slice(0, at);
     const lead = before && !before.endsWith("\n") ? "\n" : "";
     const next = `${before}${lead}${block}\n${value.slice(at)}`;
@@ -78,11 +159,16 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
       el.focus();
       const to = at + lead.length + block.length;
       el.setSelectionRange(to, to);
+      caret.current = to;
+      // เลื่อนช่องพิมพ์ไปตรงที่เพิ่งแทรก ไม่งั้นแทรกท้ายบทความยาว ๆ แล้วไม่เห็นว่าอะไรเกิดขึ้น
+      el.blur();
+      el.focus();
     });
   }
 
   async function upload(file: File) {
     setError(null);
+    setHint(null);
     setUploading(true);
     setProgress({ phase: "upload", percent: 0, name: file.name });
 
@@ -98,39 +184,12 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
       setError(result.error);
       return;
     }
+    setHint("แทรกรูปลงในเนื้อหาแล้ว — ต้องกดบันทึกด้านล่างด้วย รูปถึงจะขึ้นบนหน้าเว็บจริง");
     // ใส่เป็น figure เพื่อให้มีที่เขียนคำบรรยายใต้ภาพ · alt ต้องกรอกเองเพื่อคนใช้โปรแกรมอ่านหน้าจอ
     insert(
       `<figure>\n  <img src="${result.data.url}" alt="${file.name.replace(/\.[^.]+$/, "")}">\n  <figcaption>คำบรรยายภาพ</figcaption>\n</figure>`,
     );
   }
-
-  const tools = [
-    { icon: Heading2, title: "หัวข้อใหญ่", run: () => wrap("<h2>", "</h2>", "หัวข้อใหญ่") },
-    { icon: Heading3, title: "หัวข้อย่อย", run: () => wrap("<h3>", "</h3>", "หัวข้อย่อย") },
-    { icon: Bold, title: "ตัวหนา", run: () => wrap("<strong>", "</strong>", "ข้อความ") },
-    { icon: Italic, title: "ตัวเอียง", run: () => wrap("<em>", "</em>", "ข้อความ") },
-    { icon: Link2, title: "ลิงก์", run: () => wrap('<a href="https://">', "</a>", "ข้อความลิงก์") },
-    {
-      icon: List,
-      title: "รายการแบบจุด",
-      run: () => insert("<ul>\n  <li>รายการที่ 1</li>\n  <li>รายการที่ 2</li>\n</ul>"),
-    },
-    {
-      icon: ListOrdered,
-      title: "รายการแบบตัวเลข",
-      run: () => insert("<ol>\n  <li>ข้อที่ 1</li>\n  <li>ข้อที่ 2</li>\n</ol>"),
-    },
-    { icon: Quote, title: "ยกคำพูด", run: () => wrap("<blockquote>", "</blockquote>", "ข้อความที่ยกมา") },
-    {
-      icon: Table,
-      title: "ตาราง",
-      run: () =>
-        insert(
-          "<table>\n  <thead>\n    <tr><th>หัวข้อ 1</th><th>หัวข้อ 2</th></tr>\n  </thead>\n  <tbody>\n    <tr><td>ข้อมูล</td><td>ข้อมูล</td></tr>\n  </tbody>\n</table>",
-        ),
-    },
-    { icon: Minus, title: "เส้นคั่น", run: () => insert("<hr>") },
-  ];
 
   return (
     <div className="border-b border-gray-100 bg-gray-50 px-2 py-1.5">
@@ -147,13 +206,17 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
       />
 
       <div className="flex flex-wrap items-center gap-0.5">
-        {tools.map((tool) => (
+        {TOOLS.map((tool) => (
           <button
             key={tool.title}
             type="button"
             title={tool.title}
             aria-label={tool.title}
-            onClick={tool.run}
+            onClick={() =>
+              tool.kind === "wrap"
+                ? wrap(tool.before, tool.after, tool.sample)
+                : insert(tool.block)
+            }
             className="grid h-8 w-8 place-items-center rounded-lg text-gray-500 transition hover:bg-white hover:text-brand-600 hover:shadow-sm"
           >
             <tool.icon className="h-4 w-4" />
@@ -179,6 +242,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
 
       <UploadProgress phase={progress.phase} percent={progress.percent} fileName={progress.name} />
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      {hint && <p className="mt-1 text-xs font-medium text-emerald-700">{hint}</p>}
     </div>
   );
 }
