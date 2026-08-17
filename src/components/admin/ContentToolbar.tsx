@@ -213,6 +213,8 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
   const fileInput = useRef<HTMLInputElement>(null);
   const pdfInput = useRef<HTMLInputElement>(null);
   const personInput = useRef<HTMLInputElement>(null);
+  const menuBox = useRef<HTMLDivElement>(null);
+  const menuButton = useRef<HTMLButtonElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<{ phase: UploadPhase | null; percent: number; name: string }>(
     { phase: null, percent: 0, name: "" },
@@ -224,8 +226,8 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
   const [target, setTarget] = useState<string>("");
   /** เมนูเลือกชนิดรูปตอนกดปุ่มแทรกรูป */
   const [imageMenu, setImageMenu] = useState(false);
-  /** กางแผงไปทางซ้ายแทน เมื่อกางทางขวาแล้วจะล้นขอบจอ */
-  const [menuRight, setMenuRight] = useState(false);
+  /** มุมบนซ้ายของแผง วัดจากจอ (position: fixed) — ตั้งตอนกดปุ่ม */
+  const [menuAt, setMenuAt] = useState({ top: 0, left: 0 });
   /** ทำเนียบที่จะสร้างใหม่ ให้แถวละกี่คน */
   const [peopleCols, setPeopleCols] = useState(3);
   /** กำลังแก้ทำเนียบกลุ่มไหน — null = กลุ่มล่างสุด (กลุ่มที่เพิ่งแทรก) */
@@ -304,6 +306,36 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
       }
     };
   }, [textarea]);
+
+  /*
+   * แผงเลือกชนิดรูปลอยยึดกับจอ (fixed) ตำแหน่งจึงค้างอยู่กับที่เมื่อหน้าเลื่อน
+   * ปิดทิ้งเมื่อเลื่อนจอ ย่อ-ขยายหน้าต่าง กด Esc หรือคลิกที่อื่น จะได้ไม่ลอยผิดที่
+   */
+  useEffect(() => {
+    if (!imageMenu) return;
+
+    const close = () => setImageMenu(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (menuBox.current?.contains(target) || menuButton.current?.contains(target)) return;
+      close();
+    };
+
+    // true = จับตอน capture เพราะการเลื่อนเกิดในช่องพิมพ์ ไม่ได้เกิดที่ window
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onDown);
+    };
+  }, [imageMenu]);
 
   /** ช่วงที่จะเขียนทับ — ไม่เคยแตะช่องพิมพ์เลยถือว่าอยากต่อท้าย */
   function range() {
@@ -637,11 +669,16 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
         {/* ปุ่มเดียว กดแล้วค่อยเลือกว่าเป็นรูปทั่วไปหรือรูปบุคคล — ย่อคนละขนาดกัน */}
         <div className="relative">
           <button
+            ref={menuButton}
             type="button"
             onClick={(e) => {
-              // ปุ่มนี้มักอยู่ค่อนไปทางขวา ถ้ากางแผงไปทางขวาเสมอจะล้นขอบจอจนอ่านไม่ครบ
               const box = e.currentTarget.getBoundingClientRect();
-              setMenuRight(box.left + MENU_WIDTH > window.innerWidth - 16);
+              // ยึดกับจอ ไม่ใช่กับปุ่ม เพราะกรอบการ์ดของหน้าแก้ไขตั้ง overflow-hidden ไว้
+              // แผงที่ยื่นพ้นกรอบจะโดนตัดหายไปครึ่งหนึ่ง (ปุ่มคนต่อแถวเลข 5 หายไปเลย)
+              setMenuAt({
+                top: box.bottom + 4,
+                left: Math.max(8, Math.min(box.left, window.innerWidth - MENU_WIDTH - 16)),
+              });
               setImageMenu((v) => !v);
             }}
             disabled={uploading}
@@ -658,9 +695,9 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
 
           {imageMenu && (
             <div
-              className={`absolute top-full z-40 mt-1 w-72 rounded-xl bg-white p-2 shadow-xl ring-1 ring-black/10 ${
-                menuRight ? "right-0" : "left-0"
-              }`}
+              ref={menuBox}
+              style={{ top: menuAt.top, left: menuAt.left, width: MENU_WIDTH }}
+              className="fixed z-50 max-h-[70vh] overflow-y-auto rounded-xl bg-white p-2 shadow-xl ring-1 ring-black/10"
             >
               <button
                 type="button"
