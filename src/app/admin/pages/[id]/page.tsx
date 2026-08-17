@@ -20,7 +20,7 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
   return (
     <>
       <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3">
           <Link href="/admin/pages/" className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100">
             <ChevronLeft className="h-5 w-5" />
           </Link>
@@ -28,7 +28,7 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-5">
+      <main className="mx-auto max-w-6xl px-4 py-5">
         <PageEditor
           page={{
             id: page.id,

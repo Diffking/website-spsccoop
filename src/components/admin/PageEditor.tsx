@@ -210,7 +210,8 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
               onChange={(e) => setContent(e.target.value)}
               rows={16}
               placeholder="พิมพ์เนื้อหาที่นี่ ใส่แท็ก HTML ได้ เช่น <h2>หัวข้อ</h2> <p>ย่อหน้า</p>"
-              className="w-full resize-y p-4 font-mono text-sm leading-relaxed outline-none"
+              // สูงตามจอ (หักหัวเว็บกับแถบปุ่มออก) — จอใหญ่จะได้ใช้พื้นที่คุ้ม ไม่ใช่ช่องเตี้ย ๆ กลางจอโล่ง
+              className="min-h-[60vh] w-full resize-y p-4 font-mono text-sm leading-relaxed outline-none"
             />
           </>
         ) : (
@@ -218,7 +219,7 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
            * ใช้คอมโพเนนต์ตัวเดียวกับหน้าเว็บจริง — เดิมพรีวิววาด HTML ดิบ ๆ
            * แท็ปเมนูจึงไม่ขึ้นเป็นแท็บให้กด เห็นเป็นก้อนเรียงกันเฉย ๆ ไม่ตรงกับของจริง
            */
-          <PageContent html={localAssetsInHtml(content)} className="min-h-[16rem] p-4" />
+          <PageContent html={localAssetsInHtml(content)} className="min-h-[60vh] p-4" />
         )}
       </div>
 
