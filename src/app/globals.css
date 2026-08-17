@@ -241,12 +241,12 @@ body {
 .prose-page .person { margin: 1.25rem 0; text-align: center; }
 /* figure ที่วางในกริดทำเนียบ ถือเป็นการ์ดคนเสมอ ถึงจะไม่ได้ใส่ class="person" ก็ตาม */
 .prose-page .people figure { margin: 0; text-align: center; }
-/* สัดส่วนรูปถ่าย 1 นิ้ว (2.5 x 3.2 ซม.) — อัปรูป 1 นิ้วมาแล้วพอดีกรอบ ไม่โดนตัดหน้า
+/* สัดส่วนรูปถ่าย 1.5 นิ้ว (3.5 x 4.5 ซม.) — อัปรูปขนาดนี้มาแล้วพอดีกรอบ ไม่โดนตัดหน้า
    จำกัดความกว้างไว้ด้วย ไม่งั้นจอกว้าง ๆ กับ 2 คอลัมน์จะได้รูปใหญ่เกินจริง */
 .prose-page .person img,
 .prose-page .people figure img {
-  display: block; width: 100%; max-width: 11rem; margin: 0 auto;
-  aspect-ratio: 25 / 32; object-fit: cover; object-position: top center;
+  display: block; width: 100%; max-width: 13rem; margin: 0 auto;
+  aspect-ratio: 35 / 45; object-fit: cover; object-position: top center;
   border-radius: .6rem; background: #f3f4f6;
   box-shadow: 0 4px 14px rgb(15 83 144 / .12);
 }

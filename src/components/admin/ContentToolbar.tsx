@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import {
   Bold,
+  ChevronDown,
   Heading2,
   Heading3,
   ImagePlus,
@@ -22,6 +23,7 @@ import {
 } from "lucide-react";
 import UploadProgress from "@/components/admin/UploadProgress";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
+import { findBlock } from "@/lib/htmlBlocks";
 
 /**
  * แถบเครื่องมือจัดข้อความสำหรับช่องเนื้อหา HTML — ใช้ซ้ำได้ทุกที่ที่พิมพ์เนื้อหาเป็น HTML
@@ -213,8 +215,29 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
   const [layout, setLayout] = useState<string>("");
   /** แทรกของลงแท็บไหน — "" = ตรงตำแหน่งเคอร์เซอร์เหมือนเดิม */
   const [target, setTarget] = useState<string>("");
+  /** เมนูเลือกชนิดรูปตอนกดปุ่มแทรกรูป */
+  const [imageMenu, setImageMenu] = useState(false);
+  /** ทำเนียบที่จะสร้างใหม่ ให้แถวละกี่คน */
+  const [peopleCols, setPeopleCols] = useState(3);
 
   const tabs = findTabs(value);
+  /** ในหน้านี้มีทำเนียบอยู่แล้วไหม — มีแล้วจะโชว์ปุ่มปรับจำนวนคนต่อแถวให้แก้ได้ทันที */
+  const peopleBlock = findBlock(value, "people");
+  const currentCols = Number(/\bcols-(\d)\b/.exec(peopleBlock?.className ?? "")?.[1] ?? peopleCols);
+
+  /** เปลี่ยนจำนวนคนต่อแถวของทำเนียบที่มีอยู่ — ยังไม่มีก็แค่จำไว้ใช้ตอนแทรกครั้งถัดไป */
+  function changeColumns(n: number) {
+    setPeopleCols(n);
+    if (!peopleBlock) return;
+
+    const openEnd = value.indexOf(">", peopleBlock.start) + 1;
+    const openTag = value.slice(peopleBlock.start, openEnd);
+    const nextTag = /\bcols-\d\b/.test(openTag)
+      ? openTag.replace(/\bcols-\d\b/, `cols-${n}`)
+      : openTag.replace(/class="([^"]*)"/, `class="$1 cols-${n}"`);
+
+    onChange(value.slice(0, peopleBlock.start) + nextTag + value.slice(openEnd));
+  }
 
   /**
    * ตำแหน่งเคอร์เซอร์ล่าสุดในช่องพิมพ์ — null = ยังไม่เคยคลิกในช่องเลย
@@ -338,8 +361,8 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
       )
       .join("\n");
 
-    insert(`<div class="people cols-3">\n${figures}\n</div>`);
-    setHint(`แทรกรูปบุคคล ${done.length} คน (กรอบ 1 นิ้ว) — แก้ชื่อกับตำแหน่งในเนื้อหา แล้วกดบันทึก`);
+    insert(`<div class="people cols-${peopleCols}">\n${figures}\n</div>`);
+    setHint(`แทรกรูปบุคคล ${done.length} คน (กรอบ 1.5 นิ้ว) — แก้ชื่อกับตำแหน่งในเนื้อหา แล้วกดบันทึก`);
   }
 
   /** โครง <figure> ของรูปหนึ่งใบ — alt ตั้งจากชื่อไฟล์ไปก่อน แก้ทีหลังได้ */
@@ -552,34 +575,89 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
           ))}
         </select>
 
-        <button
-          type="button"
-          onClick={() => fileInput.current?.click()}
-          disabled={uploading}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-700 transition hover:bg-brand-100 disabled:opacity-60"
-        >
-          {uploading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <ImagePlus className="h-3.5 w-3.5" />
-          )}
-          แทรกรูป 600px
-        </button>
+        {/* ปุ่มเดียว กดแล้วค่อยเลือกว่าเป็นรูปทั่วไปหรือรูปบุคคล — ย่อคนละขนาดกัน */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setImageMenu((v) => !v)}
+            disabled={uploading}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-700 transition hover:bg-brand-100 disabled:opacity-60"
+          >
+            {uploading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ImagePlus className="h-3.5 w-3.5" />
+            )}
+            แทรกรูป
+            <ChevronDown className={`h-3 w-3 transition ${imageMenu ? "rotate-180" : ""}`} />
+          </button>
 
-        <button
-          type="button"
-          onClick={() => personInput.current?.click()}
-          disabled={uploading}
-          title="อัปรูปบุคคล ย่อให้พอดีกรอบรูปถ่าย 1 นิ้ว พร้อมช่องใส่ชื่อและตำแหน่ง"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-700 transition hover:bg-brand-100 disabled:opacity-60"
-        >
-          {uploading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <UserSquare2 className="h-3.5 w-3.5" />
+          {imageMenu && (
+            <div className="absolute left-0 top-full z-40 mt-1 w-72 rounded-xl bg-white p-2 shadow-xl ring-1 ring-black/10">
+              <button
+                type="button"
+                onClick={() => {
+                  setImageMenu(false);
+                  fileInput.current?.click();
+                }}
+                className="flex w-full items-start gap-2 rounded-lg p-2 text-left transition hover:bg-gray-50"
+              >
+                <ImagePlus className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+                <span>
+                  <span className="block text-sm font-medium text-gray-800">รูปทั่วไป</span>
+                  <span className="block text-xs text-gray-500">
+                    ย่อให้ด้านยาวสุดไม่เกิน 600px · เลือกการวางได้จากช่องซ้ายมือ
+                  </span>
+                </span>
+              </button>
+
+              <div className="mt-1 rounded-lg p-2 transition hover:bg-gray-50">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageMenu(false);
+                    personInput.current?.click();
+                  }}
+                  className="flex w-full items-start gap-2 text-left"
+                >
+                  <UserSquare2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+                  <span>
+                    <span className="block text-sm font-medium text-gray-800">
+                      รูปบุคคล (ทำเนียบ)
+                    </span>
+                    <span className="block text-xs text-gray-500">
+                      กรอบรูปถ่าย 1.5 นิ้ว (3.5 × 4.5 ซม.) พร้อมช่องชื่อและตำแหน่ง
+                    </span>
+                  </span>
+                </button>
+
+                {/* เลือกคนต่อแถวตรงนี้เลย ไม่ต้องไปหาแผงแยกอีกที */}
+                <div className="mt-2 flex items-center gap-1.5 pl-6">
+                  <span className="text-xs text-gray-500">คนต่อแถว</span>
+                  {[2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => changeColumns(n)}
+                      className={`h-7 w-8 rounded-lg text-xs font-medium transition ${
+                        currentCols === n
+                          ? "bg-brand-600 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                {peopleBlock && (
+                  <p className="mt-1.5 pl-6 text-[11px] text-emerald-700">
+                    หน้านี้มีทำเนียบอยู่แล้ว — กดเลขเพื่อเปลี่ยนจำนวนคนต่อแถวได้ทันที
+                  </p>
+                )}
+              </div>
+            </div>
           )}
-          แทรกรูปบุคคล 1 นิ้ว
-        </button>
+        </div>
 
         <span className="h-5 w-px bg-gray-200" />
         <span className="text-[11px] font-medium text-gray-400">ไฟล์</span>
