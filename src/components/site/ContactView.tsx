@@ -15,6 +15,9 @@ import {
   Navigation,
   Phone,
   Printer,
+  QrCode,
+  Share2,
+  Smartphone,
 } from "lucide-react";
 import { Facebook, Line } from "@/components/ui/BrandIcons";
 import type { BankAccount } from "@/lib/settings";
@@ -74,6 +77,9 @@ export default function ContactView({
   const [geoError, setGeoError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [openChannel, setOpenChannel] = useState<string | null>(null);
+  /** คิวอาร์ของลิงก์เส้นทาง — เป็นข้อความ SVG ที่สร้างตอนกดปุ่ม */
+  const [qr, setQr] = useState<string | null>(null);
+  const [qrBusy, setQrBusy] = useState(false);
 
   /*
    * ปลายทางที่ล็อกไว้ — มีพิกัดใช้พิกัด ไม่มีก็ค้นด้วย "ชื่อสหกรณ์ + ที่อยู่"
@@ -107,6 +113,7 @@ export default function ContactView({
       (position) => {
         const { latitude, longitude } = position.coords;
         setOrigin(`${latitude.toFixed(6)},${longitude.toFixed(6)}`);
+        setQr(null);
         setLocating(false);
       },
       () => {
@@ -115,6 +122,50 @@ export default function ContactView({
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
+  }
+
+  /**
+   * ข้อความที่ส่งไปพร้อมลิงก์ — คนรับต้องรู้ว่านี่คือเส้นทางไปไหน ไม่ใช่ลิงก์เปล่า ๆ
+   */
+  const shareText = `เส้นทางไป ${coopName}`;
+  const lineShareUrl = `https://line.me/R/msg/text/?${encodeURIComponent(`${shareText}\n${directionsUrl}`)}`;
+
+  /**
+   * สร้างคิวอาร์จากลิงก์เส้นทางปัจจุบัน
+   *
+   * โหลดตัวสร้างเฉพาะตอนกด (dynamic import) — คนที่แค่มาดูเบอร์โทรไม่ต้องโหลดไปด้วย
+   * สร้างเองในเครื่อง ไม่ได้ยิงไปขอรูปคิวอาร์จากเว็บนอก ลิงก์ของสมาชิกจึงไม่หลุดออกไปไหน
+   */
+  async function makeQr() {
+    setQrBusy(true);
+    try {
+      const { toString: toQrString } = await import("qrcode");
+      setQr(
+        await toQrString(directionsUrl, {
+          type: "svg",
+          margin: 1,
+          errorCorrectionLevel: "M",
+          color: { dark: "#0f5390", light: "#ffffff" },
+        }),
+      );
+    } catch {
+      setQr(null);
+    }
+    setQrBusy(false);
+  }
+
+  /** มือถือใช้เมนูแชร์ของเครื่อง ส่วนคอมไม่มีเมนูนั้น ถอยไปคัดลอกลิงก์แทน */
+  async function shareLink() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: shareText, text: shareText, url: directionsUrl });
+        return;
+      } catch {
+        // ผู้ใช้กดยกเลิกเมนูแชร์ — ไม่ต้องทำอะไรต่อ
+        return;
+      }
+    }
+    void copy(directionsUrl, "link");
   }
 
   async function copy(text: string, id: string) {
@@ -215,7 +266,11 @@ export default function ContactView({
               <div className="mt-1 flex gap-2">
                 <input
                   value={origin}
-                  onChange={(e) => setOrigin(e.target.value)}
+                  onChange={(e) => {
+                    setOrigin(e.target.value);
+                    // คิวอาร์เดิมชี้เส้นทางเก่า ปล่อยไว้จะพาไปผิดที่
+                    setQr(null);
+                  }}
                   placeholder="เช่น โรงพยาบาลหาดใหญ่ หรือกดใช้ตำแหน่งปัจจุบัน"
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-base outline-none focus:border-brand-500"
                 />
@@ -252,7 +307,10 @@ export default function ContactView({
               <button
                 key={m.key}
                 type="button"
-                onClick={() => setMode(m.key)}
+                onClick={() => {
+                  setMode(m.key);
+                  setQr(null);
+                }}
                 className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
                   mode === m.key
                     ? "bg-brand-600 text-white"
@@ -277,6 +335,73 @@ export default function ContactView({
           <p className="mt-2 text-xs text-gray-500">
             ใส่จุดเริ่มต้นแล้วแผนที่ด้านบนจะเปลี่ยนเป็นเส้นทางให้ทันที · ปลายทางล็อกเป็นสหกรณ์เสมอ
           </p>
+
+          {/* ---- ส่งแผนที่เข้ามือถือ ----
+              เปิดเว็บบนคอมแล้วต้องขับรถไปเอง ต้องมีทางย้ายเส้นทางลงมือถือให้ได้
+              คิวอาร์คือทางที่ไม่ต้องพิมพ์อะไรเลย สแกนแล้วกูเกิลแมปในมือถือเปิดเส้นทางให้ทันที */}
+          <div className="mt-4 rounded-xl bg-gray-50 p-4 ring-1 ring-gray-200">
+            <div className="flex flex-wrap items-center gap-2">
+              <Smartphone className="h-4 w-4 text-brand-600" />
+              <span className="text-sm font-medium text-gray-700">ส่งแผนที่เข้ามือถือ</span>
+
+              <div className="ml-auto flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={makeQr}
+                  disabled={qrBusy}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm text-gray-600 ring-1 ring-gray-200 transition hover:bg-gray-100 disabled:opacity-60"
+                >
+                  {qrBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <QrCode className="h-3.5 w-3.5" />
+                  )}
+                  {qr ? "สร้างคิวอาร์ใหม่" : "คิวอาร์โค้ด"}
+                </button>
+
+                <a
+                  href={lineShareUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm text-emerald-700 ring-1 ring-emerald-200 transition hover:bg-emerald-50"
+                >
+                  <Line className="h-3.5 w-3.5" /> ส่งทางไลน์
+                </a>
+
+                <button
+                  type="button"
+                  onClick={shareLink}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm text-gray-600 ring-1 ring-gray-200 transition hover:bg-gray-100"
+                >
+                  {copied === "link" ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-emerald-600" /> คัดลอกลิงก์แล้ว
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="h-3.5 w-3.5" /> แชร์ / คัดลอกลิงก์
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {qr && (
+              <div className="mt-3 flex flex-wrap items-center gap-4">
+                {/* SVG ที่สร้างเองในเครื่อง ไม่ได้ไปดึงรูปคิวอาร์จากเว็บนอก */}
+                <div
+                  className="h-40 w-40 shrink-0 rounded-lg bg-white p-2 ring-1 ring-gray-200 [&>svg]:h-full [&>svg]:w-full"
+                  dangerouslySetInnerHTML={{ __html: qr }}
+                />
+                <p className="max-w-xs text-sm text-gray-600">
+                  เปิดกล้องมือถือส่องที่คิวอาร์นี้ แล้วกูเกิลแมปจะเปิดเส้นทางมาที่สหกรณ์ให้เลย
+                  <span className="mt-1 block text-xs text-gray-400">
+                    เปลี่ยนจุดเริ่มต้นหรือวิธีเดินทางแล้ว กดสร้างคิวอาร์ใหม่อีกครั้ง
+                  </span>
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
