@@ -34,7 +34,8 @@ export default async function ReadPage({ searchParams }: Params) {
     <>
       <PageTracker />
       <Header />
-      <main className="mx-auto w-full max-w-5xl px-4 py-8">
+      {/* กว้างเท่าหัวเว็บกับหน้าแรก — หน้าอ่านเอกสารยิ่งกว้างยิ่งอ่านง่าย */}
+      <main className="mx-auto w-full max-w-6xl px-4 py-8">
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-brand-600"

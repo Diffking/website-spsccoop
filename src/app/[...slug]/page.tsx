@@ -65,7 +65,8 @@ export default async function ContentPage({ params }: Params) {
     <>
       <PageTracker />
       <Header />
-      <main className="mx-auto w-full max-w-4xl px-4 py-8">
+      {/* กว้างเท่าหัวเว็บกับหน้าแรก (max-w-6xl) — ทำเนียบ 4 คนต่อแถวกับตารางจะได้ไม่อึดอัด */}
+      <main className="mx-auto w-full max-w-6xl px-4 py-8">
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-brand-600"
