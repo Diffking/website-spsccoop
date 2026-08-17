@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Loader2, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, FilePlus2, Loader2, Plus, RotateCcw, Save, SquareArrowOutUpRight, Trash2 } from "lucide-react";
 import type { NavNode } from "@/lib/nav";
+import { linkStatus, STATUS_STYLE, toSlug, type LinkStatus } from "@/lib/siteRoutes";
+
+/** หน้าเนื้อหาที่มีอยู่ในฐาน — ใช้เช็คว่าเมนูชี้ไปหน้าที่มีจริงไหม */
+export type PageRef = { id: string; slug: string; title: string; published: boolean };
 
 /**
  * แก้เมนูนำทางบนหัวเว็บ — ลึกได้ 3 ชั้น (เมนู → เมนูย่อย → เมนูย่อยของย่อย)
@@ -49,23 +53,33 @@ function Row({
   path,
   depth,
   siblings,
+  pages,
+  creating,
   onChange,
   onMove,
   onRemove,
   onAddChild,
+  onCreatePage,
 }: {
   node: NavNode;
   path: number[];
   depth: number;
   siblings: number;
+  pages: PageRef[];
+  creating: string | null;
   onChange: (path: number[], patch: Partial<NavNode>) => void;
   onMove: (path: number[], step: number) => void;
   onRemove: (path: number[]) => void;
   onAddChild: (path: number[]) => void;
+  onCreatePage: (href: string, label: string) => void;
 }) {
   const [open, setOpen] = useState(depth === 0);
   const index = path[path.length - 1];
   const children = node.children ?? [];
+
+  const status: LinkStatus = linkStatus(node.href, pages);
+  const style = STATUS_STYLE[status];
+  const page = pages.find((p) => p.slug === toSlug(node.href));
 
   return (
     <li className="rounded-xl bg-white ring-1 ring-black/5">
@@ -90,9 +104,44 @@ function Row({
         <input
           value={node.href}
           onChange={(e) => onChange(path, { href: e.target.value })}
+          list="nav-page-paths"
           placeholder={children.length > 0 ? "เว้นว่าง = เป็นหัวข้อเฉย ๆ" : "/downloads"}
           className="min-w-40 flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 outline-none focus:border-brand-400"
         />
+
+        {/* บอกทันทีว่าลิงก์นี้กดแล้วไปถึงหน้าจริงไหม ไม่ต้องรอคนโทรมาบอกว่าเจอ 404 */}
+        <span
+          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${style.className}`}
+        >
+          {style.label}
+        </span>
+
+        {status === "missing" && (
+          <button
+            type="button"
+            onClick={() => onCreatePage(node.href, node.label)}
+            disabled={creating === node.href}
+            title="สร้างหน้าเนื้อหาว่าง ๆ ที่ที่อยู่นี้"
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-brand-600 px-2 py-1 text-[11px] font-medium text-white transition hover:bg-brand-700 disabled:opacity-50"
+          >
+            {creating === node.href ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <FilePlus2 className="h-3 w-3" />
+            )}
+            สร้างหน้านี้
+          </button>
+        )}
+
+        {page && (
+          <a
+            href={`/admin/pages/${page.id}/`}
+            title="เปิดหน้านี้ไปแก้เนื้อหา"
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-white px-2 py-1 text-[11px] font-medium text-brand-700 ring-1 ring-brand-100 transition hover:bg-brand-50"
+          >
+            <SquareArrowOutUpRight className="h-3 w-3" /> แก้เนื้อหา
+          </a>
+        )}
 
         <div className="flex shrink-0 items-center gap-0.5">
           <button
@@ -145,10 +194,13 @@ function Row({
               path={[...path, i]}
               depth={depth + 1}
               siblings={children.length}
+              pages={pages}
+              creating={creating}
               onChange={onChange}
               onMove={onMove}
               onRemove={onRemove}
               onAddChild={onAddChild}
+              onCreatePage={onCreatePage}
             />
           ))}
         </ul>
@@ -157,10 +209,53 @@ function Row({
   );
 }
 
-export default function NavMenuEditor({ initial }: { initial: NavNode[] }) {
+export default function NavMenuEditor({
+  initial,
+  initialPages = [],
+}: {
+  initial: NavNode[];
+  initialPages?: PageRef[];
+}) {
   const [nav, setNav] = useState<NavNode[]>(initial);
+  const [pages, setPages] = useState<PageRef[]>(initialPages);
+  const [creating, setCreating] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+
+  /** นับเมนูที่กดแล้วเจอ 404 — โชว์ไว้บนหัวจะได้รู้ว่ายังเหลือต้องทำอีกกี่หน้า */
+  const countMissing = (nodes: NavNode[]): number =>
+    nodes.reduce(
+      (sum, node) =>
+        sum +
+        (linkStatus(node.href, pages) === "missing" ? 1 : 0) +
+        countMissing(node.children ?? []),
+      0,
+    );
+  const missing = countMissing(nav);
+
+  /** สร้างหน้าเนื้อหาว่าง ๆ ให้เมนูที่ยังไม่มีหน้า — ใช้ชื่อเมนูเป็นชื่อหน้าไปก่อน */
+  async function createPage(href: string, label: string) {
+    setCreating(href);
+    setStatus(null);
+
+    const response = await fetch("/api/admin/pages/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: label.trim() || href, slug: toSlug(href) }),
+    });
+    const data = await response.json().catch(() => ({}));
+    setCreating(null);
+
+    if (!response.ok) {
+      setStatus({ kind: "error", text: data.error ?? "สร้างหน้าไม่สำเร็จ" });
+      return;
+    }
+    setPages((list) => [...list, data.page as PageRef]);
+    setStatus({
+      kind: "ok",
+      text: `สร้างหน้า "${data.page.title}" แล้ว — กด "แก้เนื้อหา" เพื่อใส่ข้อความ (ยังเป็นฉบับร่าง คนนอกยังไม่เห็น)`,
+    });
+  }
 
   const dirty = JSON.stringify(nav) !== JSON.stringify(initial);
 
@@ -204,6 +299,11 @@ export default function NavMenuEditor({ initial }: { initial: NavNode[] }) {
           <p className="text-xs text-gray-500">
             ลึกได้ 3 ชั้น · เมนูที่มีเมนูย่อยจะเว้นลิงก์ไว้ก็ได้ (เป็นหัวข้อกางเมนูย่อยเฉย ๆ)
           </p>
+          {missing > 0 && (
+            <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-600">
+              ยังไม่มีหน้า {missing} เมนู — กดแล้วคนเข้าเว็บจะเจอหน้า 404
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {dirty && (
@@ -238,13 +338,25 @@ export default function NavMenuEditor({ initial }: { initial: NavNode[] }) {
             path={[i]}
             depth={0}
             siblings={nav.length}
+            pages={pages}
+            creating={creating}
             onChange={change}
             onMove={move}
             onRemove={remove}
             onAddChild={addChild}
+            onCreatePage={createPage}
           />
         ))}
       </ul>
+
+      {/* พิมพ์ในช่องลิงก์แล้วมีรายการหน้าที่มีอยู่ให้เลือก ไม่ต้องจำที่อยู่เอง */}
+      <datalist id="nav-page-paths">
+        {pages.map((p) => (
+          <option key={p.id} value={`/${p.slug}`}>
+            {p.title}
+          </option>
+        ))}
+      </datalist>
 
       <button
         type="button"

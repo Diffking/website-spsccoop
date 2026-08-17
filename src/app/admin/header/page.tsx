@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { getBrand, getNav } from "@/lib/nav";
+import { db } from "@/lib/db";
 import BrandForm from "@/components/admin/BrandForm";
 import NavMenuEditor from "@/components/admin/NavMenuEditor";
 
@@ -8,7 +9,15 @@ export default async function AdminHeaderPage() {
   const user = await currentUser();
   if (!user) redirect("/admin/");
 
-  const [nav, brand] = await Promise.all([getNav(), getBrand()]);
+  const [nav, brand, pages] = await Promise.all([
+    getNav(),
+    getBrand(),
+    // เอาไว้เช็คว่าเมนูแต่ละอันชี้ไปหน้าที่มีจริงไหม
+    db.page.findMany({
+      orderBy: { slug: "asc" },
+      select: { id: true, slug: true, title: true, published: true },
+    }),
+  ]);
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-6">
@@ -17,7 +26,7 @@ export default async function AdminHeaderPage() {
 
       <div className="space-y-5">
         <BrandForm initial={brand} />
-        <NavMenuEditor initial={nav} />
+        <NavMenuEditor initial={nav} initialPages={pages} />
       </div>
     </main>
   );
