@@ -32,9 +32,9 @@ export type DesignedPage = {
 
 export const DESIGNED_PAGES: DesignedPage[] = [
   {
-    slug: "contact",
-    title: "ติดต่อเรา",
-    path: "/contact/",
+    slug: "about/contact",
+    title: "ติดต่อสหกรณ์",
+    path: "/about/contact/",
     desc: "แผนที่ เส้นทางมาสหกรณ์ ช่องทางติดต่อ และเลขที่บัญชี",
     features: [
       "แผนที่กูเกิลปักหมุดสำนักงาน",
