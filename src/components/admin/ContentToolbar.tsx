@@ -24,6 +24,8 @@ import {
 import UploadProgress from "@/components/admin/UploadProgress";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
 import { findBlocks } from "@/lib/htmlBlocks";
+import { parsePersonFile, sortByFileOrder } from "@/lib/personName";
+import { tidyPeopleHtml } from "@/lib/peopleHtml";
 
 /**
  * แถบเครื่องมือจัดข้อความสำหรับช่องเนื้อหา HTML — ใช้ซ้ำได้ทุกที่ที่พิมพ์เนื้อหาเป็น HTML
@@ -259,6 +261,27 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
   }
 
   /**
+   * จัดทำเนียบที่ใส่ไปแล้วให้เข้าที่ — เรียงตามเลขหน้าชื่อไฟล์ แยกตำแหน่งออกจากชื่อ
+   * ใช้กับหน้าที่แทรกรูปไปก่อนหน้านี้ จะได้ไม่ต้องลบทิ้งแล้วอัปใหม่
+   */
+  function tidyPeople() {
+    setError(null);
+    const result = tidyPeopleHtml(value);
+    if (result.html === value) {
+      setHint("ทำเนียบเรียบร้อยดีอยู่แล้ว ไม่มีอะไรต้องจัด");
+      return;
+    }
+
+    onChange(result.html);
+    setHint(
+      `จัดทำเนียบให้แล้ว ${result.fixed} คน (เรียงตามเลขหน้าชื่อไฟล์)` +
+        (result.unknownRole > 0
+          ? ` · อ่านตำแหน่งไม่ออก ${result.unknownRole} คน ต้องพิมพ์เอง`
+          : ""),
+    );
+  }
+
+  /**
    * ตำแหน่งเคอร์เซอร์ล่าสุดในช่องพิมพ์ — null = ยังไม่เคยคลิกในช่องเลย
    *
    * ตอนกดปุ่มบนแถบเครื่องมือ โฟกัสอยู่ที่ปุ่ม ไม่ใช่ช่องพิมพ์ ถ้าอ่าน selectionStart
@@ -340,11 +363,17 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
   /**
    * อัปรูปบุคคล — ย่อ 400px พอสำหรับกรอบ 1 นิ้ว และวางเป็น <figure class="person">
    * ใส่ในกริดทำเนียบก็ได้ วางเดี่ยว ๆ ก็ได้ ขนาดกรอบเท่ากันทั้งสองแบบ
+   *
+   * ชื่อไฟล์คือข้อมูล: 01-ประธานกรรมการ-นายจำลอง-แก้วพิทยานนท์.png
+   * → เรียงตามเลข 01-15 แล้วแยกตำแหน่งกับชื่อลงคนละช่องให้เลย ไม่ต้องมานั่งแก้ทีละคน
    */
-  async function uploadPeople(files: File[]) {
+  async function uploadPeople(picked: File[]) {
     setError(null);
     setHint(null);
     setUploading(true);
+
+    // เบราว์เซอร์ส่งไฟล์มาตามลำดับที่กดเลือก ไม่ใช่ตามเลขหน้าชื่อไฟล์ ต้องเรียงเองก่อน
+    const files = sortByFileOrder(picked, (f) => f.name);
 
     const done: { url: string; name: string }[] = [];
     for (const [i, file] of files.entries()) {
@@ -371,21 +400,27 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
     setUploading(false);
     if (done.length === 0) return;
 
+    // alt เก็บชื่อไฟล์เดิมไว้เสมอ — ใช้เป็นต้นทางตอนกด "จัดชื่อ-ตำแหน่ง" ซ้ำภายหลัง
+    let noRole = 0;
     const figures = done
-      .map(
-        (d) =>
+      .map((d) => {
+        const person = parsePersonFile(d.name);
+        if (!person.role) noRole += 1;
+        return (
           `  <figure class="person">\n    <img src="${d.url}" alt="${d.name}">\n` +
-          `    <figcaption>\n      <span class="person-name">${d.name}</span>\n` +
-          `      <span class="person-role">ตำแหน่ง</span>\n    </figcaption>\n  </figure>`,
-      )
+          `    <figcaption>\n      <span class="person-name">${person.name || d.name}</span>\n` +
+          `      <span class="person-role">${person.role || "ตำแหน่ง"}</span>\n` +
+          "    </figcaption>\n  </figure>"
+        );
+      })
       .join("\n");
 
     insert(`<div class="people cols-${peopleCols}">\n${figures}\n</div>`);
     // กลุ่มใหม่อยู่ล่างสุดเสมอ — เลิกล็อกกลุ่มที่เลือกไว้ ปุ่มคนต่อแถวจะได้แก้กลุ่มที่เพิ่งแทรก
     setGroupPick(null);
     setHint(
-      `แทรกรูปบุคคล ${done.length} คน (กรอบ 1.5 นิ้ว) เป็นกลุ่มใหม่แถวละ ${peopleCols} คน — ` +
-        "แก้ชื่อกับตำแหน่งในเนื้อหา แล้วกดบันทึก",
+      `แทรกรูปบุคคล ${done.length} คน เรียงตามเลขหน้าชื่อไฟล์แล้ว แถวละ ${peopleCols} คน` +
+        (noRole > 0 ? ` · อ่านตำแหน่งไม่ออก ${noRole} คน ต้องพิมพ์เอง` : " · แยกชื่อกับตำแหน่งให้แล้ว"),
     );
   }
 
@@ -703,6 +738,20 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
                     </button>
                   ))}
                 </div>
+                {/* หน้าที่แทรกรูปไปก่อนมี ปุ่มนี้จัดชื่อกับลำดับให้ใหม่ ไม่ต้องอัปซ้ำ */}
+                {activeBlock && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageMenu(false);
+                      tidyPeople();
+                    }}
+                    className="mt-2 ml-6 rounded-lg bg-emerald-50 px-2 py-1.5 text-[11px] font-medium text-emerald-700 transition hover:bg-emerald-100"
+                  >
+                    จัดชื่อ-ตำแหน่ง-ลำดับ จากชื่อไฟล์
+                  </button>
+                )}
+
                 {activeBlock && (
                   <p className="mt-1.5 pl-6 text-[11px] text-emerald-700">
                     {peopleBlocks.length > 1
