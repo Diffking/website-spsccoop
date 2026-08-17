@@ -222,6 +222,50 @@ body {
 .prose-page .tab.is-ready + .tab.is-ready { margin-top: 0; }
 .prose-page .tab[hidden] { display: none; }
 
+/* ---- การ์ดลิงก์แบบตาราง ----
+   ป้ายอักษรย่อสีเข้มด้านซ้าย + ชื่อกับคำอธิบายด้านขวา · ทั้งใบเป็นลิงก์เดียว
+   ใช้แทนแท็ปเมนูได้เมื่อแต่ละหัวข้อเป็น "ลิงก์ไปที่อื่น" มากกว่าจะเป็นเนื้อหายาว ๆ */
+.prose-page .cards {
+  display: grid; gap: .75rem; margin: 1.5rem 0;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+}
+.prose-page .cards .card {
+  display: flex; align-items: stretch; overflow: hidden;
+  border-radius: .6rem; background: #fff; text-decoration: none;
+  border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgb(16 24 40 / .06);
+  transition: box-shadow .2s, transform .2s, border-color .2s;
+}
+.prose-page .cards .card:hover {
+  transform: translateY(-2px);
+  border-color: #cfe6f8; box-shadow: 0 8px 20px rgb(15 83 144 / .12);
+}
+
+/* ป้ายอักษรย่อ — ตัวหนังสือสั้น ๆ 1-4 ตัว พื้นสีเข้มตามที่เลือก */
+.prose-page .cards .card-badge {
+  display: grid; place-items: center; flex: 0 0 4rem; min-height: 4rem;
+  font-size: .95rem; font-weight: 700; color: #fff; text-align: center;
+  line-height: 1.2; padding: .25rem;
+}
+/* ไม่ระบุสี = สีหลักของเว็บ */
+.prose-page .cards .card-badge { background: #1c7fca; }
+.prose-page .cards .card.blue   .card-badge { background: #1c7fca; }
+.prose-page .cards .card.green  .card-badge { background: #17a589; }
+.prose-page .cards .card.amber  .card-badge { background: #d99000; }
+.prose-page .cards .card.pink   .card-badge { background: #db2777; }
+.prose-page .cards .card.purple .card-badge { background: #7c3aed; }
+.prose-page .cards .card.teal   .card-badge { background: #0d9488; }
+
+.prose-page .cards .card-text {
+  display: flex; flex-direction: column; justify-content: center;
+  min-width: 0; padding: .7rem .9rem; gap: .15rem;
+}
+.prose-page .cards .card-title {
+  font-weight: 600; color: #1f2937; line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.prose-page .cards .card:hover .card-title { color: #0f5390; }
+.prose-page .cards .card-sub { font-size: .8rem; color: #6b7280; }
+
 /* ---- การ์ดไฟล์ PDF ที่แนบในเนื้อหา ---- */
 .prose-page .ebook {
   display: flex; flex-wrap: wrap; align-items: center; gap: .75rem;

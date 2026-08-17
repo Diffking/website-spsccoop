@@ -16,6 +16,7 @@ import {
   Table,
   FileText,
   PanelsTopLeft,
+  LayoutGrid,
 } from "lucide-react";
 import UploadProgress from "@/components/admin/UploadProgress";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
@@ -130,6 +131,29 @@ const TOOLS: Tool[] = [
       "<table>\n  <thead>\n    <tr><th>หัวข้อ 1</th><th>หัวข้อ 2</th></tr>\n  </thead>\n  <tbody>\n    <tr><td>ข้อมูล</td><td>ข้อมูล</td></tr>\n  </tbody>\n</table>",
   },
   { icon: Minus, title: "เส้นคั่น", kind: "block", block: "<hr>" },
+  {
+    icon: LayoutGrid,
+    title: "การ์ดลิงก์ (เรียงเป็นตาราง)",
+    kind: "block",
+    // class ของการ์ด = สี (blue/green/amber/pink/purple/teal) · เพิ่มการ์ดก็ก๊อป <a> ทั้งก้อน
+    block:
+      '<div class="cards">\n' +
+      '  <a class="card blue" href="#">\n' +
+      '    <span class="card-badge">แผน</span>\n' +
+      '    <span class="card-text">\n' +
+      '      <span class="card-title">ชื่อหัวข้อ</span>\n' +
+      '      <span class="card-sub">คำอธิบายสั้น ๆ</span>\n' +
+      "    </span>\n" +
+      "  </a>\n" +
+      '  <a class="card green" href="#">\n' +
+      '    <span class="card-badge">รายงาน</span>\n' +
+      '    <span class="card-text">\n' +
+      '      <span class="card-title">ชื่อหัวข้อ</span>\n' +
+      '      <span class="card-sub">คำอธิบายสั้น ๆ</span>\n' +
+      "    </span>\n" +
+      "  </a>\n" +
+      "</div>",
+  },
   {
     icon: PanelsTopLeft,
     title: "แท็ปเมนู (สลับหัวข้อ)",
