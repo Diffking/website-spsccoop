@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save, Trash2, Loader2, Eye, Pencil, Sparkles, Undo2 } from "lucide-react";
 import ContentToolbar from "@/components/admin/ContentToolbar";
+import PageContent from "@/components/site/PageContent";
 
 type Props = {
   page: { id: string; slug: string; title: string; body: string; published: boolean };
@@ -189,10 +190,11 @@ export default function PageEditor({ page, aiReady = false }: Props) {
             />
           </>
         ) : (
-          <div
-            className="prose-page min-h-[16rem] p-4"
-            dangerouslySetInnerHTML={{ __html: content }}
-          />
+          /*
+           * ใช้คอมโพเนนต์ตัวเดียวกับหน้าเว็บจริง — เดิมพรีวิววาด HTML ดิบ ๆ
+           * แท็ปเมนูจึงไม่ขึ้นเป็นแท็บให้กด เห็นเป็นก้อนเรียงกันเฉย ๆ ไม่ตรงกับของจริง
+           */
+          <PageContent html={content} className="min-h-[16rem] p-4" />
         )}
       </div>
 

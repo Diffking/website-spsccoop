@@ -321,10 +321,16 @@ export function formatPageHtml(html: string, title: string) {
           "- บรรทัดที่เป็นหัวข้อย่อยอยู่แล้ว ทำเป็น <h2> หรือ <h3> ตามระดับ\n" +
           "- รายการที่ขึ้นต้นด้วย - หรือ 1. 2. 3. ทำเป็น <ul><li> หรือ <ol><li>\n" +
           "- ข้อความที่เป็นตาราง ทำเป็น <table><thead><tbody>\n" +
-          "- ลบแท็กขยะจาก Word ทิ้ง (<span style>, <font>, class แปลก ๆ, <div> ซ้อนเปล่า ๆ)\n" +
+          "- ลบแท็กขยะจาก Word ทิ้ง (<span style>, <font>, class แปลก ๆ)\n" +
+          "- <div> ที่ไม่มี class ให้ยุบทิ้งได้ แต่ <div> ที่มี class ห้ามแตะเด็ดขาด\n" +
           "- <img> ที่มีอยู่เดิมให้คงไว้ทั้ง src และ alt ห้ามลบ\n" +
           '- <figure> และ <div class="image-row"> ที่มีอยู่เดิม ให้คงทั้งโครงและค่า class ไว้เป๊ะ ๆ ' +
-          "(class พวก left/right/small/image-row คือคำสั่งจัดวางรูป ลบแล้วรูปเพี้ยนทั้งหน้า)\n\n" +
+          "(class พวก left/right/small/image-row คือคำสั่งจัดวางรูป ลบแล้วรูปเพี้ยนทั้งหน้า)\n" +
+          '- แท็ปเมนู: <div class="tabs"> ที่ครอบ <div class="tab" data-title="..."> อยู่ ' +
+          "ต้องคงไว้ทั้งก้อน ทั้ง class และ data-title ห้ามยุบ ห้ามแปลงเป็นหัวข้อ ห้ามสลับลำดับ " +
+          "(นี่คือแท็บที่กดสลับได้บนหน้าเว็บ ยุบทิ้งแล้วหน้าพัง) " +
+          "จัดรูปแบบได้เฉพาะ*ข้างใน*แต่ละ tab เท่านั้น\n" +
+          '- <div class="ebook"> (การ์ดไฟล์ PDF) คงไว้ทั้งก้อนเช่นกัน\n\n' +
           "ใช้ได้เฉพาะแท็ก: p, h2, h3, ul, ol, li, strong, em, a, br, hr, blockquote, " +
           "table, thead, tbody, tr, th, td, img, figure, figcaption\n" +
           "ห้ามใส่ style, script, iframe และห้ามครอบด้วย <html> หรือ <body>\n" +

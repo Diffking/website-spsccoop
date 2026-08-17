@@ -89,3 +89,26 @@ export function cleanPageHtml(html: string): string {
       .trim()
   );
 }
+
+/**
+ * โครงสร้างที่ห้ามหายหลัง AI จัดรูปแบบ — รูป แท็บเมนู การ์ดไฟล์
+ *
+ * AI ตอบไม่เหมือนเดิมทุกครั้ง วันดีคืนดีมันยุบ <div class="tabs"> ทิ้งแล้วแท็บหายทั้งหน้า
+ * (เกิดขึ้นมาแล้วกับหน้าแผนงาน) สั่งในคำสั่งอย่างเดียวไม่พอ ต้องนับของก่อน-หลังเทียบกัน
+ */
+const KEEP_PATTERNS: { name: string; pattern: RegExp }[] = [
+  { name: "รูปภาพ", pattern: /<img\b/gi },
+  { name: "แท็ปเมนู", pattern: /class="[^"]*\btabs\b/gi },
+  { name: "หัวข้อแท็บ", pattern: /class="[^"]*\btab\b/gi },
+  { name: "แถวรูป", pattern: /class="[^"]*\bimage-row\b/gi },
+  { name: "การ์ดไฟล์ PDF", pattern: /class="[^"]*\bebook\b/gi },
+];
+
+const count = (html: string, pattern: RegExp) => html.match(pattern)?.length ?? 0;
+
+/** ชื่อโครงที่หายไป — ว่าง = ครบดี เอาผลจาก AI ไปใช้ได้ */
+export function missingStructures(before: string, after: string): string[] {
+  return KEEP_PATTERNS.filter((k) => count(after, k.pattern) < count(before, k.pattern)).map(
+    (k) => k.name,
+  );
+}
