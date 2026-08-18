@@ -26,6 +26,8 @@ export default function BrandForm({ initial }: { initial: SiteBrand }) {
 
     const form = new FormData();
     form.append("file", file);
+    // เก็บแยกโฟลเดอร์ ไม่ปนกับแบนเนอร์สไลด์
+    form.append("folder", "brand");
     const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", form, (percent, phase) =>
       setProgress((p) => ({ ...p, percent, phase })),
     );
@@ -79,7 +81,10 @@ export default function BrandForm({ initial }: { initial: SiteBrand }) {
 
       <div className="mt-4">
         <span className="mb-1.5 block text-sm text-gray-600">
-          โลโก้ <span className="text-gray-400">(เว้นว่าง = ใช้โลโก้เดิมที่ติดมากับเว็บ)</span>
+          โลโก้{" "}
+          <span className="text-gray-400">
+            (รองรับ .svg — คมทุกความละเอียด · เว้นว่าง = ใช้โลโก้เดิมที่ติดมากับเว็บ)
+          </span>
         </span>
         <div className="flex items-center gap-3">
           <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full bg-gray-100 ring-1 ring-black/5">
@@ -95,7 +100,7 @@ export default function BrandForm({ initial }: { initial: SiteBrand }) {
           <input
             ref={filePicker}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/svg+xml,.svg"
             hidden
             onChange={(e) => {
               const file = e.target.files?.[0];

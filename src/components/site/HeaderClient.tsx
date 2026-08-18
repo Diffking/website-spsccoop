@@ -101,12 +101,15 @@ const real = (href: string | undefined) => (href && href !== "#" ? href : null);
 export default function HeaderClient({
   nav,
   brand,
+  logoSvg,
   hours,
   holidayToday,
   nextHoliday,
 }: {
   nav: NavNode[];
   brand: SiteBrand;
+  /** โค้ด SVG ของโลโก้ที่ล้างแล้ว — มีค่านี้แปลว่าให้ฝังลงหน้าแทนการใส่ผ่าน <img> */
+  logoSvg?: string | null;
   hours: OfficeHours;
   holidayToday: string | null;
   nextHoliday: NextHoliday | null;
@@ -124,8 +127,12 @@ export default function HeaderClient({
       <div className="bg-gradient-to-r from-brand-700 to-brand-500 text-white text-xs md:text-sm">
         <div className="mx-auto flex max-w-344 items-center justify-between gap-3 px-4 py-1.5">
           <Link href="/" className="flex min-w-0 items-center gap-2">
-            <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-white shadow ring-1 ring-black/5">
-              {brand.logoUrl ? (
+            <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-white shadow ring-1 ring-black/5">
+              {logoSvg ? (
+                /* โลโก้ SVG ฝังลงหน้าเลย — โค้ดถูกล้างที่ฝั่งเซิร์ฟเวอร์แล้ว (ดู src/lib/svg.ts) */
+                <span className="grid h-7 w-7 place-items-center [&>svg]:h-full [&>svg]:w-full"
+                      dangerouslySetInnerHTML={{ __html: logoSvg }} />
+              ) : brand.logoUrl ? (
                 // โลโก้ที่อัปจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={brand.logoUrl} alt={brand.name} className="h-7 w-7 object-contain" />
@@ -133,7 +140,8 @@ export default function HeaderClient({
                 <Image src={logo} alt={brand.name} width={32} height={32} className="h-7 w-7 object-contain" priority />
               )}
             </span>
-            <span className="truncate font-medium">{brand.name}</span>
+            {/* ชื่อเต็มของสหกรณ์ — ไม่ตัดท้ายด้วย ... แล้ว จอแคบให้ตกบรรทัดแทน */}
+            <span className="font-medium leading-tight">{brand.name}</span>
           </Link>
           <div className="flex items-center gap-3">
             <div className="hidden sm:block">

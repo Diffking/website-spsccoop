@@ -505,7 +505,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
 
     const form = new FormData();
     form.append("file", file);
-    form.append("folder", "page_images");
+    form.append("folder", folder);
     const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", form, (percent, phase) =>
       setProgress((p) => ({ ...p, percent, phase })),
     );

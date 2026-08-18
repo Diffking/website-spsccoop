@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser, toSlug } from "@/lib/apiAuth";
+import { pageFolder } from "@/lib/ftp";
 
 /** รายการหน้าเนื้อหาทั้งหมด */
 export async function GET() {
@@ -33,6 +34,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `มีหน้าที่ใช้ที่อยู่ "${slug}" อยู่แล้ว` }, { status: 409 });
   }
 
-  const page = await db.page.create({ data: { title, slug } });
+  /*
+   * ตั้งโฟลเดอร์เก็บไฟล์ของหน้านี้ให้ตั้งแต่ตอนสร้าง — ไฟล์ที่แนบในหน้าจะได้ไม่ไปกอง
+   * รวมกันหมดในโฟลเดอร์เดียว เจ้าหน้าที่แก้ชื่อโฟลเดอร์เองทีหลังได้ที่หน้าแก้ไข
+   */
+  const page = await db.page.create({
+    data: { title, slug, assetFolder: pageFolder(slug) },
+  });
   return NextResponse.json({ page }, { status: 201 });
 }

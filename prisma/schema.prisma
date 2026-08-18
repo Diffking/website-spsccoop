@@ -211,6 +211,9 @@ model Page {
   title       String
   /// เนื้อหาแบบ HTML
   body        String   @default("")
+  /// โฟลเดอร์เก็บไฟล์แนบของหน้านี้ใต้ assets/ เช่น "pages/about-history"
+  /// ตั้งอัตโนมัติจาก slug ตอนสร้างหน้า แก้เองได้ที่หน้าแก้ไข
+  assetFolder String?
   published   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

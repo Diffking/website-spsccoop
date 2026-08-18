@@ -12,7 +12,15 @@ import Toggle from "@/components/ui/Toggle";
 const AI_FORMAT_KEY = "spsc_page_ai_format";
 
 type Props = {
-  page: { id: string; slug: string; title: string; body: string; published: boolean };
+  page: {
+    id: string;
+    slug: string;
+    title: string;
+    body: string;
+    published: boolean;
+    /** โฟลเดอร์เก็บไฟล์แนบของหน้านี้ใต้ assets/ */
+    assetFolder: string;
+  };
   /** ตั้งคีย์ AI ไว้ไหม — ไม่ได้ตั้งก็ซ่อนสวิตช์จัดรูปแบบไปเลย */
   aiReady?: boolean;
   /** ค่าสวิตช์ AI ที่ผู้ใช้เลือกไว้ครั้งก่อน (อ่านจาก cookie ฝั่งเซิร์ฟเวอร์) */
@@ -24,6 +32,7 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
   const textarea = useRef<HTMLTextAreaElement>(null);
   const [title, setTitle] = useState(page.title);
   const [slug, setSlug] = useState(page.slug);
+  const [assetFolder, setAssetFolder] = useState(page.assetFolder);
   const [content, setContent] = useState(page.body);
   const [published, setPublished] = useState(page.published);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
@@ -104,13 +113,14 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
     const response = await fetch(`/api/admin/pages/${page.id}/`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, slug, content: body, published }),
+      body: JSON.stringify({ title, slug, content: body, published, assetFolder }),
     });
     const data = await response.json().catch(() => ({}));
 
     if (response.ok) {
       setStatus({ kind: "ok", text: `บันทึกแล้ว${note}` });
       setSlug(data.page.slug);
+      setAssetFolder(data.page.assetFolder ?? assetFolder);
       router.refresh();
     } else {
       setStatus({ kind: "error", text: data.error ?? "บันทึกไม่สำเร็จ" });
@@ -127,7 +137,7 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
     const response = await fetch(`/api/admin/pages/${page.id}/`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, slug, content: beforeAi, published }),
+      body: JSON.stringify({ title, slug, content: beforeAi, published, assetFolder }),
     });
     setBeforeAi(null);
     setBusy(false);
@@ -167,6 +177,28 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
           />
         </label>
 
+        {/* ไฟล์ที่แนบในหน้านี้ไปอยู่โฟลเดอร์นี้ทั้งหมด — หาไฟล์ของแต่ละหน้าเจอง่ายเวลาเปิดดูใน FTP */}
+        <label className="mt-3 block text-sm text-gray-600">
+          โฟลเดอร์เก็บไฟล์ของหน้านี้
+          <span className="ml-1 text-xs text-gray-400">
+            (รูปและ PDF ที่แนบในหน้านี้จะไปอยู่ใน assets/{assetFolder || "pages/…"})
+          </span>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="shrink-0 rounded-lg bg-gray-100 px-2.5 py-2 font-mono text-sm text-gray-500">
+              assets/pages/
+            </span>
+            <input
+              value={assetFolder.replace(/^pages\//, "")}
+              onChange={(e) => setAssetFolder(`pages/${e.target.value.replace(/^pages\//, "")}`)}
+              placeholder="ชื่อโฟลเดอร์ เช่น about-history"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm outline-none focus:border-brand-500"
+            />
+          </div>
+          <span className="mt-1 block text-xs text-gray-400">
+            ใช้ a-z 0-9 และขีดกลางเท่านั้น · เว้นว่างหรือพิมพ์ผิดรูปแบบ ระบบจะตั้งให้จากที่อยู่หน้าเอง
+          </span>
+        </label>
+
         <label className="mt-4 flex items-center gap-2.5 text-sm text-gray-700">
           <input
             type="checkbox"
@@ -203,7 +235,12 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
 
         {tab === "edit" ? (
           <>
-            <ContentToolbar textarea={textarea} value={content} onChange={setContent} />
+            <ContentToolbar
+              textarea={textarea}
+              value={content}
+              onChange={setContent}
+              folder={assetFolder}
+            />
             <textarea
               ref={textarea}
               value={content}

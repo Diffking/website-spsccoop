@@ -22,6 +22,8 @@ export const FOLDERS = {
   resultreport: "รายงานกิจการ",
   member_docs: "เอกสารแนะนำสมาชิก",
   page_images: "รูปในหน้าเนื้อหา",
+  brand: "โลโก้และภาพประจำเว็บ",
+  home_items: "รูปรายการหน้าแรก",
 } as const;
 
 /**
@@ -32,13 +34,42 @@ const COMMITTEE_FOLDER = /^committees\/set\d{1,3}$/;
 
 export const committeeFolder = (set: number) => `committees/set${Math.trunc(set)}` as Folder;
 
-export type Folder = keyof typeof FOLDERS | `committees/set${number}`;
+/**
+ * หน้าเนื้อหาแต่ละหน้ามีโฟลเดอร์ของตัวเองใต้ pages/ เช่น pages/about-history
+ * ไฟล์ที่แนบในหน้าไหนก็อยู่ด้วยกัน เข้าไปดูใน FTP แล้วรู้ทันทีว่าไฟล์นี้ของหน้าอะไร
+ * (เดิมกองรวมกันหมดใน page_images ตามหาไฟล์ของหน้าหนึ่ง ๆ ไม่ได้เลย)
+ */
+const PAGE_FOLDER = /^pages\/[a-z0-9][a-z0-9-]{0,39}$/;
+
+/** ชื่อโฟลเดอร์จาก slug ของหน้า — about/history → pages/about-history */
+export function pageFolder(slug: string): Folder {
+  const name = slug
+    .toLowerCase()
+    .replace(/[^a-z0-9/-]+/g, "-")
+    .replace(/\//g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+  return (name ? `pages/${name}` : "page_images") as Folder;
+}
+
+/** ตรวจชื่อโฟลเดอร์ที่เจ้าหน้าที่พิมพ์เอง — ผิดรูปแบบคืนค่าที่คำนวณจาก slug แทน */
+export function cleanPageFolder(input: unknown, slug: string): Folder {
+  if (typeof input === "string") {
+    const value = input.trim().replace(/^\/+|\/+$/g, "");
+    const withPrefix = value.startsWith("pages/") ? value : `pages/${value}`;
+    if (PAGE_FOLDER.test(withPrefix)) return withPrefix as Folder;
+  }
+  return pageFolder(slug);
+}
+
+export type Folder = keyof typeof FOLDERS | `committees/set${number}` | `pages/${string}`;
 
 export const DEFAULT_FOLDER: Folder = "banner_slide";
 
 export const isFolder = (value: unknown): value is Folder =>
   typeof value === "string" &&
-  (Object.hasOwn(FOLDERS, value) || COMMITTEE_FOLDER.test(value));
+  (Object.hasOwn(FOLDERS, value) || COMMITTEE_FOLDER.test(value) || PAGE_FOLDER.test(value));
 
 const HOST = process.env.FTP_HOST?.trim() ?? "";
 const USER = process.env.FTP_USER?.trim() ?? "";

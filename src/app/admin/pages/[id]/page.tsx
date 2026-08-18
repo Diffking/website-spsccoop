@@ -6,6 +6,7 @@ import { currentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { AI_READY } from "@/lib/ai";
 import PageEditor from "@/components/admin/PageEditor";
+import { pageFolder } from "@/lib/ftp";
 
 export default async function EditPagePage({ params }: { params: Promise<{ id: string }> }) {
   const user = await currentUser();
@@ -36,6 +37,8 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
             title: page.title,
             body: page.body,
             published: page.published,
+            // หน้าเก่าที่สร้างก่อนมีช่องนี้ ยังไม่มีค่าในฐาน — คำนวณจาก slug ให้ไปก่อน
+            assetFolder: page.assetFolder ?? pageFolder(page.slug),
           }}
           aiReady={AI_READY}
           aiFormatDefault={aiFormatDefault}
