@@ -202,7 +202,8 @@ export default function HomeItemsManager({
 
     const form = new FormData();
     form.append("file", file);
-    if (folder) form.append("folder", folder);
+    // ไม่ได้ระบุมา ก็เก็บที่โฟลเดอร์ของรายการหน้าแรก ไม่ใช่ไปกองรวมกับแบนเนอร์สไลด์
+    form.append("folder", folder || "home_items");
     const result = await uploadWithProgress<{ url: string }>(
       "/api/admin/upload/",
       form,

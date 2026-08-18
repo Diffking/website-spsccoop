@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { DEFAULT_FOLDER, isFolder, uploadToFtp } from "@/lib/ftp";
 import { MAX_EDGE, shrink } from "@/lib/image";
 import { compressPdf } from "@/lib/pdf";
+import { sanitizeSvg } from "@/lib/svg";
 
 /**
  * อัปโหลดรูปจากหลังบ้าน → public/uploads (mount เป็น volume ไว้แล้ว ไม่หายตอน build ใหม่)
@@ -29,6 +30,7 @@ const EXTENSIONS: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
   "image/gif": "gif",
+  "image/svg+xml": "svg",
   "application/pdf": "pdf",
 };
 
@@ -54,12 +56,14 @@ export async function POST(request: Request) {
   const extension = EXTENSIONS[file.type];
   if (!extension) {
     return NextResponse.json(
-      { error: "รองรับเฉพาะไฟล์ภาพ JPG, PNG, WEBP, GIF หรือไฟล์ PDF" },
+      { error: "รองรับเฉพาะไฟล์ภาพ JPG, PNG, WEBP, GIF, SVG หรือไฟล์ PDF" },
       { status: 400 },
     );
   }
 
   const isPdf = file.type === "application/pdf";
+  // SVG เป็นเวกเตอร์ ย่อไม่ได้และไม่ต้องย่อ แต่ต้องล้างโค้ดในไฟล์ก่อนเก็บ
+  const isSvg = file.type === "image/svg+xml";
   /*
    * ขนาดที่ย่อ — ฝั่งหน้าเว็บส่งมาได้ว่าจะเอาเท่าไหร่ (รูปทั่วไป 600 · รูปบุคคล 1 นิ้ว 400)
    * ไม่ส่งมาก็ใช้ค่าตามโฟลเดอร์เหมือนเดิม
@@ -86,7 +90,18 @@ export async function POST(request: Request) {
   let size = { width: 0, height: 0 };
   let note = "";
 
-  if (isPdf) {
+  if (isSvg) {
+    /*
+     * โลโก้ SVG จะถูกฝังลงหน้าเว็บตรง ๆ ไม่ได้ใส่ผ่าน <img> — โค้ดที่ติดมาในไฟล์
+     * จะรันในหน้าเราทันที ล้างตั้งแต่ตอนเก็บ ไฟล์ในเครื่องจะได้สะอาดตั้งแต่ต้น
+     */
+    const clean = sanitizeSvg(original.toString("utf8"));
+    if (!clean) {
+      return NextResponse.json({ error: "อ่านไฟล์ SVG ไม่ได้ ไฟล์อาจเสียหาย" }, { status: 400 });
+    }
+    bytes = Buffer.from(clean, "utf8");
+    if (bytes.byteLength < original.byteLength) note = "ล้างสคริปต์และข้อมูลส่วนเกินออกแล้ว";
+  } else if (isPdf) {
     try {
       const squeezed = await compressPdf(original, PDF_TARGET_BYTES);
       bytes = squeezed.bytes;
