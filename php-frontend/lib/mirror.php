@@ -1,0 +1,178 @@
+<?php
+
+// ไฟล์นี้เป็นไลบรารี ไม่ได้ให้เปิดตรง ๆ
+if (PHP_SAPI !== 'cli' && realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) {
+    http_response_code(404);
+    exit;
+}
+/**
+ * ตัวมิเรอร์เว็บ — ดึงหน้าเว็บที่หลังบ้านสร้างเสร็จแล้วมาเก็บไว้ แล้วเสิร์ฟจากของที่เก็บ
+ *
+ * จุดสำคัญคือ "หลังบ้านดับ เว็บต้องไม่ดับ" — ถ้าดึงของใหม่ไม่ได้ ให้เสิร์ฟของเก่าที่เก็บไว้
+ * ต่อไปเรื่อย ๆ คนอ่านเว็บจะไม่รู้เลยว่าเครื่องที่สำนักงานปิดอยู่
+ *
+ * ไม่ได้วาดหน้าเว็บเองสักบรรทัด — รับ HTML ที่เสร็จแล้วมาเสิร์ฟต่อ
+ * ของใหม่ที่เพิ่มในหลังบ้านจึงตามมาเองโดยไม่ต้องแก้ไฟล์นี้
+ */
+
+final class Mirror
+{
+    public function __construct(private array $config)
+    {
+        if (!is_dir($this->config['cache_dir'])) {
+            @mkdir($this->config['cache_dir'], 0775, true);
+        }
+    }
+
+    /** ที่อยู่ที่ขอมา รวมพารามิเตอร์ท้าย URL (ต่างพารามิเตอร์ = คนละหน้า) */
+    public function path(): string
+    {
+        $uri = $_SERVER['REQUEST_URI'] ?? '/';
+        return '/' . ltrim($uri, '/');
+    }
+
+    /** ที่อยู่นี้ห้ามส่งต่อไหม */
+    public function blocked(string $path): bool
+    {
+        foreach ($this->config['blocked'] as $prefix) {
+            if (str_starts_with($path, $prefix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** ไฟล์แนบ/รูป/ไฟล์ประกอบเว็บ — เก็บได้นานกว่าหน้าเว็บ */
+    public function isAsset(string $path): bool
+    {
+        return str_starts_with($path, '/uploads/')
+            || str_starts_with($path, '/_next/')
+            || str_starts_with($path, '/api/pdf')
+            || str_starts_with($path, '/api/ebook')
+            || preg_match('#\.(ico|png|jpe?g|webp|gif|svg|css|js|woff2?|pdf)$#i', $path) === 1;
+    }
+
+    private function key(string $path): string
+    {
+        return $this->config['cache_dir'] . '/' . sha1($path);
+    }
+
+    /** อ่านของในแคช — ไม่มีคืน null */
+    public function cached(string $path): ?array
+    {
+        $meta = $this->key($path) . '.json';
+        $body = $this->key($path) . '.bin';
+        if (!is_file($meta) || !is_file($body)) {
+            return null;
+        }
+        $info = json_decode((string) file_get_contents($meta), true);
+        if (!is_array($info)) {
+            return null;
+        }
+        $info['file'] = $body;
+        $info['age'] = time() - ($info['time'] ?? 0);
+        return $info;
+    }
+
+    /** ไปเอาของใหม่จากหลังบ้าน — ไม่สำเร็จคืน null (ให้คนเรียกไปใช้ของเก่า) */
+    public function fetch(string $path): ?array
+    {
+        $url = $this->config['backend'] . $path;
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HEADER => true,
+            CURLOPT_TIMEOUT => $this->config['timeout'],
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_ENCODING => '',
+            // บอกหลังบ้านว่าใครขอมา เผื่อต้องไล่ปัญหาย้อนหลัง
+            CURLOPT_USERAGENT => 'spsccoop-mirror/1.0',
+            CURLOPT_HTTPHEADER => ['Accept-Language: th'],
+        ]);
+        $raw = curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        curl_close($ch);
+
+        if ($raw === false || $status === 0) {
+            return null;
+        }
+        // หลังบ้านตอบว่าไม่มีหน้านี้/พัง — ไม่เอามาทับของเก่าที่ยังใช้ได้
+        if ($status >= 500) {
+            return null;
+        }
+
+        $head = substr($raw, 0, $headerSize);
+        $body = substr($raw, $headerSize);
+        $type = 'text/html; charset=utf-8';
+        if (preg_match('/^content-type:\s*(.+)$/im', $head, $m)) {
+            $type = trim($m[1]);
+        }
+
+        $info = ['status' => $status, 'type' => $type, 'time' => time()];
+        file_put_contents($this->key($path) . '.bin', $body);
+        file_put_contents($this->key($path) . '.json', json_encode($info, JSON_UNESCAPED_UNICODE));
+
+        $info['file'] = $this->key($path) . '.bin';
+        $info['age'] = 0;
+        return $info;
+    }
+
+    /** ส่งของที่มีให้เบราว์เซอร์ รองรับขอเป็นช่วง (ตัวอ่าน PDF ใช้) */
+    public function send(array $item, string $state): void
+    {
+        $size = (int) filesize($item['file']);
+        header('Content-Type: ' . $item['type']);
+        header('X-Mirror: ' . $state);
+        header('Accept-Ranges: bytes');
+
+        $range = $_SERVER['HTTP_RANGE'] ?? '';
+        if ($range !== '' && preg_match('/bytes=(\d*)-(\d*)/', $range, $m)) {
+            $start = $m[1] === '' ? 0 : (int) $m[1];
+            $end = $m[2] === '' ? $size - 1 : min((int) $m[2], $size - 1);
+            if ($start > $end) {
+                http_response_code(416);
+                header("Content-Range: bytes */$size");
+                return;
+            }
+            http_response_code(206);
+            header("Content-Range: bytes $start-$end/$size");
+            header('Content-Length: ' . ($end - $start + 1));
+            $fh = fopen($item['file'], 'rb');
+            fseek($fh, $start);
+            echo fread($fh, $end - $start + 1);
+            fclose($fh);
+            return;
+        }
+
+        http_response_code($item['status']);
+        header('Content-Length: ' . $size);
+        readfile($item['file']);
+    }
+
+    /** ลบของในแคชของที่อยู่นี้ */
+    public function purge(string $path): bool
+    {
+        $ok = false;
+        foreach (['.json', '.bin'] as $ext) {
+            $file = $this->key($path) . $ext;
+            if (is_file($file)) {
+                $ok = @unlink($file) || $ok;
+            }
+        }
+        return $ok;
+    }
+
+    /** ลบทั้งแคช */
+    public function purgeAll(): int
+    {
+        $count = 0;
+        foreach (glob($this->config['cache_dir'] . '/*') ?: [] as $file) {
+            if (@unlink($file)) {
+                $count++;
+            }
+        }
+        return (int) ($count / 2);
+    }
+}

@@ -1,0 +1,14 @@
+# ทุกคำขอส่งเข้า index.php ยกเว้นไฟล์ที่มีอยู่จริงบนโฮสต์
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.php [L]
+</IfModule>
+
+# ห้ามเปิดไฟล์ตั้งค่าและโฟลเดอร์แคชจากภายนอก
+<FilesMatch "^(config|config\.sample)\.php$">
+  Require all denied
+</FilesMatch>
+RedirectMatch 404 ^/(cache|lib)/
