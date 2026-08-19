@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import type { Metadata } from "next";
 import { getSetting } from "@/lib/settings";
 
@@ -97,6 +98,35 @@ export const DEFAULT_SEO: SeoSettings = {
   ],
 };
 
+
+/**
+ * โดเมนที่คนกำลังเปิดอยู่ ตรงกับโดเมนหลักที่ตั้งไว้ไหม
+ *
+ * เว็บเดียวกันเปิดได้สองโดเมน (www.spsccoop.com สำหรับสมาชิก · coopsmile.org เป็นสำรอง
+ * และเป็นทางเข้าหลังบ้าน) ถ้าปล่อยให้กูเกิลเก็บทั้งสองโดเมน เนื้อหาจะซ้ำกันทั้งเว็บ
+ * กูเกิลต้องมานั่งเดาว่าอันไหนตัวจริง แล้วอันดับของทั้งคู่แย่ลงทั้งคู่
+ *
+ * ตัวมิเรอร์บนโฮสต์ดึงหน้าไปจาก coopsmile.org แต่เอาไปเสิร์ฟในนาม www.spsccoop.com
+ * จึงต้องส่งหัว x-public-host มาบอกว่า "ที่จริงคนกำลังเปิดโดเมนนี้อยู่นะ"
+ * ไม่งั้นหน้าที่ถูกเก็บสำเนาไปจะติดป้ายห้ามเก็บไปด้วยทั้งเว็บ
+ */
+export async function onCanonicalHost(seo: SeoSettings): Promise<boolean> {
+  try {
+    const head = await headers();
+    const raw = head.get("x-public-host") ?? head.get("host") ?? "";
+    const host = raw.split(":")[0].trim().toLowerCase();
+    if (!host) return true;
+
+    // ตอนพัฒนาในเครื่องไม่ต้องมากั้น
+    if (host === "localhost" || host === "127.0.0.1") return true;
+
+    const canonical = new URL(seo.siteUrl).hostname.toLowerCase();
+    return host === canonical || host === canonical.replace(/^www\./, "");
+  } catch {
+    return true;
+  }
+}
+
 export const getSeo = () => getSetting<SeoSettings>("seo", DEFAULT_SEO);
 
 /** หาค่าของหน้านั้น — ไม่เจอถือว่าไม่ให้เก็บ (หน้าใหม่ต้องมาเปิดเองในหลังบ้าน) */
@@ -129,7 +159,8 @@ export async function pageMetadata(path: string): Promise<Metadata> {
    */
   const scope = seo.scope ?? "all";
   const homeOnly = (scope === "home" || scope === "home-strict") && path !== "/";
-  const index = seo.enabled && page.indexed && !homeOnly;
+  // โดเมนสำรองห้ามให้เก็บทุกหน้า ไม่งั้นเนื้อหาซ้ำกับโดเมนหลักทั้งเว็บ
+  const index = seo.enabled && page.indexed && !homeOnly && (await onCanonicalHost(seo));
 
   return {
     metadataBase: new URL(seo.siteUrl),

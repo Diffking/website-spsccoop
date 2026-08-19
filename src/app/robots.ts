@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getSeo } from "@/lib/seo";
+import { getSeo, onCanonicalHost } from "@/lib/seo";
 
 // อ่านค่าจากหลังบ้านทุกครั้ง — prerender ตอน build ไม่ได้ (ยังไม่มี DATABASE_URL)
 export const dynamic = "force-dynamic";
@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic";
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const seo = await getSeo();
 
-  // สวิตช์ใหญ่ปิด = ห้ามเก็บทั้งเว็บ
-  if (!seo.enabled) {
+  // สวิตช์ใหญ่ปิด = ห้ามเก็บทั้งเว็บ · เปิดจากโดเมนสำรองก็ห้ามเหมือนกัน (กันเนื้อหาซ้ำ)
+  if (!seo.enabled || !(await onCanonicalHost(seo))) {
     return { rules: { userAgent: "*", disallow: "/" } };
   }
 

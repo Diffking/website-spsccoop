@@ -144,7 +144,16 @@ final class Mirror
             CURLOPT_ENCODING => '',
             // บอกหลังบ้านว่าใครขอมา เผื่อต้องไล่ปัญหาย้อนหลัง
             CURLOPT_USERAGENT => 'spsccoop-mirror/1.0',
-            CURLOPT_HTTPHEADER => ['Accept-Language: th'],
+            /*
+             * บอกหลังบ้านว่าหน้านี้จะถูกเอาไปเสิร์ฟในนามโดเมนไหน
+             *
+             * เราไปดึงจาก coopsmile.org แต่คนที่อ่านจริงเปิด www.spsccoop.com อยู่
+             * ถ้าไม่บอก หลังบ้านจะนึกว่านี่คือโดเมนสำรอง แล้วติดป้ายห้ามกูเกิลเก็บมาให้ทั้งเว็บ
+             */
+            CURLOPT_HTTPHEADER => [
+                'Accept-Language: th',
+                'X-Public-Host: ' . ($this->config['public_host'] ?? 'www.spsccoop.com'),
+            ],
         ]);
         $raw = curl_exec($ch);
         $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
