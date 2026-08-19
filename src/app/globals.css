@@ -367,27 +367,27 @@ body {
   .reveal-item, .reveal-item.is-in { opacity: 1; transform: none; transition: none; }
 }
 
-/* ---- ลิงก์ดาวน์โหลด PDF แบบไม่มีคำอธิบาย ----
-   ใช้ตอนอยากแปะไฟล์ให้โหลดเฉย ๆ ไม่ต้องมีการ์ดหรือปุ่มอ่านในเว็บ
-   ทำเป็นชิปเล็ก ๆ มีไอคอนไฟล์นำหน้า จะได้รู้ว่ากดแล้วได้ไฟล์ ไม่ใช่ลิงก์ไปหน้าอื่น */
-.prose-page a.pdf-link {
-  display: inline-flex; align-items: center; gap: .45rem;
-  margin: .25rem .35rem .25rem 0; padding: .45rem .85rem;
-  border-radius: .5rem; background: #fef2f2; color: #b91c1c;
-  border: 1px solid #fecaca; text-decoration: none; font-weight: 500;
-  font-size: .95rem; line-height: 1.4; word-break: break-word;
-  transition: background .15s, border-color .15s, transform .15s;
+
+/* ---- ไอคอนดาวน์โหลด PDF (ไม่มีข้อความ) ----
+   ใช้ตอนอยากแปะแค่ไฟล์ให้กดโหลด ไม่ต้องมีการ์ดหรือชื่อไฟล์บนหน้า
+   ชื่อไฟล์อยู่ใน title/aria-label — เอาเมาส์ชี้ก็เห็น โปรแกรมอ่านหน้าจอก็อ่านออก
+   วาดไอคอนด้วย mask ไม่ต้องมีไฟล์รูป เปลี่ยนสีตามข้อความได้เอง */
+.prose-page a.pdf-icon {
+  display: inline-block; vertical-align: middle;
+  width: 2.75rem; height: 2.75rem; margin: .35rem .5rem .35rem 0;
+  border-radius: .6rem; background-color: #fef2f2; color: #dc2626;
+  border: 1px solid #fecaca; text-decoration: none;
+  transition: background-color .15s, border-color .15s, transform .15s;
 }
-.prose-page a.pdf-link::before {
-  content: ""; width: 1.05rem; height: 1.05rem; flex-shrink: 0;
+.prose-page a.pdf-icon::before {
+  content: ""; display: block; width: 100%; height: 100%;
   background: currentColor;
-  /* ไอคอนไฟล์เอกสาร วาดด้วย mask จะได้เปลี่ยนสีตามข้อความเองโดยไม่ต้องมีไฟล์รูป */
-  -webkit-mask: var(--pdf-icon) center / contain no-repeat;
-  mask: var(--pdf-icon) center / contain no-repeat;
+  -webkit-mask: var(--pdf-icon) center / 1.5rem 1.5rem no-repeat;
+  mask: var(--pdf-icon) center / 1.5rem 1.5rem no-repeat;
+}
+.prose-page a.pdf-icon:hover {
+  background-color: #fee2e2; border-color: #f87171; transform: translateY(-1px);
 }
 .prose-page {
   --pdf-icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z'/><path d='M14 2v6h6'/><path d='M12 18v-6'/><path d='m9 15 3 3 3-3'/></svg>");
-}
-.prose-page a.pdf-link:hover {
-  background: #fee2e2; border-color: #fca5a5; transform: translateY(-1px);
 }

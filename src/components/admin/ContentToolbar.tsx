@@ -628,8 +628,15 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
     const read = `/read/?src=${encodeURIComponent(result.data.url)}&title=${encodeURIComponent(name)}`;
 
     if (pdfMode === "link") {
-      // ลิงก์ล้วน ๆ ไม่มีคำอธิบาย ไม่มีปุ่มอ่านในเว็บ — กดแล้วโหลดไฟล์ทันที
-      insert(`<a class="pdf-link" href="${result.data.url}" download>${name}</a>`);
+      /*
+       * ไอคอนอย่างเดียว ไม่มีข้อความบนหน้าเว็บเลย — กดที่ไอคอนแล้วโหลดไฟล์ทันที
+       * ชื่อไฟล์ยังใส่ไว้ใน title/aria-label เพื่อให้เอาเมาส์ชี้แล้วเห็น และโปรแกรมอ่านหน้าจอ
+       * อ่านออกว่ากำลังจะโหลดไฟล์อะไร (ไอคอนเปล่า ๆ คนตาบอดจะไม่รู้เลยว่าลิงก์นี้คืออะไร)
+       */
+      insert(
+        `<a class="pdf-icon" href="${result.data.url}" download ` +
+          `title="${name}" aria-label="ดาวน์โหลด ${name}"></a>`,
+      );
     } else {
       insert(
         `<div class="ebook">\n  <span class="ebook-name">${name}</span>\n` +
@@ -1104,7 +1111,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
                 >
                   ลิงก์ดาวน์โหลดอย่างเดียว
                   <span className="mt-0.5 block text-[11px] font-normal text-gray-500">
-                    ชื่อไฟล์อย่างเดียว กดแล้วโหลดไฟล์ทันที ไม่มีข้อความอื่น
+                    ไอคอน PDF อย่างเดียว ไม่มีข้อความ กดที่ไอคอนแล้วโหลดไฟล์ทันที
                   </span>
                 </button>
               </div>
