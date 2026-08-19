@@ -116,7 +116,7 @@ services:
     entrypoint:
       - sh
       - -c
-      - apk add --no-cache curl >/dev/null 2>&1; while true; do if [ -n "$$MIRROR_PURGE_TOKEN" ]; then echo "อุ่นแคช $$(date '+%F %H:%M')"; curl -s -m 900 "$${MIRROR_WARM_URL:-https://www.spsccoop.com/warm.php}?token=$$MIRROR_PURGE_TOKEN" | tail -2; fi; sleep 3600; done
+      - apk add --no-cache curl >/dev/null 2>&1; while true; do if [ -n "$$MIRROR_PURGE_TOKEN" ]; then echo "อุ่นแคช $$(date '+%F %H:%M')"; curl -s -m 900 "$${MIRROR_WARM_URL:-https://www.spsccoop.com/warm.php}?token=$$MIRROR_PURGE_TOKEN&by=auto" | tail -2; fi; sleep 3600; done
 
   # Cloudflare Tunnel — ชี้โดเมนเข้า web:3000 (ตั้ง ingress ฝั่ง Cloudflare)
   # TUNNEL_TOKEN อยู่ในไฟล์ .env ข้างไฟล์นี้ (ไม่ commit)

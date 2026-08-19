@@ -13,7 +13,10 @@ export type MirrorLastRun = {
   pages: { ok: number; skip: number; fail: number; total: number };
   assets: { ok: number; skip: number; fail: number; total: number } | null;
   bytes: number;
+  /** "auto" = ตัวตั้งเวลาทุกชั่วโมง · "manual" = เจ้าหน้าที่กดปุ่มเอง */
   by: string;
+  /** เวลารอบอัตโนมัติล่าสุด — กดเองไม่ทับค่านี้ ใช้ดูว่าตัวตั้งเวลายังเดินอยู่ไหม */
+  auto_time: number | null;
 };
 
 export type MirrorStatus = {
@@ -78,7 +81,7 @@ export async function runWarm(force = false): Promise<{ ok: boolean; text: strin
   if (!base) return { ok: false, text: "ยังไม่ได้ตั้งค่าตัวมิเรอร์ใน .env" };
 
   try {
-    const res = await fetch(`${base}${force ? "&force=1" : ""}`, {
+    const res = await fetch(`${base}&by=manual${force ? "&force=1" : ""}`, {
       cache: "no-store",
       signal: AbortSignal.timeout(600_000),
     });

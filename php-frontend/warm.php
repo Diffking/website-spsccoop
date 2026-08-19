@@ -39,6 +39,11 @@ $force = in_array('--force', $argv ?? [], true) || !empty($_GET['force']);
 /** แฟ้มบันทึกว่าอุ่นครั้งล่าสุดเมื่อไหร่ ได้ผลอย่างไร — หลังบ้านเอาไปโชว์ */
 $stampFile = $config['cache_dir'] . '/.last-warm.json';
 
+/** อ่านของเดิมไว้ก่อน จะได้ไม่ทับเวลารอบอัตโนมัติล่าสุดตอนเจ้าหน้าที่กดเอง */
+$previous = is_file($stampFile)
+    ? (array) json_decode((string) file_get_contents($stampFile), true)
+    : [];
+
 /*
  * โหมดรายงานสถานะ: ?status=1 — ตอบว่าอุ่นล่าสุดเมื่อไหร่ และตอนนี้เก็บอะไรไว้บ้าง
  * หลังบ้านเรียกมาโชว์ในหน้า "สำเนาหน้าเว็บบนโฮสต์" จะได้ไม่ต้องเดาว่าระบบยังทำงานอยู่ไหม
@@ -68,6 +73,13 @@ if (!empty($_GET['status'])) {
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
+
+/*
+ * ใครสั่งอุ่นรอบนี้ — ตัวตั้งเวลาที่เดินทุกชั่วโมง หรือเจ้าหน้าที่กดปุ่มเอง
+ * ต้องแยกให้ออก ไม่งั้นหลังบ้านจะบอกไม่ได้ว่า "ระบบอัตโนมัติยังเดินอยู่ไหม"
+ * (กดเองรัวๆ แล้วเห็นเวลาขยับ ไม่ได้แปลว่าตัวตั้งเวลายังทำงาน)
+ */
+$by = ($_GET['by'] ?? '') === 'auto' ? 'auto' : (PHP_SAPI === 'cli' ? 'auto' : 'manual');
 
 $startedAt = microtime(true);
 $config['timeout'] = (int) ($config['warm_timeout'] ?? 120);
@@ -114,7 +126,8 @@ if (empty($config['warm_assets'])) {
         'pages' => ['ok' => $ok, 'skip' => $skip, 'fail' => $fail, 'total' => count($paths)],
         'assets' => null,
         'bytes' => 0,
-        'by' => PHP_SAPI === 'cli' ? 'cli' : 'web',
+        'by' => $by,
+        'auto_time' => $by === 'auto' ? time() : ($previous['auto_time'] ?? null),
     ], JSON_UNESCAPED_UNICODE));
     exit;
 }
@@ -204,5 +217,6 @@ file_put_contents($stampFile, json_encode([
     'pages' => ['ok' => $ok, 'skip' => $skip, 'fail' => $fail, 'total' => count($paths)],
     'assets' => ['ok' => $aOk, 'skip' => $aSkip, 'fail' => $aFail, 'total' => count($assets)],
     'bytes' => $bytes,
-    'by' => PHP_SAPI === 'cli' ? 'cli' : 'web',
+    'by' => $by,
+    'auto_time' => $by === 'auto' ? time() : ($previous['auto_time'] ?? null),
 ], JSON_UNESCAPED_UNICODE));

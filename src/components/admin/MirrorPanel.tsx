@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { AlertTriangle, CheckCircle2, CloudCog, HardDrive, RefreshCw } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CloudCog, HardDrive, RefreshCw, Timer } from "lucide-react";
 import type { MirrorStatus } from "@/lib/mirror";
 
 /**
@@ -17,6 +17,8 @@ const thaiDateTime = new Intl.DateTimeFormat("th-TH", {
   timeStyle: "short",
   timeZone: "Asia/Bangkok",
 });
+
+const thaiTime = new Intl.DateTimeFormat("th-TH", { timeStyle: "short", timeZone: "Asia/Bangkok" });
 
 const mb = (bytes: number) => `${(bytes / 1_048_576).toFixed(1)} MB`;
 
@@ -71,9 +73,16 @@ export default function MirrorPanel({ initial }: { initial: MirrorStatus }) {
 
   const last = status.last;
   const lastAgo = last && now ? ago(now / 1000 - last.time) : null;
-  // อุ่นทุกชั่วโมง ถ้าเกินสองชั่วโมงแล้วยังไม่ขยับ แปลว่ามีอะไรไม่ปกติ
-  const stale = !last || (now !== null && now / 1000 - last.time > 7200);
   const failed = last ? last.pages.fail + (last.assets?.fail ?? 0) : 0;
+
+  /*
+   * ป้ายสถานะดูที่ "รอบอัตโนมัติ" เท่านั้น ไม่ดูรอบที่กดเอง
+   * เพราะกดเองรัว ๆ แล้วเห็นเวลาขยับ ไม่ได้แปลว่าตัวตั้งเวลายังทำงานอยู่
+   */
+  const autoTime = last?.auto_time ?? null;
+  const autoAgo = autoTime && now ? ago(now / 1000 - autoTime) : null;
+  const nextAuto = autoTime ? new Date((autoTime + 3600) * 1000) : null;
+  const stale = !autoTime || (now !== null && now / 1000 - autoTime > 7200);
 
   return (
     <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
@@ -112,7 +121,14 @@ export default function MirrorPanel({ initial }: { initial: MirrorStatus }) {
         <>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl bg-gray-50 p-3">
-              <p className="text-xs text-gray-500">อุ่นสำเนาล่าสุด</p>
+              <p className="text-xs text-gray-500">
+                อุ่นสำเนาล่าสุด
+                {last && (
+                  <span className="ml-1.5 rounded-full bg-white px-1.5 py-0.5 text-[11px] text-gray-500 ring-1 ring-gray-200">
+                    {last.by === "manual" ? "สั่งเอง" : "อัตโนมัติ"}
+                  </span>
+                )}
+              </p>
               <p className="mt-1 text-sm font-medium text-gray-800">
                 {last ? (lastAgo ?? "เพิ่งอุ่นไป") : "ยังไม่เคยอุ่น"}
               </p>
@@ -138,6 +154,28 @@ export default function MirrorPanel({ initial }: { initial: MirrorStatus }) {
                 {status.cache ? mb(status.cache.bytes) : "—"}
               </p>
             </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-gray-50 p-3 text-xs text-gray-600">
+            <Timer className="h-4 w-4 shrink-0 text-gray-400" />
+            <span className="font-medium text-gray-700">อุ่นอัตโนมัติทุกชั่วโมง</span>
+            {autoTime ? (
+              <>
+                <span className="text-gray-400">·</span>
+                <span>
+                  รอบอัตโนมัติล่าสุด {autoAgo ?? "เพิ่งผ่านไป"} (
+                  {thaiDateTime.format(new Date(autoTime * 1000))} น.)
+                </span>
+                {nextAuto && (
+                  <>
+                    <span className="text-gray-400">·</span>
+                    <span>รอบถัดไปประมาณ {thaiTime.format(nextAuto)} น.</span>
+                  </>
+                )}
+              </>
+            ) : (
+              <span className="text-amber-700">ยังไม่เคยมีรอบอัตโนมัติ — ตรวจว่าบริการ mirror-warm ทำงานอยู่หรือไม่</span>
+            )}
           </div>
 
           {last && (
