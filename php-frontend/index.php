@@ -48,6 +48,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
 $ttl = $mirror->isAsset($path) ? $config['ttl_asset'] : $config['ttl_page'];
 $cached = $mirror->cached($path);
 
+// ไม่เคยเก็บที่อยู่นี้ไว้ แต่ไฟล์เดียวกันอาจถูกเก็บไว้ในอีกชื่อหนึ่ง (ดู aliasOf)
+if ($cached === null) {
+    $alias = $mirror->aliasOf($path);
+    if ($alias !== null) {
+        $cached = $mirror->cached($alias);
+    }
+}
+
 // ยังสดอยู่ ใช้ได้เลย ไม่ต้องรบกวนหลังบ้าน
 if ($cached !== null && $cached['age'] < $ttl) {
     $mirror->send($cached, 'hit');

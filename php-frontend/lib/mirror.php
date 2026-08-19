@@ -52,6 +52,28 @@ final class Mirror
             || preg_match('#\.(ico|png|jpe?g|webp|gif|svg|css|js|woff2?|pdf)$#i', $path) === 1;
     }
 
+    /**
+     * ที่อยู่สำรองของไฟล์เดียวกัน — ใช้ตอนหลังบ้านปิดแล้วยังไม่เคยเก็บที่อยู่นี้ไว้
+     *
+     * ตัวอ่านหนังสือในเว็บสร้างที่อยู่ /api/pdf/?src=/uploads/xxx.pdf ขึ้นมาตอนกดอ่าน
+     * ที่อยู่นี้ไม่ปรากฏใน HTML ตัวอุ่นแคชจึงมองไม่เห็นและเก็บไว้ไม่ได้
+     * แต่ไฟล์ตัวเดียวกันถูกเก็บไว้แล้วในชื่อ /uploads/xxx.pdf — ยกตัวนั้นให้แทนได้เลย
+     * (ไม่ต้องเก็บซ้ำสองชุดให้เปลืองพื้นที่โฮสต์)
+     */
+    public function aliasOf(string $path): ?string
+    {
+        if (!str_starts_with($path, '/api/pdf')) {
+            return null;
+        }
+        $query = parse_url($path, PHP_URL_QUERY);
+        if (!is_string($query)) {
+            return null;
+        }
+        parse_str($query, $params);
+        $src = (string) ($params['src'] ?? '');
+        return str_starts_with($src, '/uploads/') ? $src : null;
+    }
+
     private function key(string $path): string
     {
         return $this->config['cache_dir'] . '/' . sha1($path);
@@ -74,9 +96,40 @@ final class Mirror
         return $info;
     }
 
+    /** แฟ้มที่ใช้จำว่า "เพิ่งลองแล้วหลังบ้านไม่ตอบ" */
+    private function downMark(): string
+    {
+        return $this->config['cache_dir'] . '/.backend-down';
+    }
+
+    /**
+     * หลังบ้านดับอยู่หรือเปล่า (เท่าที่เพิ่งลองมา)
+     *
+     * เครื่องที่สำนักงานเปิดแค่เวลาทำการ กลางคืนกับเสาร์อาทิตย์จึงติดต่อไม่ได้เป็นปกติ
+     * ถ้าปล่อยให้ทุกคำขอไปลองต่อเอง คนอ่านเว็บตอนกลางคืนจะต้องรอครบ timeout ทุกหน้า
+     * จำไว้สักพักว่าดับอยู่ แล้วยกของในแคชให้เลย — เร็วเหมือนหลังบ้านเปิดอยู่
+     */
+    public function backendDown(): bool
+    {
+        $mark = $this->downMark();
+        if (!is_file($mark)) {
+            return false;
+        }
+        if (time() - (int) filemtime($mark) < (int) ($this->config['down_ttl'] ?? 60)) {
+            return true;
+        }
+        @unlink($mark);   // ครบเวลาแล้ว ลองใหม่ได้
+        return false;
+    }
+
     /** ไปเอาของใหม่จากหลังบ้าน — ไม่สำเร็จคืน null (ให้คนเรียกไปใช้ของเก่า) */
     public function fetch(string $path): ?array
     {
+        // เพิ่งลองแล้วไม่ตอบ ไม่ต้องลองซ้ำให้คนอ่านเว็บรอ
+        if ($this->backendDown()) {
+            return null;
+        }
+
         $url = $this->config['backend'] . $path;
         $ch = curl_init($url);
         curl_setopt_array($ch, [
@@ -96,8 +149,10 @@ final class Mirror
         curl_close($ch);
 
         if ($raw === false || $status === 0) {
+            @touch($this->downMark());   // จำไว้ว่าดับ คำขอถัดไปจะได้ไม่ต้องรอ
             return null;
         }
+        @unlink($this->downMark());      // ตอบแล้ว = กลับมาแล้ว
         // หลังบ้านตอบว่าไม่มีหน้านี้/พัง — ไม่เอามาทับของเก่าที่ยังใช้ได้
         if ($status >= 500) {
             return null;
