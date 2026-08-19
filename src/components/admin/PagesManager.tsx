@@ -3,7 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, ChevronRight, Loader2, CircleDot, Circle, Search, FolderOpen } from "lucide-react";
+import {
+  Plus,
+  ChevronRight,
+  Loader2,
+  CircleDot,
+  Circle,
+  Search,
+  FolderOpen,
+  Pencil,
+} from "lucide-react";
 import { groupPages } from "@/lib/pageGroups";
 
 export type PageRow = {
@@ -25,6 +34,42 @@ export default function PagesManager({ pages }: { pages: PageRow[] }) {
   const [adding, setAdding] = useState(false);
   /** คำค้นในรายการ — พิมพ์ชื่อหน้าหรือที่อยู่ก็เจอ ไม่ต้องกวาดตาทีละบรรทัด */
   const [find, setFind] = useState("");
+  /** หมวดที่กำลังเปลี่ยนชื่ออยู่ (คีย์เดิม) และชื่อใหม่ที่พิมพ์ไว้ */
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+
+  /** เปลี่ยนชื่อหมวดทั้งกลุ่มในคลิกเดียว — หน้าที่ยังไม่เคยตั้งหมวดก็ได้หมวดนี้ไปด้วย */
+  async function renameCategory(from: string) {
+    const to = newName.trim();
+    setRenaming(null);
+    if (!to || to === from) return;
+
+    setBusy(true);
+    const response = await fetch("/api/admin/pages/categories/", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ from, to }),
+    });
+    setBusy(false);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setError(data.error ?? "เปลี่ยนชื่อหมวดไม่สำเร็จ");
+      return;
+    }
+    router.refresh();
+  }
+
+  /** ย้ายหน้าเดียวไปหมวดอื่น */
+  async function movePage(id: string, category: string) {
+    setBusy(true);
+    await fetch(`/api/admin/pages/${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category }),
+    }).catch(() => null);
+    setBusy(false);
+    router.refresh();
+  }
 
   async function create(event: React.FormEvent) {
     event.preventDefault();
@@ -59,6 +104,10 @@ export default function PagesManager({ pages }: { pages: PageRow[] }) {
       )
     : pages;
   const groups = groupPages(matched);
+  // หมวดที่ "ตั้งเอง" เท่านั้น (ไม่รวมกลุ่มอัตโนมัติตามที่อยู่) ไว้ให้เลือกย้ายหน้า
+  const allCategories = [...new Set(pages.map((p) => p.category?.trim()).filter(Boolean))].sort(
+    (a, b) => (a as string).localeCompare(b as string, "th"),
+  ) as string[];
 
   return (
     <div className="space-y-4">
@@ -150,11 +199,52 @@ export default function PagesManager({ pages }: { pages: PageRow[] }) {
         groups.map((group) => (
           <section key={group.key} className="space-y-1.5">
             {/* หัวข้อกลุ่ม — ไม่ใช่ลำดับ แค่ชั้นวางให้หาเจอ */}
-            <p className="flex items-center gap-1.5 px-1 text-xs font-semibold text-gray-500">
-              <FolderOpen className="h-3.5 w-3.5 text-gray-400" />
-              {group.key}
-              <span className="font-normal text-gray-400">({group.pages.length})</span>
-            </p>
+            {renaming === group.key ? (
+              <div className="flex items-center gap-1.5 px-1">
+                <input
+                  autoFocus
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void renameCategory(group.key);
+                    if (e.key === "Escape") setRenaming(null);
+                  }}
+                  placeholder="ชื่อหมวดใหม่ เช่น ทำเนียบองค์กร"
+                  className="w-64 rounded-lg border border-brand-300 px-2 py-1 text-xs outline-none focus:border-brand-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => void renameCategory(group.key)}
+                  className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-brand-700"
+                >
+                  เปลี่ยนชื่อ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRenaming(null)}
+                  className="rounded-lg px-2 py-1 text-xs text-gray-500 transition hover:bg-gray-100"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            ) : (
+              <p className="flex items-center gap-1.5 px-1 text-xs font-semibold text-gray-500">
+                <FolderOpen className="h-3.5 w-3.5 text-gray-400" />
+                {group.key}
+                <span className="font-normal text-gray-400">({group.pages.length})</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRenaming(group.key);
+                    setNewName(group.key);
+                  }}
+                  title="เปลี่ยนชื่อหมวดนี้ — มีผลกับทุกหน้าในกลุ่ม"
+                  className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-brand-600"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+              </p>
+            )}
 
             <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
               {group.pages.map((page) => (
@@ -179,6 +269,23 @@ export default function PagesManager({ pages }: { pages: PageRow[] }) {
                     </span>
                     <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" />
                   </Link>
+
+                  {/* ย้ายหมวดจากตรงนี้ได้เลย ไม่ต้องเปิดเข้าไปในหน้าแก้ไข */}
+                  <div className="flex items-center gap-1.5 border-t border-gray-50 px-4 py-1.5">
+                    <span className="text-[11px] text-gray-400">หมวด</span>
+                    <select
+                      value={allCategories.includes(page.category ?? "") ? page.category ?? "" : ""}
+                      onChange={(e) => void movePage(page.id, e.target.value)}
+                      className="rounded-lg border border-gray-200 bg-white px-2 py-0.5 text-[11px] text-gray-600 outline-none focus:border-brand-400"
+                    >
+                      <option value="">— ตามที่อยู่หน้า —</option>
+                      {allCategories.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </li>
               ))}
             </ul>
