@@ -21,7 +21,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     seo.pages.filter((page) => !page.indexed).map((page) => page.path.replace(/\/$/, "")),
   );
 
-  const paths = await publicPaths();
+  // บอกเฉพาะหน้าที่ยอมให้เข้าอ่าน — ลิสต์หน้าที่ห้ามไว้ใน sitemap คือขัดกันเอง
+  const paths = (seo.scope ?? "all") === "all" ? await publicPaths() : ["/"];
 
   return paths
     .filter((path) => !blocked.has(path.replace(/\/$/, "")))

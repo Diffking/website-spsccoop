@@ -62,6 +62,8 @@ export async function PUT(request: Request) {
 
   await saveSetting("seo", {
     enabled: Boolean(body.enabled),
+    // ค่าที่ไม่รู้จักถอยไปใช้ "ทุกหน้า" ตามพฤติกรรมเดิม
+    scope: body.scope === "home" || body.scope === "home-strict" ? body.scope : "all",
     siteUrl,
     siteName: body.siteName.trim(),
     defaultTitle: body.defaultTitle.trim(),

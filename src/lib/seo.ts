@@ -20,9 +20,32 @@ export type SeoPage = {
   description: string;
 };
 
+/**
+ * ให้เครื่องมือค้นหาทำอะไรกับเว็บได้บ้าง
+ *
+ * ต้องแยก "เข้าอ่าน" กับ "เอาไปแสดงในผลค้นหา" ออกจากกัน คนมักคิดว่าเป็นเรื่องเดียวกัน
+ * แต่ถ้าห้ามเข้าอ่าน กูเกิลจะอ่านป้าย "ห้ามเก็บ" ในหน้านั้นไม่เจอ แล้วยังโชว์ที่อยู่หน้านั้น
+ * ค้างไว้ในผลค้นหาต่อไปอีกนาน — กลับตาลปัตรกับที่ตั้งใจ
+ */
+export type SeoScope =
+  /** ทุกหน้า (ยกเว้นหลังบ้านกับหน้าที่ปิดไว้รายหน้า) */
+  | "all"
+  /**
+   * ผลค้นหาโชว์เฉพาะหน้าแรก — หน้าอื่นยังให้เข้าอ่านได้ แต่ติดป้ายห้ามเก็บไว้
+   * เป็นวิธีที่ทำให้หน้าอื่นหลุดออกจากผลค้นหาได้จริง
+   */
+  | "home"
+  /**
+   * ห้ามเข้าอ่านหน้าอื่นเลย (robots.txt) — เข้มที่สุดในแง่ปริมาณการเข้าอ่าน
+   * แต่หน้าที่กูเกิลเคยเก็บไว้แล้วอาจค้างอยู่ในผลค้นหาแบบไม่มีคำอธิบายอีกพักใหญ่
+   */
+  | "home-strict";
+
 export type SeoSettings = {
   /** สวิตช์ใหญ่ — ปิดแล้วทั้งเว็บไม่ให้เก็บ ใช้ตอนเว็บยังไม่พร้อมเปิดจริง */
   enabled: boolean;
+  /** ไม่ระบุ = "all" (พฤติกรรมเดิมก่อนมีตัวเลือกนี้) */
+  scope?: SeoScope;
   siteUrl: string;
   siteName: string;
   defaultTitle: string;
@@ -33,6 +56,7 @@ export type SeoSettings = {
 
 export const DEFAULT_SEO: SeoSettings = {
   enabled: true,
+  scope: "all",
   siteUrl: "https://beta.spsccoop.com",
   siteName: "สหกรณ์ออมทรัพย์สาธารณสุขสงขลา จำกัด",
   defaultTitle: "สหกรณ์ออมทรัพย์สาธารณสุขสงขลา จำกัด | เงินฝาก เงินกู้ สวัสดิการสมาชิก",
@@ -98,8 +122,14 @@ export async function pageMetadata(path: string): Promise<Metadata> {
 
   const title = page.title.trim() || seo.defaultTitle;
   const description = page.description.trim() || seo.defaultDescription;
-  // สวิตช์ใหญ่ปิด = ไม่ให้เก็บทั้งเว็บ ไม่ว่ารายหน้าจะตั้งไว้ยังไง
-  const index = seo.enabled && page.indexed;
+  /*
+   * สวิตช์ใหญ่ปิด = ไม่ให้เก็บทั้งเว็บ ไม่ว่ารายหน้าจะตั้งไว้ยังไง
+   * โหมด "เฉพาะหน้าแรก" = หน้าอื่นติดป้ายห้ามเก็บไว้ในตัวหน้าด้วย ไม่ได้กันแค่ใน robots.txt
+   * (บอทบางตัวไม่อ่าน robots.txt · และหน้าที่เคยถูกเก็บไว้ก่อนหน้านี้จะได้หลุดออกจากผลค้นหา)
+   */
+  const scope = seo.scope ?? "all";
+  const homeOnly = (scope === "home" || scope === "home-strict") && path !== "/";
+  const index = seo.enabled && page.indexed && !homeOnly;
 
   return {
     metadataBase: new URL(seo.siteUrl),

@@ -7,6 +7,24 @@ import type { SeoSettings, SeoPage } from "@/lib/seo";
 
 const BLANK: SeoPage = { path: "", label: "", indexed: true, title: "", description: "" };
 
+const SCOPE_CHOICES: { value: "all" | "home" | "home-strict"; label: string; hint: string }[] = [
+  {
+    value: "all",
+    label: "ทุกหน้า",
+    hint: "คนค้นหาเรื่องอะไรก็เจอหน้านั้นตรง ๆ เช่น ค้น “ดาวน์โหลดแบบฟอร์มสหกรณ์” แล้วเจอหน้าดาวน์โหลด",
+  },
+  {
+    value: "home",
+    label: "ผลค้นหาโชว์เฉพาะหน้าแรก (แนะนำ)",
+    hint: "หน้าอื่นยังให้เข้าอ่านได้ แต่ติดป้ายห้ามเก็บ — เป็นวิธีที่ทำให้หน้าอื่นหลุดจากผลค้นหาได้จริง",
+  },
+  {
+    value: "home-strict",
+    label: "ห้ามเข้าอ่านหน้าอื่นเลย",
+    hint: "เข้มที่สุด แต่หน้าที่กูเกิลเคยเก็บไว้แล้วอาจค้างอยู่ในผลค้นหาแบบไม่มีคำอธิบายอีกพักใหญ่",
+  },
+];
+
 export default function SeoManager({ initial }: { initial: SeoSettings }) {
   const [seo, setSeo] = useState<SeoSettings>(initial);
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
@@ -82,6 +100,34 @@ export default function SeoManager({ initial }: { initial: SeoSettings }) {
           <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
             ปิดอยู่ — ไฟล์ robots.txt จะสั่งห้ามเก็บทั้งเว็บ และ sitemap.xml จะว่างเปล่า
             หน้าเว็บยังเปิดดูได้ตามปกติ แค่ไม่ขึ้นในผลการค้นหา
+          </p>
+        )}
+
+        {seo.enabled && (
+          <fieldset className="mt-3 rounded-xl bg-gray-50 p-3">
+            <legend className="px-1 text-xs font-medium text-gray-600">ให้เข้าอ่านได้แค่ไหน</legend>
+            {SCOPE_CHOICES.map((choice) => (
+              <label key={choice.value} className="mt-1.5 flex items-start gap-2">
+                <input
+                  type="radio"
+                  name="seo-scope"
+                  checked={(seo.scope ?? "all") === choice.value}
+                  onChange={() => set({ scope: choice.value })}
+                  className="mt-0.5 h-4 w-4 accent-brand-500"
+                />
+                <span>
+                  <span className="block text-sm text-gray-700">{choice.label}</span>
+                  <span className="block text-xs leading-relaxed text-gray-500">{choice.hint}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        )}
+
+        {seo.enabled && (seo.scope ?? "all") !== "all" && (
+          <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
+            เฉพาะหน้าแรก — คนที่ค้นด้วยชื่อสหกรณ์จะเจอเว็บ แต่จะ<b>ไม่เจอ</b>หน้าดาวน์โหลดเอกสาร
+            ระเบียบ หรือประกาศจากการค้นหาโดยตรง ต้องเข้าหน้าแรกแล้วกดเมนูเอง
           </p>
         )}
       </section>
