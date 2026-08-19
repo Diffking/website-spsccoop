@@ -23,7 +23,7 @@ const ALLOWED = new Set([
 const ALLOWED_CLASSES = new Set([
   "left", "right", "small", "wide", "image-row",
   // แท็บเมนูและการ์ดเอกสาร PDF — PageContent เอาไปทำเป็นแท็บกดได้จริงตอนแสดงผล
-  "tabs", "tab", "ebook", "pdf-icon",
+  "tabs", "tab", "ebook", "pdf-icon", "badge",
   // การ์ดลิงก์แบบตาราง (ดู .cards ใน globals.css)
   "cards", "card", "card-badge", "card-text", "card-title", "card-sub",
   // สีของการ์ด
