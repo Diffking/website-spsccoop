@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { AI_READY } from "@/lib/ai";
 import PageEditor from "@/components/admin/PageEditor";
 import { pageFolder } from "@/lib/ftp";
+import { usedCategories } from "@/lib/pageGroups";
 
 export default async function EditPagePage({ params }: { params: Promise<{ id: string }> }) {
   const user = await currentUser();
@@ -17,6 +18,11 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
   const aiFormatDefault = (await cookies()).get("spsc_page_ai_format")?.value !== "0";
   const page = await db.page.findUnique({ where: { id } });
   if (!page) notFound();
+
+  // หมวดที่หน้าอื่นใช้อยู่ — ให้เลือกซ้ำได้ จะได้ไม่มีหมวดชื่อคล้ายกันแต่สะกดต่างกัน
+  const others = await db.page
+    .findMany({ select: { slug: true, category: true } })
+    .catch(() => []);
 
   return (
     <>
@@ -39,7 +45,9 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
             published: page.published,
             // หน้าเก่าที่สร้างก่อนมีช่องนี้ ยังไม่มีค่าในฐาน — คำนวณจาก slug ให้ไปก่อน
             assetFolder: page.assetFolder ?? pageFolder(page.slug),
+            category: page.category ?? "",
           }}
+          categories={usedCategories(others)}
           aiReady={AI_READY}
           aiFormatDefault={aiFormatDefault}
         />

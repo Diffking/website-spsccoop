@@ -12,7 +12,14 @@ export default async function AdminPagesPage() {
 
   const pages = await db.page.findMany({
     orderBy: { slug: "asc" },
-    select: { id: true, slug: true, title: true, published: true, updatedAt: true },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      published: true,
+      updatedAt: true,
+      category: true,
+    },
   });
 
   /*

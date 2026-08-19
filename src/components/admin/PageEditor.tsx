@@ -22,19 +22,29 @@ type Props = {
     published: boolean;
     /** โฟลเดอร์เก็บไฟล์แนบของหน้านี้ใต้ assets/ */
     assetFolder: string;
+    /** หมวดสำหรับจัดกลุ่มในรายการหลังบ้าน */
+    category: string;
   };
   /** ตั้งคีย์ AI ไว้ไหม — ไม่ได้ตั้งก็ซ่อนสวิตช์จัดรูปแบบไปเลย */
   aiReady?: boolean;
+  /** หมวดที่หน้าอื่นใช้อยู่ — ไว้เลือกซ้ำได้ ไม่ต้องพิมพ์ใหม่ให้สะกดต่างกัน */
+  categories?: string[];
   /** ค่าสวิตช์ AI ที่ผู้ใช้เลือกไว้ครั้งก่อน (อ่านจาก cookie ฝั่งเซิร์ฟเวอร์) */
   aiFormatDefault?: boolean;
 };
 
-export default function PageEditor({ page, aiReady = false, aiFormatDefault = true }: Props) {
+export default function PageEditor({
+  page,
+  aiReady = false,
+  aiFormatDefault = true,
+  categories = [],
+}: Props) {
   const router = useRouter();
   const textarea = useRef<HTMLTextAreaElement>(null);
   const [title, setTitle] = useState(page.title);
   const [slug, setSlug] = useState(page.slug);
   const [assetFolder, setAssetFolder] = useState(page.assetFolder);
+  const [category, setCategory] = useState(page.category);
   const [content, setContent] = useState(page.body);
   const [published, setPublished] = useState(page.published);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
@@ -135,7 +145,7 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
     const response = await fetch(`/api/admin/pages/${page.id}/`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, slug, content: body, published, assetFolder }),
+      body: JSON.stringify({ title, slug, content: body, published, assetFolder, category }),
     });
     const data = await response.json().catch(() => ({}));
 
@@ -159,7 +169,7 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
     const response = await fetch(`/api/admin/pages/${page.id}/`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, slug, content: beforeAi, published, assetFolder }),
+      body: JSON.stringify({ title, slug, content: beforeAi, published, assetFolder, category }),
     });
     setBeforeAi(null);
     setBusy(false);
@@ -197,6 +207,26 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
             onChange={(e) => setSlug(e.target.value)}
             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm outline-none focus:border-brand-500"
           />
+        </label>
+
+        {/* หมวดไว้จัดกลุ่มในรายการหลังบ้านให้หาเจอง่าย ไม่เกี่ยวกับลำดับหรือหน้าเว็บจริง */}
+        <label className="mt-3 block text-sm text-gray-600">
+          หมวดในรายการหลังบ้าน
+          <span className="ml-1 text-xs text-gray-400">
+            (เว้นว่าง = จัดกลุ่มตามที่อยู่หน้าให้เอง · ไม่มีผลกับหน้าเว็บจริง)
+          </span>
+          <input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            list="page-categories"
+            placeholder="เช่น ทำเนียบองค์กร, ระเบียบสหกรณ์"
+            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-base outline-none focus:border-brand-500"
+          />
+          <datalist id="page-categories">
+            {categories.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </label>
 
         {/* ไฟล์ที่แนบในหน้านี้ไปอยู่โฟลเดอร์นี้ทั้งหมด — หาไฟล์ของแต่ละหน้าเจอง่ายเวลาเปิดดูใน FTP */}
