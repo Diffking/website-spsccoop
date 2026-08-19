@@ -99,7 +99,8 @@ export async function getItems(section: Section): Promise<Item[]> {
         title: r.title,
         subtitle: r.subtitle,
         icon: r.icon,
-        href: r.href,
+        // href เป็นไฟล์ PDF ได้ (เช่นคู่มือแนะนำสมาชิก) ต้องชี้สำเนาในเครื่องเหมือนรูป
+        href: localAsset(r.href) || null,
         imageUrl: localAsset(r.imageUrl) || null,
         theme: r.theme,
         category: r.category,
@@ -136,7 +137,7 @@ export async function getItemsForAdmin(section: Section): Promise<Item[]> {
     title: r.title,
     subtitle: r.subtitle,
     icon: r.icon,
-    href: r.href,
+    href: localAsset(r.href) || null,
     imageUrl: localAsset(r.imageUrl) || null,
     theme: r.theme,
     category: r.category,

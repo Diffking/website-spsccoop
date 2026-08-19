@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { assetCandidates } from "@/lib/assetFallback";
 
 /**
  * ส่งไฟล์ PDF ของเอกสารผ่านโดเมนเดียวกับเว็บ
@@ -25,17 +26,22 @@ export async function GET(request: Request, { params }: Params) {
     return NextResponse.json({ error: "ไม่พบเอกสาร" }, { status: 404 });
   }
 
-  const target = item.fileUrl.startsWith("/")
-    ? new URL(item.fileUrl, request.url).toString()
-    : item.fileUrl;
-
   const range = request.headers.get("range");
-  const upstream = await fetch(target, {
-    headers: range ? { Range: range } : undefined,
-    cache: "no-store",
-  }).catch(() => null);
 
-  if (!upstream || !upstream.ok || !upstream.body) {
+  // สำเนาในเครื่องก่อน แล้วค่อยตกไปที่โดเมน assets (ดู src/lib/assetFallback.ts)
+  let upstream: Response | null = null;
+  for (const target of assetCandidates(item.fileUrl, request.url)) {
+    const tried = await fetch(target, {
+      headers: range ? { Range: range } : undefined,
+      cache: "no-store",
+    }).catch(() => null);
+    if (tried?.ok && tried.body) {
+      upstream = tried;
+      break;
+    }
+  }
+
+  if (!upstream || !upstream.body) {
     return NextResponse.json({ error: "เปิดไฟล์เอกสารไม่ได้" }, { status: 502 });
   }
 
