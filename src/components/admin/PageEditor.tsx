@@ -113,6 +113,23 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
       }
     }
 
+    /*
+     * ซ่อมโครงสร้างให้เสมอก่อนบันทึก — ห้ามให้เนื้อหาที่ </div> ไม่สมดุลหลุดขึ้นเว็บจริง
+     *
+     * เนื้อหาพิมพ์เป็น HTML ดิบ ก๊อปวาง/ลบไม่หมดทีเดียวก็เหลือตัวปิดเกิน แล้วกล่องแม่
+     * ถูกปิดก่อนเวลา (หน้าข้อบังคับเคยแท็บหลุดออกนอกกล่องมาแล้ว) ในช่องพิมพ์ดูปกติทุกอย่าง
+     * จึงไม่พึ่งให้คนสังเกตเอง — ซ่อมให้ตรงนี้แล้วบอกว่าซ่อมอะไรไป
+     */
+    const beforeRepair = body;
+    const repairNotes = structureProblems(body);
+    if (repairNotes.length > 0) {
+      body = repairStructure(body);
+      if (body !== beforeRepair) {
+        setContent(body);
+        note += ` · ซ่อมโครงสร้างให้ (${repairNotes.join(" · ")})`;
+      }
+    }
+
     const response = await fetch(`/api/admin/pages/${page.id}/`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -259,7 +276,7 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
            * ใช้คอมโพเนนต์ตัวเดียวกับหน้าเว็บจริง — เดิมพรีวิววาด HTML ดิบ ๆ
            * แท็ปเมนูจึงไม่ขึ้นเป็นแท็บให้กด เห็นเป็นก้อนเรียงกันเฉย ๆ ไม่ตรงกับของจริง
            */
-          <PageContent html={localAssetsInHtml(content)} className="min-h-[60vh] p-4" />
+          <PageContent html={localAssetsInHtml(repairStructure(content))} className="min-h-[60vh] p-4" />
         )}
       </div>
 

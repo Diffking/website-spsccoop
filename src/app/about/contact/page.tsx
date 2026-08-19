@@ -11,6 +11,7 @@ import { getBrand } from "@/lib/nav";
 import { describeClosedDays, describeOfficeHours } from "@/lib/officeHours";
 import { pageMetadata } from "@/lib/seo";
 import { localAssetsInHtml } from "@/lib/assetFallback";
+import { repairStructure } from "@/lib/htmlStructure";
 import { db } from "@/lib/db";
 
 /**
@@ -84,7 +85,7 @@ export default async function ContactPage() {
           {/* เนื้อหาที่พิมพ์เพิ่มเองในหลังบ้าน — ต่อท้ายแผนที่และช่องทางติดต่อ */}
           {extra && (
             <PageContent
-              html={localAssetsInHtml(extra)}
+              html={repairStructure(localAssetsInHtml(extra))}
               className="mt-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 md:p-8"
             />
           )}
