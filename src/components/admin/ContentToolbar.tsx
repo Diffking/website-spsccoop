@@ -276,7 +276,7 @@ const MENU_WIDTH = 288;
  * สีป้ายข้อความ — ใช้ชุดสีเดียวกับการ์ดลิงก์ จะได้ไม่มีสีแปลกปลอมโผล่มาในหน้าเดียวกัน
  * ชื่อ class ต้องอยู่ใน ALLOWED_CLASSES ของ src/lib/pageHtml.ts ด้วย
  */
-/** ขนาดไอคอน PDF ที่เลือกได้ — ต้องตรงกับ class size-* ใน globals.css */
+/** ทางลัดขนาดที่ใช้บ่อย — พิมพ์ตัวเลขอื่นเองได้ ไม่ได้จำกัดแค่นี้ */
 const ICON_SIZES = [40, 50, 64, 80];
 
 /** สีไอคอน PDF — ค่าว่างคือสีแดงตามค่าตั้งต้น */
@@ -666,9 +666,10 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
        * ชื่อไฟล์ยังใส่ไว้ใน title/aria-label เพื่อให้เอาเมาส์ชี้แล้วเห็น และโปรแกรมอ่านหน้าจอ
        * อ่านออกว่ากำลังจะโหลดไฟล์อะไร (ไอคอนเปล่า ๆ คนตาบอดจะไม่รู้เลยว่าลิงก์นี้คืออะไร)
        */
-      const style = `pdf-icon size-${iconSize}${iconColor ? ` ${iconColor}` : ""}`;
+      // ขนาดใส่เป็น --pdf-size ติดไปกับแท็ก จะได้ตั้งเป็นตัวเลขอะไรก็ได้ ไม่ต้องมี class ตายตัว
+      const css = `pdf-icon${iconColor ? ` ${iconColor}` : ""}`;
       insert(
-        `<a class="${style}" href="${result.data.url}" download ` +
+        `<a class="${css}" style="--pdf-size:${iconSize}px" href="${result.data.url}" download ` +
           `title="${name}" aria-label="ดาวน์โหลด ${name}"></a>`,
       );
     } else {
@@ -1215,8 +1216,20 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
                   </p>
 
                   {/* ขนาดกับสีเลือกก่อนแนบ จะได้ไม่ต้องไปแก้ class ในโค้ดทีหลัง */}
+                  {/* พิมพ์ขนาดเองได้ทุกตัวเลข ปุ่มด้านหลังเป็นแค่ทางลัดของขนาดที่ใช้บ่อย */}
                   <div className="mt-2 flex items-center gap-1.5 px-1">
-                    <span className="text-[11px] text-gray-500">ขนาด</span>
+                    <span className="shrink-0 text-[11px] text-gray-500">ขนาด</span>
+                    <input
+                      type="number"
+                      min={16}
+                      max={200}
+                      value={iconSize}
+                      onChange={(e) => setIconSize(Number(e.target.value))}
+                      onBlur={() => setIconSize(Math.min(200, Math.max(16, iconSize || 50)))}
+                      className="w-16 rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none focus:border-brand-500"
+                    />
+                    <span className="shrink-0 text-[11px] text-gray-400">px</span>
+
                     {ICON_SIZES.map((size) => (
                       <button
                         key={size}
