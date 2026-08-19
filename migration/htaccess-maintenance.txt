@@ -1,0 +1,12 @@
+# ---- ช่วงปรับปรุงเว็บไซต์ ----
+# ทุกที่อยู่บนโดเมนนี้ให้แสดงหน้าแจ้งปรับปรุง ยกเว้นตัวหน้านั้นเองกับ robots.txt
+# ของเดิมสำรองไว้ที่ .htaccess.before-maintenance — เอากลับได้ด้วยการเปลี่ยนชื่อกลับ
+
+DirectoryIndex index.html index.php
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^index\.html$ - [L]
+  RewriteRule ^robots\.txt$ - [L]
+  RewriteRule ^ /index.html [L]
+</IfModule>
