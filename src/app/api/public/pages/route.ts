@@ -1,7 +1,7 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { NextResponse } from "next/server";
-import { publicPaths } from "@/lib/publicPaths";
+import { WARM_ONLY_PATHS, publicPaths } from "@/lib/publicPaths";
 
 /**
  * รายชื่อที่อยู่หน้าสาธารณะทั้งหมด — ให้ตัวมิเรอร์ฝั่งโฮสต์เอาไปไล่ดึงมาเก็บล่วงหน้า
@@ -51,7 +51,7 @@ async function runtimeFiles(): Promise<string[]> {
 }
 
 export async function GET() {
-  const paths = await publicPaths();
+  const paths = [...new Set([...(await publicPaths()), ...WARM_ONLY_PATHS])];
 
   const assets = await runtimeFiles();
 

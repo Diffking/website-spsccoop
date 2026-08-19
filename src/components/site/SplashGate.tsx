@@ -9,6 +9,9 @@ import { getActiveOccasion, type SplashContent } from "@/content/splash";
  * และเฉพาะเมื่อวันนี้ตรงกับวันสำคัญที่เปิดไว้ในหลังบ้าน (/admin)
  *
  * เช็ควันฝั่ง client → พอเลยวันสำคัญไปแล้วก็หยุดเด้งเอง ไม่ต้อง deploy ซ้ำ
+ *
+ * ที่อยู่ต้องมี / ปิดท้ายเสมอ เว็บนี้ตั้งไว้แบบนั้น — ไม่ใส่จะโดนพาไปที่อยู่ใหม่อีกจังหวะหนึ่ง
+ * ซึ่งเวลาอ่านผ่านสำเนาบนโฮสต์แล้วสะดุด กดเข้าเว็บครั้งแรกจะไม่เด้งไปหน้าวันสำคัญ
  * ครอว์เลอร์ไม่รัน JS → หน้า Home ยังถูก index ตามปกติ (SEO ไม่กระทบ)
  */
 export default function SplashGate({ content }: { content: SplashContent }) {
@@ -17,7 +20,7 @@ export default function SplashGate({ content }: { content: SplashContent }) {
     if (!getActiveOccasion(content)) return;
     try {
       if (!sessionStorage.getItem("spsc_entered")) {
-        router.replace("/splash");
+        router.replace("/splash/");
       }
     } catch {}
   }, [router, content]);

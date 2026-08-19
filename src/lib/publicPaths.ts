@@ -19,6 +19,12 @@ function withSlash(path: string): string {
   return clean === "/" ? "/" : `${clean}/`;
 }
 
+/**
+ * หน้าที่ต้องเก็บสำเนาไว้ แต่ไม่ต้องบอกกูเกิล
+ * — /splash/ คือหน้าวันสำคัญที่เด้งให้ดูก่อนเข้าเว็บ ไม่ใช่หน้าเนื้อหาที่ควรค้นเจอ
+ */
+export const WARM_ONLY_PATHS = ["/splash/"];
+
 export async function publicPaths(): Promise<string[]> {
   const pages = await db.page
     .findMany({ where: { published: true }, select: { slug: true }, orderBy: { slug: "asc" } })
