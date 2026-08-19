@@ -23,7 +23,7 @@ const ALLOWED = new Set([
 const ALLOWED_CLASSES = new Set([
   "left", "right", "small", "wide", "image-row",
   // แท็บเมนูและการ์ดเอกสาร PDF — PageContent เอาไปทำเป็นแท็บกดได้จริงตอนแสดงผล
-  "tabs", "tab", "ebook",
+  "tabs", "tab", "ebook", "pdf-link",
   // การ์ดลิงก์แบบตาราง (ดู .cards ใน globals.css)
   "cards", "card", "card-badge", "card-text", "card-title", "card-sub",
   // สีของการ์ด
@@ -35,7 +35,7 @@ const ALLOWED_CLASSES = new Set([
 
 /** แอตทริบิวต์ที่ยอมให้ติดมากับแต่ละแท็ก — นอกจากนี้ตัดทิ้งหมด รวมถึง style และ on* ทุกตัว */
 const ALLOWED_ATTRS: Record<string, string[]> = {
-  a: ["href", "target", "rel", "class"],
+  a: ["href", "target", "rel", "class", "download"],
   span: ["class"],
   img: ["src", "alt", "width", "height"],
   th: ["colspan", "rowspan"],
