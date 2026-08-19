@@ -330,6 +330,11 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
   const [saveTo, setSaveTo] = useState(folder);
   const [folderList, setFolderList] = useState<{ value: string; label: string }[]>([]);
   const [newFolder, setNewFolder] = useState(false);
+  /**
+   * แนบ PDF แบบไหน — "card" คือการ์ดอ่าน E-Book (แบบเดิม)
+   * "link" คือลิงก์ดาวน์โหลดล้วน ๆ ไม่มีข้อความอธิบายใด ๆ กดแล้วได้ไฟล์เลย
+   */
+  const [pdfMode, setPdfMode] = useState<"card" | "link">("card");
   /** มุมบนซ้ายของแผง วัดจากจอ (position: fixed) — ตั้งตอนกดปุ่ม */
   const [menuAt, setMenuAt] = useState({ top: 0, left: 0 });
   /** ทำเนียบที่จะสร้างใหม่ ให้แถวละกี่คน */
@@ -621,13 +626,21 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
     // โชว์ชื่อไฟล์เต็มรวมนามสกุล — คนอ่านจะได้รู้ทันทีว่าเป็นไฟล์อะไร ขนาดไหนควรคาดหวัง
     const name = file.name;
     const read = `/read/?src=${encodeURIComponent(result.data.url)}&title=${encodeURIComponent(name)}`;
-    insert(
-      `<div class="ebook">\n  <span class="ebook-name">${name}</span>\n` +
-        `  <a href="${read}">เปิดอ่านแบบ E-Book</a>\n` +
-        `  <a href="${result.data.url}">ดาวน์โหลด PDF</a>\n</div>`,
-    );
+
+    if (pdfMode === "link") {
+      // ลิงก์ล้วน ๆ ไม่มีคำอธิบาย ไม่มีปุ่มอ่านในเว็บ — กดแล้วโหลดไฟล์ทันที
+      insert(`<a class="pdf-link" href="${result.data.url}" download>${name}</a>`);
+    } else {
+      insert(
+        `<div class="ebook">\n  <span class="ebook-name">${name}</span>\n` +
+          `  <a href="${read}">เปิดอ่านแบบ E-Book</a>\n` +
+          `  <a href="${result.data.url}">ดาวน์โหลด PDF</a>\n</div>`,
+      );
+    }
+
     const where = tabs[Number(target)] ? ` ในแท็บ “${tabs[Number(target)].title}”` : "";
-    setHint(`แนบไฟล์ PDF แล้ว${where} — ต้องกดบันทึกด้านล่างด้วย ถึงจะขึ้นบนหน้าเว็บจริง`);
+    const what = pdfMode === "link" ? "ลิงก์ดาวน์โหลด" : "การ์ดอ่าน E-Book";
+    setHint(`แนบไฟล์ PDF แบบ${what}แล้ว${where} — ต้องกดบันทึกด้านล่างด้วย ถึงจะขึ้นบนหน้าเว็บจริง`);
   }
 
   /**
@@ -1063,16 +1076,38 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
                 setNaming={setNewFolder}
               />
 
-              <button
-                type="button"
-                onClick={() => {
-                  setOpenMenu(null);
-                  pdfInput.current?.click();
-                }}
-                className="mt-2 w-full rounded-lg bg-brand-600 px-2 py-2 text-xs font-semibold text-white transition hover:bg-brand-700"
-              >
-                เลือกไฟล์ PDF
-              </button>
+              {/* สองแบบ: การ์ดอ่านในเว็บ กับลิงก์โหลดไฟล์ล้วน ๆ — เลือกแบบไหนก็เปิดหน้าต่างเลือกไฟล์เลย */}
+              <div className="mt-2 space-y-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPdfMode("card");
+                    setOpenMenu(null);
+                    pdfInput.current?.click();
+                  }}
+                  className="w-full rounded-lg bg-brand-600 px-2.5 py-2 text-left text-xs font-semibold text-white transition hover:bg-brand-700"
+                >
+                  การ์ดอ่านแบบ E-Book
+                  <span className="mt-0.5 block text-[11px] font-normal text-white/80">
+                    ชื่อไฟล์ + ปุ่มเปิดอ่านในเว็บ + ปุ่มดาวน์โหลด
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPdfMode("link");
+                    setOpenMenu(null);
+                    pdfInput.current?.click();
+                  }}
+                  className="w-full rounded-lg bg-gray-100 px-2.5 py-2 text-left text-xs font-semibold text-gray-700 transition hover:bg-gray-200"
+                >
+                  ลิงก์ดาวน์โหลดอย่างเดียว
+                  <span className="mt-0.5 block text-[11px] font-normal text-gray-500">
+                    ชื่อไฟล์อย่างเดียว กดแล้วโหลดไฟล์ทันที ไม่มีข้อความอื่น
+                  </span>
+                </button>
+              </div>
             </div>
           )}
         </div>
