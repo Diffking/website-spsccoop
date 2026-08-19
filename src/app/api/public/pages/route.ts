@@ -1,8 +1,7 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { DESIGNED_PAGES } from "@/lib/designedPages";
+import { publicPaths } from "@/lib/publicPaths";
 
 /**
  * รายชื่อที่อยู่หน้าสาธารณะทั้งหมด — ให้ตัวมิเรอร์ฝั่งโฮสต์เอาไปไล่ดึงมาเก็บล่วงหน้า
@@ -52,21 +51,13 @@ async function runtimeFiles(): Promise<string[]> {
 }
 
 export async function GET() {
-  const pages = await db.page
-    .findMany({ where: { published: true }, select: { slug: true }, orderBy: { slug: "asc" } })
-    .catch(() => []);
-
-  const paths = [
-    "/",
-    ...DESIGNED_PAGES.map((p) => p.path),
-    ...pages.map((p) => `/${p.slug}/`),
-  ];
+  const paths = await publicPaths();
 
   const assets = await runtimeFiles();
 
   return NextResponse.json({
-    paths: [...new Set(paths)],
-    count: new Set(paths).size,
+    paths,
+    count: paths.length,
     assets,
     generatedAt: new Date().toISOString(),
   });
