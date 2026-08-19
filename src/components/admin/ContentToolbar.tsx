@@ -364,7 +364,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
    * แนบ PDF แบบไหน — "card" คือการ์ดอ่าน E-Book (แบบเดิม)
    * "link" คือลิงก์ดาวน์โหลดล้วน ๆ ไม่มีข้อความอธิบายใด ๆ กดแล้วได้ไฟล์เลย
    */
-  const [pdfMode, setPdfMode] = useState<"card" | "link">("card");
+  const [pdfMode, setPdfMode] = useState<"card" | "link" | "read">("card");
   /** ขนาดไอคอน PDF (พิกเซล) และสี — ใช้ตอนแนบแบบไอคอนอย่างเดียว */
   const [iconSize, setIconSize] = useState(50);
   const [iconColor, setIconColor] = useState("");
@@ -660,7 +660,17 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
     const name = file.name;
     const read = `/read/?src=${encodeURIComponent(result.data.url)}&title=${encodeURIComponent(name)}`;
 
-    if (pdfMode === "link") {
+    if (pdfMode === "read") {
+      /*
+       * ไอคอนที่กดแล้วเปิดอ่านในเว็บ — สมาชิกอ่านได้เลยโดยไม่ต้องโหลดลงเครื่อง
+       * ในหน้าอ่านมีปุ่มดาวน์โหลดอยู่แล้ว จึงได้ทั้งอ่านและโหลดจากไอคอนเดียว
+       */
+      const style = `pdf-icon read${iconColor ? ` ${iconColor}` : ""}`;
+      insert(
+        `<a class="${style}" style="--pdf-size:${iconSize}px" href="${read}" ` +
+          `title="เปิดอ่าน ${name}" aria-label="เปิดอ่านแบบ E-Book ${name}"></a>`,
+      );
+    } else if (pdfMode === "link") {
       /*
        * ไอคอนอย่างเดียว ไม่มีข้อความบนหน้าเว็บเลย — กดที่ไอคอนแล้วโหลดไฟล์ทันที
        * ชื่อไฟล์ยังใส่ไว้ใน title/aria-label เพื่อให้เอาเมาส์ชี้แล้วเห็น และโปรแกรมอ่านหน้าจอ
@@ -681,7 +691,8 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
     }
 
     const where = tabs[Number(target)] ? ` ในแท็บ “${tabs[Number(target)].title}”` : "";
-    const what = pdfMode === "link" ? "ไอคอนดาวน์โหลด" : "การ์ดอ่าน E-Book";
+    const what =
+      pdfMode === "read" ? "ไอคอนเปิดอ่าน" : pdfMode === "link" ? "ไอคอนดาวน์โหลด" : "การ์ดอ่าน E-Book";
     setHint(`แนบไฟล์ PDF แบบ${what}แล้ว${where} — ต้องกดบันทึกด้านล่างด้วย ถึงจะขึ้นบนหน้าเว็บจริง`);
   }
 
@@ -1265,17 +1276,37 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
                     ))}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPdfMode("link");
-                      setOpenMenu(null);
-                      pdfInput.current?.click();
-                    }}
-                    className="mt-2 w-full rounded-lg bg-gray-700 px-2.5 py-2 text-xs font-semibold text-white transition hover:bg-gray-800"
-                  >
-                    เลือกไฟล์ PDF (ไอคอน {iconSize}px)
-                  </button>
+                  <div className="mt-2 space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPdfMode("read");
+                        setOpenMenu(null);
+                        pdfInput.current?.click();
+                      }}
+                      className="w-full rounded-lg bg-brand-600 px-2.5 py-2 text-left text-xs font-semibold text-white transition hover:bg-brand-700"
+                    >
+                      ไอคอนเปิดอ่านในเว็บ ({iconSize}px)
+                      <span className="mt-0.5 block text-[11px] font-normal text-white/80">
+                        กดแล้วอ่านแบบ E-Book ได้เลย ในหน้าอ่านมีปุ่มดาวน์โหลดให้ด้วย
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPdfMode("link");
+                        setOpenMenu(null);
+                        pdfInput.current?.click();
+                      }}
+                      className="w-full rounded-lg bg-gray-700 px-2.5 py-2 text-left text-xs font-semibold text-white transition hover:bg-gray-800"
+                    >
+                      ไอคอนดาวน์โหลดทันที ({iconSize}px)
+                      <span className="mt-0.5 block text-[11px] font-normal text-white/80">
+                        กดแล้วไฟล์ลงเครื่องเลย ไม่เปิดหน้าอ่าน
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
