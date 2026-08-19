@@ -19,7 +19,7 @@ import {
   Share2,
   Smartphone,
 } from "lucide-react";
-import { Facebook, Line } from "@/components/ui/BrandIcons";
+import { Facebook, Line, YouTube } from "@/components/ui/BrandIcons";
 import type { BankAccount } from "@/lib/settings";
 
 /**
@@ -39,6 +39,7 @@ type Props = {
   fax: string;
   email: string;
   facebook?: string;
+  youtube?: string;
   line?: string;
   lineId?: string;
   /** "lat,lng" — ไม่มีก็ใช้ที่อยู่เป็นคำค้นแทน */
@@ -63,6 +64,7 @@ export default function ContactView({
   fax,
   email,
   facebook,
+  youtube,
   line,
   lineId,
   mapPoint,
@@ -234,6 +236,19 @@ export default function ContactView({
             href: facebook,
             action: "เปิดเพจ",
             tone: "bg-sky-50 text-sky-700 ring-sky-100",
+          },
+        ]
+      : []),
+    ...(youtube
+      ? [
+          {
+            id: "youtube",
+            icon: YouTube,
+            title: "ยูทูบ",
+            value: "ช่องวิดีโอของสหกรณ์",
+            href: youtube,
+            action: "เปิดช่อง",
+            tone: "bg-red-50 text-red-700 ring-red-100",
           },
         ]
       : []),

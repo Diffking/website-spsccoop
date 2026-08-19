@@ -34,6 +34,8 @@ export type SiteInfo = {
   memberCount: string;
   /** ลิงก์เพจเฟซบุ๊ก — เว้นว่าง = ไม่แสดงปุ่มที่ท้ายเว็บ */
   facebook?: string;
+  /** ลิงก์ช่องยูทูบ — เว้นว่าง = ไม่แสดงปุ่มที่ท้ายเว็บ */
+  youtube?: string;
   /** ลิงก์เพิ่มเพื่อนไลน์ (https://lin.ee/... หรือ https://line.me/ti/p/...) */
   line?: string;
   /** ไอดีไลน์ที่โชว์ให้อ่าน เช่น @spsc-coop — คนละอย่างกับลิงก์ */
@@ -102,6 +104,7 @@ export const DEFAULT_SITE_INFO: SiteInfo = {
   officeHours: "จันทร์ – ศุกร์ 08:30 – 16:30 น.",
   memberCount: "220,031",
   facebook: "",
+  youtube: "",
   line: "",
   lineId: "@spsc-coop",
   mapPoint: "",

@@ -36,6 +36,40 @@ $force = in_array('--force', $argv ?? [], true) || !empty($_GET['force']);
  * ต้องการเวลามากกว่านั้น · และห้ามใช้กลไก "จำว่าหลังบ้านดับ" เพราะพลาดไฟล์เดียว
  * ที่เหลือทั้งชุดจะถูกข้ามหมดทันที (เจอมาแล้ว: สำเร็จ 32 ไม่สำเร็จ 437)
  */
+/** แฟ้มบันทึกว่าอุ่นครั้งล่าสุดเมื่อไหร่ ได้ผลอย่างไร — หลังบ้านเอาไปโชว์ */
+$stampFile = $config['cache_dir'] . '/.last-warm.json';
+
+/*
+ * โหมดรายงานสถานะ: ?status=1 — ตอบว่าอุ่นล่าสุดเมื่อไหร่ และตอนนี้เก็บอะไรไว้บ้าง
+ * หลังบ้านเรียกมาโชว์ในหน้า "สำเนาหน้าเว็บบนโฮสต์" จะได้ไม่ต้องเดาว่าระบบยังทำงานอยู่ไหม
+ */
+if (!empty($_GET['status'])) {
+    $pages = $files = 0;
+    $bytes = 0;
+    foreach (glob($config['cache_dir'] . '/*.json') ?: [] as $meta) {
+        $info = json_decode((string) file_get_contents($meta), true);
+        $body = substr($meta, 0, -5) . '.bin';
+        $files++;
+        $bytes += (int) @filesize($body);
+        if (str_contains((string) ($info['type'] ?? ''), 'html')) {
+            $pages++;
+        }
+    }
+    $last = is_file($stampFile)
+        ? json_decode((string) file_get_contents($stampFile), true)
+        : null;
+
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'ok' => true,
+        'last' => is_array($last) ? $last : null,
+        'cache' => ['pages' => $pages, 'items' => $files, 'bytes' => $bytes],
+        'now' => time(),
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$startedAt = microtime(true);
 $config['timeout'] = (int) ($config['warm_timeout'] ?? 120);
 $config['down_ttl'] = 0;
 
@@ -74,6 +108,14 @@ echo "อุ่นหน้าเว็บ: สำเร็จ $ok · ข้า�
 ";
 
 if (empty($config['warm_assets'])) {
+    file_put_contents($stampFile, json_encode([
+        'time' => time(),
+        'seconds' => round(microtime(true) - $startedAt, 1),
+        'pages' => ['ok' => $ok, 'skip' => $skip, 'fail' => $fail, 'total' => count($paths)],
+        'assets' => null,
+        'bytes' => 0,
+        'by' => PHP_SAPI === 'cli' ? 'cli' : 'web',
+    ], JSON_UNESCAPED_UNICODE));
     exit;
 }
 
@@ -155,3 +197,12 @@ printf(
 ",
     $aOk, $aSkip, $aFail, count($assets), $bytes / 1048576
 );
+
+file_put_contents($stampFile, json_encode([
+    'time' => time(),
+    'seconds' => round(microtime(true) - $startedAt, 1),
+    'pages' => ['ok' => $ok, 'skip' => $skip, 'fail' => $fail, 'total' => count($paths)],
+    'assets' => ['ok' => $aOk, 'skip' => $aSkip, 'fail' => $aFail, 'total' => count($assets)],
+    'bytes' => $bytes,
+    'by' => PHP_SAPI === 'cli' ? 'cli' : 'web',
+], JSON_UNESCAPED_UNICODE));

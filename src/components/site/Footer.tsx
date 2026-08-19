@@ -13,6 +13,14 @@ function FacebookIcon({ className }: { className?: string }) {
   );
 }
 
+function YouTubeIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M21.58 7.19a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.82.42A2.5 2.5 0 0 0 2.42 7.2 26.1 26.1 0 0 0 2 12a26.1 26.1 0 0 0 .42 4.81 2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.82-.42a2.5 2.5 0 0 0 1.76-1.77A26.1 26.1 0 0 0 22 12a26.1 26.1 0 0 0-.42-4.81ZM10 15.02V8.98L15.2 12 10 15.02Z" />
+    </svg>
+  );
+}
+
 // ที่อยู่/เบอร์/เวลาทำการ มาจากตาราง Setting ที่แก้ได้ที่ /admin/home
 export default async function Footer() {
   const [info, agencyLinks, brand, hours] = await Promise.all([
@@ -37,16 +45,31 @@ export default async function Footer() {
               <p className="text-xs text-white/70">จำนวนผู้เยี่ยมชมภายในปีบัญชี</p>
             </div>
           </div>
-          {info.facebook && (
-            <a
-              href={info.facebook}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Facebook"
-              className="mt-4 inline-grid h-9 w-9 place-items-center rounded-full bg-white/10 hover:bg-white/20"
-            >
-              <FacebookIcon className="h-4 w-4" />
-            </a>
+          {(info.facebook || info.youtube) && (
+            <div className="mt-4 flex items-center gap-2">
+              {info.facebook && (
+                <a
+                  href={info.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Facebook"
+                  className="inline-grid h-9 w-9 place-items-center rounded-full bg-white/10 hover:bg-white/20"
+                >
+                  <FacebookIcon className="h-4 w-4" />
+                </a>
+              )}
+              {info.youtube && (
+                <a
+                  href={info.youtube}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="YouTube"
+                  className="inline-grid h-9 w-9 place-items-center rounded-full bg-white/10 hover:bg-white/20"
+                >
+                  <YouTubeIcon className="h-5 w-5" />
+                </a>
+              )}
+            </div>
           )}
         </div>
 
@@ -78,7 +101,7 @@ export default async function Footer() {
             <Clock className="mt-0.5 h-4 w-4 shrink-0" /> {describeOfficeHours(hours)}
           </p>
           {closed && (
-            <p className="mt-1.5 pl-6 text-sm text-white/60">{closed} และวันหยุดสหกรณ์ — ปิดทำการ</p>
+            <p className="mt-1.5 pl-6 text-xs text-white/60">{closed} และวันหยุดสหกรณ์ — ปิดทำการ</p>
           )}
         </div>
 

@@ -73,6 +73,7 @@ export default async function ContactPage() {
             fax={info.fax}
             email={info.email}
             facebook={info.facebook}
+            youtube={info.youtube}
             line={info.line}
             lineId={info.lineId}
             mapPoint={info.mapPoint}
