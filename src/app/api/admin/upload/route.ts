@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { requireUser } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
-import { DEFAULT_FOLDER, isFolder, uploadToFtp } from "@/lib/ftp";
+import { isFolder, uploadToFtp } from "@/lib/ftp";
 import { MAX_EDGE, shrink } from "@/lib/image";
 import { compressPdf } from "@/lib/pdf";
 import { sanitizeSvg } from "@/lib/svg";
@@ -40,9 +40,21 @@ export async function POST(request: Request) {
 
   const form = await request.formData().catch(() => null);
   const file = form?.get("file");
-  // โฟลเดอร์ปลายทางฝั่ง FTP — ส่งค่าแปลกมาก็ตกไปที่โฟลเดอร์เริ่มต้น
+  /*
+   * โฟลเดอร์ปลายทางฝั่ง FTP — ต้องระบุมาเสมอและต้องเป็นชื่อที่ระบบรู้จัก
+   *
+   * เดิมส่งค่าแปลกมาก็ปล่อยให้ตกไปที่โฟลเดอร์เริ่มต้น ผลคือไฟล์ไปกองรวมกันใน
+   * banner_slide โดยไม่มีใครรู้ตัว จนตามหาไฟล์ของแต่ละหน้าไม่เจอ — ตอนนี้ปฏิเสธไปเลย
+   * จะได้รู้ตั้งแต่ตอนพัฒนาว่ามีจุดไหนลืมระบุ
+   */
   const folderInput = form?.get("folder");
-  const folder = isFolder(folderInput) ? folderInput : DEFAULT_FOLDER;
+  if (!isFolder(folderInput)) {
+    return NextResponse.json(
+      { error: "ไม่ได้ระบุโฟลเดอร์ปลายทาง หรือชื่อโฟลเดอร์ไม่ถูกต้อง" },
+      { status: 400 },
+    );
+  }
+  const folder = folderInput;
 
   if (!(file instanceof File)) {
     // อ่าน body ไม่ได้มักแปลว่าไฟล์ใหญ่เกินเพดานที่ตั้งไว้ ไม่ใช่ว่าไม่ได้เลือกไฟล์

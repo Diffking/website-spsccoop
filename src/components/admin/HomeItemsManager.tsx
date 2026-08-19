@@ -25,6 +25,7 @@ import {
   type ServiceCategory,
 } from "@/lib/serviceCategories";
 import UploadProgress from "@/components/admin/UploadProgress";
+import { homeItemFolder } from "@/lib/assetFolders";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
 import AssetImage from "@/components/admin/AssetImage";
 
@@ -203,8 +204,9 @@ export default function HomeItemsManager({
 
     const form = new FormData();
     form.append("file", file);
-    // ไม่ได้ระบุมา ก็เก็บที่โฟลเดอร์ของรายการหน้าแรก ไม่ใช่ไปกองรวมกับแบนเนอร์สไลด์
-    form.append("folder", folder || "home_items");
+    // ไม่ได้ระบุมา ก็ใช้โฟลเดอร์ของส่วนนั้นเอง (home_items/officers ฯลฯ)
+    // ทุกจุดที่อัปต้องมีโฟลเดอร์ของตัวเองเสมอ ห้ามตกไปที่ค่าเริ่มต้นแล้วไฟล์กองรวมกัน
+    form.append("folder", folder || homeItemFolder(section));
     const result = await uploadWithProgress<{ url: string }>(
       "/api/admin/upload/",
       form,
