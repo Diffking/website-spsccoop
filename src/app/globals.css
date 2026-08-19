@@ -379,15 +379,18 @@ body {
    สีตั้งต้นแดง เปลี่ยนด้วย class blue / green / amber / purple / gray */
 .prose-page a.pdf-icon {
   display: inline-block; vertical-align: middle;
-  width: 50px; height: 50px; margin: .35rem .5rem .35rem 0;
+  /* ขนาดมาจาก --pdf-size ที่ติดมากับแท็ก (ตั้งเป็นตัวเลขอะไรก็ได้) ไม่มีก็ 50px */
+  width: var(--pdf-size, 50px); height: var(--pdf-size, 50px);
+  margin: .35rem .5rem .35rem 0;
   text-decoration: none;
   background-position: center; background-size: contain; background-repeat: no-repeat;
   transition: transform .15s, filter .15s;
 }
-.prose-page a.pdf-icon.size-40 { width: 40px; height: 40px; }
-.prose-page a.pdf-icon.size-50 { width: 50px; height: 50px; }
-.prose-page a.pdf-icon.size-64 { width: 64px; height: 64px; }
-.prose-page a.pdf-icon.size-80 { width: 80px; height: 80px; }
+/* class ขนาดแบบเดิม — เนื้อหาที่บันทึกไว้ก่อนหน้านี้ยังใช้ได้เหมือนเดิม */
+.prose-page a.pdf-icon.size-40 { --pdf-size: 40px; }
+.prose-page a.pdf-icon.size-50 { --pdf-size: 50px; }
+.prose-page a.pdf-icon.size-64 { --pdf-size: 64px; }
+.prose-page a.pdf-icon.size-80 { --pdf-size: 80px; }
 .prose-page a.pdf-icon:hover { transform: translateY(-2px); filter: brightness(1.06); }
 
 /* แดง (ค่าตั้งต้น) */

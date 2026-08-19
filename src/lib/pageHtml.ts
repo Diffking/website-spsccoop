@@ -37,7 +37,7 @@ const ALLOWED_CLASSES = new Set([
 
 /** แอตทริบิวต์ที่ยอมให้ติดมากับแต่ละแท็ก — นอกจากนี้ตัดทิ้งหมด รวมถึง style และ on* ทุกตัว */
 const ALLOWED_ATTRS: Record<string, string[]> = {
-  a: ["href", "target", "rel", "class", "download", "title", "aria-label"],
+  a: ["href", "target", "rel", "class", "download", "title", "aria-label", "style"],
   span: ["class"],
   img: ["src", "alt", "width", "height"],
   th: ["colspan", "rowspan"],
@@ -67,6 +67,16 @@ function cleanAttrs(tag: string, raw: string): string {
     if (name === "href" || name === "src") {
       value = safeUrl(value);
       if (!value) continue;
+    }
+    /*
+     * style เปิดให้ใช้ได้ทางเดียวคือกำหนดขนาดไอคอน PDF (--pdf-size: 50px)
+     * เพราะต้องให้เจ้าหน้าที่ตั้งขนาดเป็นตัวเลขอะไรก็ได้ ซึ่งทำด้วย class ตายตัวไม่ได้
+     * นอกจากรูปแบบนี้ตัดทิ้งทั้งหมด — style เปิดกว้างคือช่องให้ยัดโค้ดแต่งหน้าเว็บได้ทั้งหน้า
+     */
+    if (name === "style") {
+      const size = /^\s*--pdf-size:\s*(\d{1,3})px\s*;?\s*$/.exec(value);
+      if (!size) continue;
+      value = `--pdf-size:${size[1]}px`;
     }
     if (name === "class") {
       value = value.split(/\s+/).filter((c) => ALLOWED_CLASSES.has(c)).join(" ");
@@ -124,4 +134,20 @@ export function missingStructures(before: string, after: string): string[] {
   return KEEP_PATTERNS.filter((k) => count(after, k.pattern) < count(before, k.pattern)).map(
     (k) => k.name,
   );
+}
+
+/**
+ * ตัด style ที่ไม่ใช่ "ขนาดไอคอน PDF" ออกจากเนื้อหา — ใช้กับทุกทางที่บันทึกเนื้อหา
+ *
+ * ตัวกรองเต็ม (cleanPageHtml) ทำงานเฉพาะตอน AI จัดรูปแบบ ส่วนการบันทึกปกติไม่ได้กรอง
+ * เพราะเนื้อหาเป็น HTML ที่เจ้าหน้าที่ตั้งใจพิมพ์เอง แต่ style เป็นคนละเรื่อง —
+ * เปิดทิ้งไว้เท่ากับยอมให้แปะ CSS อะไรก็ได้ลงหน้าเว็บจริง (ลอยทับทั้งจอ ซ่อนของ ฯลฯ)
+ * จึงยอมให้เหลือได้แค่รูปแบบเดียวคือ --pdf-size ที่ระบบเป็นคนใส่ให้เอง
+ */
+export function limitInlineStyles(html: string): string {
+  return html.replace(/\sstyle\s*=\s*("([^"]*)"|'([^']*)')/gi, (whole, _q, dq, sq) => {
+    const value = (dq ?? sq ?? "") as string;
+    const size = /^\s*--pdf-size:\s*(\d{1,3})px\s*;?\s*$/.exec(value);
+    return size ? ` style="--pdf-size:${size[1]}px"` : "";
+  });
 }
