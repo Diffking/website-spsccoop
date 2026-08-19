@@ -19,9 +19,51 @@ export function localAsset(url: string | null | undefined): string {
   return name ? `/uploads/${name}` : url;
 }
 
-/** แปลงทุกที่อยู่ที่โผล่ในก้อน HTML (src/href ของเนื้อหาหน้าเว็บ) */
+/** ใส่ backslash หน้าอักขระพิเศษ — สร้าง regex จากที่อยู่เว็บที่มีจุดกับสแลชอยู่เต็ม */
+const escapeRegExp = (value: string) =>
+  value
+    .split("")
+    .map((c) => (".*+?^${}()|[]\\".includes(c) ? "\\" + c : c))
+    .join("");
+
+/**
+ * แปลงทุกที่อยู่ที่โผล่ในก้อน HTML (src/href ของเนื้อหาหน้าเว็บ)
+ *
+ * ต้องจับแบบที่ถูกเข้ารหัสไว้ด้วย — ลิงก์ "อ่านแบบ E-Book" เก็บที่อยู่ไฟล์ไว้ใน
+ * ?src=https%3A%2F%2F... ซึ่งไม่ตรงกับรูปแบบธรรมดา ปล่อยไว้จะเหลือที่อยู่ของโดเมนที่ล่มแล้ว
+ * ค้างในลิงก์ กดแล้วเปิดไม่ได้ทั้งที่ไฟล์ยังอยู่ครบในเครื่อง
+ */
 export function localAssetsInHtml(html: string): string {
   if (!ASSETS_BASE) return html;
-  const pattern = new RegExp(`${ASSETS_BASE.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}/[^"'\\s)]+`, "g");
-  return html.replace(pattern, (match) => localAsset(match));
+
+  const plain = new RegExp(`${escapeRegExp(ASSETS_BASE)}/[^"'\\s)]+`, "g");
+  const encoded = new RegExp(
+    `${escapeRegExp(encodeURIComponent(ASSETS_BASE))}(?:%2F|/)[^"'\\s)&]+`,
+    "gi",
+  );
+
+  return html
+    .replace(plain, (match) => localAsset(match))
+    .replace(encoded, (match) => encodeURIComponent(localAsset(decodeURIComponent(match))));
+}
+
+/**
+ * ลำดับที่อยู่ที่ควรลองดึงไฟล์ — สำเนาในเครื่องก่อน ค่อยตกไปที่โดเมน assets
+ *
+ * ใช้กับตัวส่งต่อไฟล์ PDF (/api/pdf, /api/ebook) ที่ต้อง fetch ไฟล์จริงมาส่งให้เบราว์เซอร์
+ * โดเมน assets ล่มเมื่อไหร่ ตัวส่งต่อจะดึงไม่ได้แล้วขึ้น "เปิดเอกสารไม่สำเร็จ" ทั้งที่ไฟล์
+ * ยังอยู่ครบในเครื่อง (เกิดขึ้นมาแล้วตอน beta.spsccoop.com หายจาก DNS)
+ *
+ * เอาสำเนาในเครื่องขึ้นก่อนเสมอ เพราะเร็วกว่าและไม่ต้องออกไปนอกเครื่องอยู่แล้ว
+ */
+export function assetCandidates(url: string, requestUrl: string): string[] {
+  const list: string[] = [];
+  const local = localAsset(url);
+
+  const absolute = (value: string) =>
+    value.startsWith("/") ? new URL(value, requestUrl).toString() : value;
+
+  if (local && local !== url) list.push(absolute(local));
+  if (url) list.push(absolute(url));
+  return list;
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAllowedAssetUrl } from "@/lib/assetUrl";
+import { assetCandidates } from "@/lib/assetFallback";
 
 /**
  * ส่งไฟล์ PDF ที่แนบในหน้าเนื้อหา ผ่านโดเมนเดียวกับเว็บ
@@ -19,15 +20,26 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "ที่อยู่ไฟล์ไม่ถูกต้อง" }, { status: 400 });
   }
 
-  const target = src.startsWith("/") ? new URL(src, request.url).toString() : src;
-
   const range = request.headers.get("range");
-  const upstream = await fetch(target, {
-    headers: range ? { Range: range } : undefined,
-    cache: "no-store",
-  }).catch(() => null);
 
-  if (!upstream || !upstream.ok || !upstream.body) {
+  /*
+   * ลองสำเนาในเครื่องก่อน แล้วค่อยตกไปที่โดเมน assets
+   * โดเมนนั้นล่มเมื่อไหร่ (เกิดมาแล้วกับ beta.spsccoop.com) ถ้าไม่ลองในเครื่องก่อน
+   * จะขึ้น "เปิดเอกสารไม่สำเร็จ" ทั้งที่ไฟล์ยังอยู่ครบในเครื่อง
+   */
+  let upstream: Response | null = null;
+  for (const target of assetCandidates(src, request.url)) {
+    const tried = await fetch(target, {
+      headers: range ? { Range: range } : undefined,
+      cache: "no-store",
+    }).catch(() => null);
+    if (tried?.ok && tried.body) {
+      upstream = tried;
+      break;
+    }
+  }
+
+  if (!upstream || !upstream.body) {
     return NextResponse.json({ error: "เปิดไฟล์เอกสารไม่ได้" }, { status: 502 });
   }
 
