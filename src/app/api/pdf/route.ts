@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAllowedAssetUrl } from "@/lib/assetUrl";
-import { assetCandidates } from "@/lib/assetFallback";
+import { assetCandidates, localAsset } from "@/lib/assetFallback";
+import { localFileResponse } from "@/lib/localFile";
 
 /**
  * ส่งไฟล์ PDF ที่แนบในหน้าเนื้อหา ผ่านโดเมนเดียวกับเว็บ
@@ -27,6 +28,13 @@ export async function GET(request: Request) {
    * โดเมนนั้นล่มเมื่อไหร่ (เกิดมาแล้วกับ beta.spsccoop.com) ถ้าไม่ลองในเครื่องก่อน
    * จะขึ้น "เปิดเอกสารไม่สำเร็จ" ทั้งที่ไฟล์ยังอยู่ครบในเครื่อง
    */
+  /*
+   * สำเนาในเครื่องอ่านจากดิสก์ตรง ๆ ก่อนเสมอ — เร็วกว่าและไม่ต้องวิ่งออกอินเทอร์เน็ต
+   * (เรียกเว็บตัวเองผ่านโดเมนจริงจากในคอนเทนเนอร์ไม่ได้ เคยทำให้ทุกไฟล์ 502)
+   */
+  const fromDisk = await localFileResponse(localAsset(src) || src, range);
+  if (fromDisk) return fromDisk;
+
   let upstream: Response | null = null;
   for (const target of assetCandidates(src, request.url)) {
     const tried = await fetch(target, {
