@@ -4,6 +4,7 @@ import { requireUser, toSlug } from "@/lib/apiAuth";
 import { cleanPageFolder, pageFolder } from "@/lib/ftp";
 import { repairStructure } from "@/lib/htmlStructure";
 import { limitInlineStyles } from "@/lib/pageHtml";
+import { purgeEverySite } from "@/lib/mirrorPurge";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -80,6 +81,8 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   const page = await db.page.update({ where: { id }, data });
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ page });
 }
 
@@ -89,5 +92,7 @@ export async function DELETE(_request: Request, { params }: Params) {
 
   const { id } = await params;
   await db.page.deleteMany({ where: { id } });
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ ok: true });
 }

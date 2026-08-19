@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser, toSlug } from "@/lib/apiAuth";
 import { pageFolder } from "@/lib/ftp";
+import { purgeEverySite } from "@/lib/mirrorPurge";
 
 /** รายการหน้าเนื้อหาทั้งหมด */
 export async function GET() {
@@ -73,5 +74,7 @@ export async function POST(request: Request) {
   const page = await db.page.create({
     data: { title, slug, assetFolder: pageFolder(slug), category: await inheritCategory(slug) },
   });
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ page }, { status: 201 });
 }

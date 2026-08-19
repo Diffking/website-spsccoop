@@ -18,6 +18,7 @@ import {
   type SiteInfo,
   type TickerSettings,
 } from "@/lib/settings";
+import { purgeEverySite } from "@/lib/mirrorPurge";
 
 /** บันทึกข้อมูลสหกรณ์ + อัตราดอกเบี้ย + ตั้งค่าข่าววิ่ง ของหน้าแรก */
 export async function PUT(request: Request) {
@@ -98,6 +99,8 @@ export async function PUT(request: Request) {
   if (body.committeePhotoScale !== undefined) {
     const scale = Math.trunc(Number(body.committeePhotoScale));
     if (!(COMMITTEE_PHOTO_SCALES as readonly number[]).includes(scale)) {
+      // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+      purgeEverySite();
       return NextResponse.json(
         { error: `ขนาดรูปเลือกได้เฉพาะ ${COMMITTEE_PHOTO_SCALES.join(", ")}%` },
         { status: 400 },
@@ -138,5 +141,7 @@ export async function PUT(request: Request) {
     await saveSetting("homeTones", next);
   }
 
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ ok: true });
 }

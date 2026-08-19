@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
+import { purgeEverySite } from "@/lib/mirrorPurge";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -30,6 +31,8 @@ export async function PATCH(request: Request, { params }: Params) {
         db.homeItem.update({ where: { id: neighbour.id }, data: { sortOrder: existing.sortOrder } }),
       ]);
     }
+    // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+    purgeEverySite();
     return NextResponse.json({ ok: true });
   }
 
@@ -55,6 +58,8 @@ export async function PATCH(request: Request, { params }: Params) {
     },
   });
 
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ item });
 }
 
@@ -64,5 +69,7 @@ export async function DELETE(_request: Request, { params }: Params) {
 
   const { id } = await params;
   await db.homeItem.deleteMany({ where: { id } });
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ ok: true });
 }

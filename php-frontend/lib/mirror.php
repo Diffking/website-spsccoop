@@ -241,15 +241,27 @@ final class Mirror
         return $ok;
     }
 
-    /** ลบทั้งแคช */
-    public function purgeAll(): int
+    /**
+     * ลบสำเนาหน้าเว็บทั้งหมด — ใช้ตอนหลังบ้านแก้ของที่กระทบทุกหน้า (เมนู หัวเว็บ ค่าตั้ง)
+     *
+     * ปกติเว้นรูปกับไฟล์แนบไว้ ($pagesOnly) เพราะของพวกนั้นแทบไม่เปลี่ยน แต่รวมกันเป็นสิบ ๆ MB
+     * ลบทิ้งทีก็ต้องโหลดใหม่หมดทั้งที่เนื้อไฟล์เหมือนเดิม — เปลืองทั้งเวลาและเน็ตของโฮสต์
+     */
+    public function purgeAll(bool $pagesOnly = true): int
     {
         $count = 0;
-        foreach (glob($this->config['cache_dir'] . '/*') ?: [] as $file) {
-            if (@unlink($file)) {
+        foreach (glob($this->config['cache_dir'] . '/*.json') ?: [] as $meta) {
+            if ($pagesOnly) {
+                $info = json_decode((string) file_get_contents($meta), true);
+                if (!str_contains((string) ($info['type'] ?? ''), 'html')) {
+                    continue;
+                }
+            }
+            @unlink(substr($meta, 0, -5) . '.bin');
+            if (@unlink($meta)) {
                 $count++;
             }
         }
-        return (int) ($count / 2);
+        return $count;
     }
 }

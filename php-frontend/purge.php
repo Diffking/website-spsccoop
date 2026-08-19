@@ -4,7 +4,8 @@
  * เนื้อหาใหม่จะขึ้นเว็บทันทีโดยไม่ต้องรอหมดอายุ
  *
  *   POST /purge.php   {"token":"...","paths":["/about/history/","/"]}
- *   POST /purge.php   {"token":"...","all":true}
+ *   POST /purge.php   {"token":"...","all":true}         ล้างเฉพาะหน้าเว็บ
+ *   POST /purge.php   {"token":"...","everything":true}  ล้างรูปกับไฟล์แนบด้วย
  */
 
 declare(strict_types=1);
@@ -23,8 +24,12 @@ if (!is_array($body) || !hash_equals((string) $config['purge_token'], (string) (
 
 $mirror = new Mirror($config);
 
-if (!empty($body['all'])) {
-    echo json_encode(['purged' => $mirror->purgeAll()], JSON_UNESCAPED_UNICODE);
+// everything = ล้างรูปกับไฟล์แนบด้วย (ใช้เฉพาะตอนอยากเริ่มใหม่หมดจริง ๆ)
+if (!empty($body['all']) || !empty($body['everything'])) {
+    echo json_encode(
+        ['purged' => $mirror->purgeAll(empty($body['everything']))],
+        JSON_UNESCAPED_UNICODE
+    );
     exit;
 }
 

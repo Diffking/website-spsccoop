@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { cleanNav, type SiteBrand } from "@/lib/nav";
 import { saveSetting } from "@/lib/settings";
+import { purgeEverySite } from "@/lib/mirrorPurge";
 
 /** บันทึกเมนูนำทาง + ชื่อ/โลโก้ของหัวเว็บ */
 export async function PUT(request: Request) {
@@ -34,5 +35,7 @@ export async function PUT(request: Request) {
     } satisfies SiteBrand);
   }
 
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ ok: true });
 }

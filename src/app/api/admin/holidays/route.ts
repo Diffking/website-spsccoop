@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
+import { purgeEverySite } from "@/lib/mirrorPurge";
 
 /** วันที่ล้วนจากช่อง input (YYYY-MM-DD) — ตรึงเป็นเที่ยงคืนเวลาไทย ไม่ให้เลื่อนวันตามโซนเวลาเซิร์ฟเวอร์ */
 export function parseThaiDate(value: string): Date | null {
@@ -34,5 +35,7 @@ export async function POST(request: Request) {
     data: { date, title, note: String(body.note ?? "").trim() || null },
   });
 
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ item }, { status: 201 });
 }

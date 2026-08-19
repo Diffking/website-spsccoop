@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
 import { isEventType } from "@/lib/homeItems";
+import { purgeEverySite } from "@/lib/mirrorPurge";
 
 /** "YYYY-MM-DD" จากช่องเลือกวัน → เที่ยงคืนเวลาไทย · ว่าง = ไม่จำกัด */
 export function parseDay(value?: string): Date | null {
@@ -51,6 +52,8 @@ export async function POST(request: Request) {
     },
   });
 
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ item }, { status: 201 });
 }
 
@@ -84,5 +87,7 @@ export async function PUT(request: Request) {
     order.map((id, index) => db.slide.update({ where: { id }, data: { sortOrder: index } })),
   );
 
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ ok: true });
 }

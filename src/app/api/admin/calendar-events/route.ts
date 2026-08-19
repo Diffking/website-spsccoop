@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
 import { isEventType } from "@/lib/homeItems";
 import { parseThaiDate } from "@/app/api/admin/holidays/route";
+import { purgeEverySite } from "@/lib/mirrorPurge";
 
 /** เพิ่มกิจกรรมบนปฏิทินหน้าแรก */
 export async function POST(request: Request) {
@@ -37,5 +38,7 @@ export async function POST(request: Request) {
     },
   });
 
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ item }, { status: 201 });
 }

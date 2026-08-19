@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/apiAuth";
+import { purgeEverySite } from "@/lib/mirrorPurge";
 
 export async function POST(request: Request) {
   const auth = await requireUser();
@@ -16,5 +17,7 @@ export async function POST(request: Request) {
   const item = await db.newsTicker.create({
     data: { text, sortOrder: (last?.sortOrder ?? 0) + 1 },
   });
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ item }, { status: 201 });
 }

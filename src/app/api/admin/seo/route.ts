@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { saveSetting } from "@/lib/settings";
 import type { SeoPage, SeoSettings } from "@/lib/seo";
+import { purgeEverySite } from "@/lib/mirrorPurge";
 
 /** บันทึกการตั้งค่า SEO ทั้งก้อน */
 export async function PUT(request: Request) {
@@ -18,6 +19,8 @@ export async function PUT(request: Request) {
     // ต้องเป็น URL ที่ใช้ได้จริง ไม่งั้น new URL() ในหน้าเว็บจะพังทั้งเว็บ
     new URL(siteUrl);
   } catch {
+    // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+    purgeEverySite();
     return NextResponse.json(
       { error: "ที่อยู่เว็บไซต์ไม่ถูกต้อง ต้องขึ้นต้นด้วย https://" },
       { status: 400 },
@@ -36,6 +39,8 @@ export async function PUT(request: Request) {
     const label = String(raw.label ?? "").trim();
 
     if (!path.startsWith("/")) {
+      // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+      purgeEverySite();
       return NextResponse.json(
         { error: `เส้นทาง "${path || "(ว่าง)"}" ต้องขึ้นต้นด้วย /` },
         { status: 400 },
@@ -65,5 +70,7 @@ export async function PUT(request: Request) {
     pages,
   } satisfies SeoSettings);
 
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ ok: true });
 }

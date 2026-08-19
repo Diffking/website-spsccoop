@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/apiAuth";
 import { isKind, type Kind } from "@/lib/announcementKinds";
+import { purgeEverySite } from "@/lib/mirrorPurge";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -56,6 +57,8 @@ export async function PATCH(request: Request, { params }: Params) {
   if (typeof body.published === "boolean") data.published = body.published;
 
   const item = await db.announcement.update({ where: { id }, data });
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ item });
 }
 
@@ -65,5 +68,7 @@ export async function DELETE(_request: Request, { params }: Params) {
 
   const { id } = await params;
   await db.announcement.deleteMany({ where: { id } });
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ ok: true });
 }

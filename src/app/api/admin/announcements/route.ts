@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/apiAuth";
 import { isKind } from "@/lib/announcementKinds";
+import { purgeEverySite } from "@/lib/mirrorPurge";
 
 export async function POST(request: Request) {
   const auth = await requireUser();
@@ -48,6 +49,8 @@ export async function POST(request: Request) {
       sortOrder: (top?.sortOrder ?? 0) - 1,
     },
   });
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ item }, { status: 201 });
 }
 
@@ -74,6 +77,8 @@ export async function PUT(request: Request) {
   const existing = await db.announcement.findMany({ where: { kind: body.kind }, select: { id: true } });
   const ids = new Set(existing.map((a) => a.id));
   if (new Set(order).size !== order.length || order.length !== ids.size || order.some((id) => !ids.has(id))) {
+    // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+    purgeEverySite();
     return NextResponse.json(
       { error: "รายการที่ส่งมาไม่ตรงกับที่มีอยู่ ลองโหลดหน้าใหม่" },
       { status: 409 },
@@ -84,5 +89,7 @@ export async function PUT(request: Request) {
     order.map((id, index) => db.announcement.update({ where: { id }, data: { sortOrder: index } })),
   );
 
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ ok: true });
 }

@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/apiAuth";
 import { saveSetting } from "@/lib/settings";
 import type { SplashContent, SplashOccasion } from "@/content/splash";
 import { DEFAULT_SPLASH_BG, isSplashBackground } from "@/lib/splashTheme";
+import { purgeEverySite } from "@/lib/mirrorPurge";
 
 const DATE_PATTERN = /^(?:\d{4}-)?\d{2}-\d{2}$/;
 
@@ -34,6 +35,8 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: `"${name || id || "วันสำคัญ"}" ต้องมีชื่อและรูป` }, { status: 400 });
     }
     if (!DATE_PATTERN.test(from) || !DATE_PATTERN.test(to)) {
+      // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+      purgeEverySite();
       return NextResponse.json(
         { error: `วันที่ของ "${name}" ต้องเป็น MM-DD หรือ YYYY-MM-DD` },
         { status: 400 },
@@ -66,5 +69,7 @@ export async function PUT(request: Request) {
     occasions,
   } satisfies SplashContent);
 
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ ok: true });
 }

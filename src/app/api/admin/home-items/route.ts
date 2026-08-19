@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
+import { purgeEverySite } from "@/lib/mirrorPurge";
 
 const SECTIONS = [
   "services",
@@ -37,6 +38,8 @@ export async function PUT(request: Request) {
   const existing = await db.homeItem.findMany({ where: { section }, select: { id: true } });
   const ids = new Set(existing.map((i) => i.id));
   if (new Set(order).size !== order.length || order.length !== ids.size || order.some((id) => !ids.has(id))) {
+    // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+    purgeEverySite();
     return NextResponse.json(
       { error: "รายการที่ส่งมาไม่ตรงกับที่มีอยู่ ลองโหลดหน้าใหม่" },
       { status: 409 },
@@ -47,6 +50,8 @@ export async function PUT(request: Request) {
     order.map((id, index) => db.homeItem.update({ where: { id }, data: { sortOrder: index } })),
   );
 
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ ok: true });
 }
 
@@ -82,5 +87,7 @@ export async function POST(request: Request) {
     },
   });
 
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ item }, { status: 201 });
 }

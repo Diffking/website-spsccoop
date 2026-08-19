@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
 import { isEventType } from "@/lib/homeItems";
 import { parseDay } from "../route";
+import { purgeEverySite } from "@/lib/mirrorPurge";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -43,6 +44,8 @@ export async function PATCH(request: Request, { params }: Params) {
         db.slide.update({ where: { id: neighbour.id }, data: { sortOrder: existing.sortOrder } }),
       ]);
     }
+    // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+    purgeEverySite();
     return NextResponse.json({ ok: true });
   }
 
@@ -80,6 +83,8 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   const item = await db.slide.update({ where: { id }, data });
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ item });
 }
 
@@ -90,5 +95,7 @@ export async function DELETE(_request: Request, { params }: Params) {
 
   const { id } = await params;
   await db.slide.deleteMany({ where: { id } });
+  // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
+  purgeEverySite();
   return NextResponse.json({ ok: true });
 }
