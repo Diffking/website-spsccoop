@@ -110,7 +110,19 @@ final class Mirror
             $type = trim($m[1]);
         }
 
-        $info = ['status' => $status, 'type' => $type, 'time' => time()];
+        /*
+         * หัวอื่นที่ต้องส่งต่อด้วย ไม่งั้นบางอย่างพัง:
+         * location — หลังบ้านตอบ 308 พาไปที่อยู่ที่มี / ปิดท้าย (ตัวอ่าน PDF เจอเข้าไปเปิดไฟล์ไม่ได้เลย)
+         * content-disposition — ชื่อไฟล์ตอนกดดาวน์โหลด
+         */
+        $extra = [];
+        foreach (['location', 'content-disposition'] as $name) {
+            if (preg_match('/^' . $name . ':\s*(.+)$/im', $head, $m)) {
+                $extra[$name] = trim($m[1]);
+            }
+        }
+
+        $info = ['status' => $status, 'type' => $type, 'time' => time(), 'extra' => $extra];
         file_put_contents($this->key($path) . '.bin', $body);
         file_put_contents($this->key($path) . '.json', json_encode($info, JSON_UNESCAPED_UNICODE));
 
@@ -126,6 +138,16 @@ final class Mirror
         header('Content-Type: ' . $item['type']);
         header('X-Mirror: ' . $state);
         header('Accept-Ranges: bytes');
+
+        foreach ((array) ($item['extra'] ?? []) as $name => $value) {
+            header(ucfirst($name) . ': ' . $value);
+        }
+
+        // คำตอบประเภทพาไปที่อยู่อื่น ไม่มีเนื้อหาให้ส่ง จบตรงนี้
+        if ($item['status'] >= 300 && $item['status'] < 400) {
+            http_response_code($item['status']);
+            return;
+        }
 
         $range = $_SERVER['HTTP_RANGE'] ?? '';
         if ($range !== '' && preg_match('/bytes=(\d*)-(\d*)/', $range, $m)) {
