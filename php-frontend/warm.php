@@ -12,7 +12,33 @@ declare(strict_types=1);
 $config = require __DIR__ . '/config.php';
 require __DIR__ . '/lib/mirror.php';
 
-$force = in_array('--force', $argv ?? [], true);
+/*
+ * เรียกผ่านเว็บได้ด้วย (cron ของโฮสต์บางเจ้าสั่งได้แค่ผ่าน URL) แต่ต้องมีรหัส
+ * ไม่งั้นใครก็สั่งให้โฮสต์ไล่ดึงทั้งเว็บรัว ๆ ได้ กลายเป็นช่องกลั่นแกล้ง
+ *
+ *   php warm.php --force
+ *   https://www.spsccoop.com/warm.php?token=รหัส&force=1
+ */
+if (PHP_SAPI !== 'cli') {
+    header('Content-Type: text/plain; charset=utf-8');
+    if (!hash_equals((string) $config['purge_token'], (string) ($_GET['token'] ?? ''))) {
+        http_response_code(403);
+        echo 'รหัสไม่ถูกต้อง';
+        exit;
+    }
+}
+
+$force = in_array('--force', $argv ?? [], true) || !empty($_GET['force']);
+/*
+ * ตอนอุ่นแคชใช้กติกาคนละชุดกับตอนคนเปิดเว็บ
+ *
+ * timeout สั้น ๆ มีไว้กันคนอ่านเว็บนั่งรอ แต่ตอนอุ่นไม่มีใครรออยู่ ไฟล์ PDF หลายเมกะไบต์
+ * ต้องการเวลามากกว่านั้น · และห้ามใช้กลไก "จำว่าหลังบ้านดับ" เพราะพลาดไฟล์เดียว
+ * ที่เหลือทั้งชุดจะถูกข้ามหมดทันที (เจอมาแล้ว: สำเร็จ 32 ไม่สำเร็จ 437)
+ */
+$config['timeout'] = (int) ($config['warm_timeout'] ?? 120);
+$config['down_ttl'] = 0;
+
 $mirror = new Mirror($config);
 
 // รายชื่อหน้ามาจากหลังบ้านโดยตรง จะได้ไม่ต้องมาไล่แก้ไฟล์นี้ทุกครั้งที่เพิ่มหน้า
