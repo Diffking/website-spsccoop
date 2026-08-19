@@ -23,6 +23,7 @@ export async function PATCH(request: Request, { params }: Params) {
     content?: string;
     published?: boolean;
     assetFolder?: string;
+    category?: string;
   };
 
   const data: {
@@ -31,6 +32,7 @@ export async function PATCH(request: Request, { params }: Params) {
     body?: string;
     published?: boolean;
     assetFolder?: string;
+    category?: string | null;
   } = {};
 
   if (typeof body.title === "string") {
@@ -64,6 +66,9 @@ export async function PATCH(request: Request, { params }: Params) {
    * โฟลเดอร์เก็บไฟล์ของหน้านี้ — พิมพ์ผิดรูปแบบก็ไม่ปฏิเสธ แต่ใช้ชื่อที่คำนวณจาก slug แทน
    * (ไฟล์ต้องมีที่อยู่เสมอ ปล่อยว่างแล้วไฟล์จะไปกองผิดที่)
    */
+  // หมวดไว้จัดกลุ่มในหลังบ้านเท่านั้น เว้นว่าง = ให้ระบบจัดกลุ่มตามที่อยู่หน้าเอง
+  if (typeof body.category === "string") data.category = body.category.trim() || null;
+
   if (typeof body.assetFolder === "string") {
     data.assetFolder = cleanPageFolder(body.assetFolder, data.slug ?? existing.slug);
   } else if (data.slug && !existing.assetFolder) {
