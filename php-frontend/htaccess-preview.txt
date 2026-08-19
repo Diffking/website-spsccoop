@@ -1,0 +1,44 @@
+# ---- ช่วงติดตั้งเว็บใหม่ (ยังไม่เปิดให้สมาชิก) ----
+# คนทั่วไป      → เห็นหน้าแจ้งปรับปรุงเหมือนเดิม
+# คนที่มีรหัสดูก่อน → เห็นเว็บจริงผ่านตัวมิเรอร์
+#
+# เปิดดูครั้งแรกที่  https://www.spsccoop.com/?preview=รหัส
+# ระบบจะติดคุกกี้ให้ 8 ชั่วโมง จากนั้นเดินดูทั้งเว็บได้ตามปกติ
+#
+# เลิกดูก่อนใคร: ลบคุกกี้ของเว็บนี้ในเบราว์เซอร์
+# ของเดิมสำรองไว้ที่ .htaccess.maintenance — เอากลับได้ด้วยการเปลี่ยนชื่อกลับ
+
+DirectoryIndex index.html index.php
+
+# ห้ามเปิดไฟล์ตั้งค่าและโฟลเดอร์ภายในจากเบราว์เซอร์
+<FilesMatch "^(config|config\.sample)\.php$">
+  Require all denied
+</FilesMatch>
+RedirectMatch 404 ^/(cache|lib)/
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # หลังบ้านต้องสั่งล้างแคชได้ตลอด แม้ยังไม่เปิดเว็บให้สมาชิก (สองไฟล์นี้มีรหัสกันอยู่แล้ว)
+  RewriteRule ^(purge|warm)\.php$ - [L]
+
+  # ใส่รหัสถูก = ติดคุกกี้แล้วเด้งกลับหน้าแรก (ที่อยู่จะได้ไม่ติดรหัสไปด้วย)
+  RewriteCond %{QUERY_STRING} (^|&)preview=__PREVIEW_KEY__(&|$)
+  RewriteRule ^ /? [CO=spsc_preview:__PREVIEW_KEY__:www.spsccoop.com:480:/,R=302,L]
+
+  # มีคุกกี้แล้ว = ทุกคำขอเข้าตัวมิเรอร์ (ยกเว้นไฟล์ที่มีอยู่จริงบนโฮสต์)
+  RewriteCond %{HTTP_COOKIE} spsc_preview=__PREVIEW_KEY__
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.php [L]
+
+  # คนที่มีคุกกี้ ห้ามตกไปเจอกฎหน้าแจ้งปรับปรุงข้างล่าง
+  # (จำเป็น เพราะบรรทัดบนพาไป index.php แล้ววนอ่านไฟล์นี้ใหม่อีกรอบ
+  #  รอบสองไฟล์มีอยู่จริง เงื่อนไข !-f จึงไม่ผ่าน แล้วหลุดไปหน้าแจ้งปรับปรุง)
+  RewriteCond %{HTTP_COOKIE} spsc_preview=__PREVIEW_KEY__
+  RewriteRule ^ - [L]
+
+  # ไม่มีคุกกี้ = หน้าแจ้งปรับปรุงเหมือนเดิมทุกที่อยู่
+  RewriteRule ^index\.html$ - [L]
+  RewriteRule ^robots\.txt$ - [L]
+  RewriteRule ^ /index.html [L]
+</IfModule>
