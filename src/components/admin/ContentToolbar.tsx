@@ -239,6 +239,14 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
   const [openMenu, setOpenMenu] = useState<null | "image" | "cards">(null);
   /** การ์ดลิงก์ที่จะสร้างใหม่ ให้แถวละกี่ใบ */
   const [cardsCols, setCardsCols] = useState(3);
+  /*
+   * โฟลเดอร์ปลายทางของไฟล์ที่จะแนบครั้งถัดไป — ตั้งต้นเป็นโฟลเดอร์ของหน้านี้
+   * แต่เลือกโฟลเดอร์อื่นหรือพิมพ์ชื่อใหม่ได้ทุกครั้งก่อนแนบ (บางไฟล์ใช้ร่วมหลายหน้า
+   * เช่นแบบฟอร์มกลาง เก็บไว้ที่เดียวแล้วลิงก์จากหลายหน้าดีกว่าอัปซ้ำ)
+   */
+  const [saveTo, setSaveTo] = useState(folder);
+  const [folderList, setFolderList] = useState<{ value: string; label: string }[]>([]);
+  const [newFolder, setNewFolder] = useState(false);
   /** มุมบนซ้ายของแผง วัดจากจอ (position: fixed) — ตั้งตอนกดปุ่ม */
   const [menuAt, setMenuAt] = useState({ top: 0, left: 0 });
   /** ทำเนียบที่จะสร้างใหม่ ให้แถวละกี่คน */
@@ -367,6 +375,17 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
     };
   }, [openMenu]);
 
+  /** ดึงรายชื่อโฟลเดอร์ที่มีอยู่จริงมาให้เลือก — เรียกครั้งเดียวตอนต้องใช้ */
+  async function loadFolders() {
+    if (folderList.length > 0) return;
+    const response = await fetch("/api/admin/folders/").catch(() => null);
+    if (!response?.ok) return;
+    const data = (await response.json().catch(() => ({}))) as {
+      folders?: { value: string; label: string }[];
+    };
+    setFolderList(data.folders ?? []);
+  }
+
   /** ช่วงที่จะเขียนทับ — ไม่เคยแตะช่องพิมพ์เลยถือว่าอยากต่อท้าย */
   function range() {
     const el = textarea.current;
@@ -447,7 +466,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
 
       const form = new FormData();
       form.append("file", file);
-      form.append("folder", folder);
+      form.append("folder", saveTo);
       form.append("maxEdge", "400");
       const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", form, (percent, phase) =>
         setProgress((p) => ({ ...p, percent, phase })),
@@ -505,7 +524,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
 
     const form = new FormData();
     form.append("file", file);
-    form.append("folder", folder);
+    form.append("folder", saveTo);
     const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", form, (percent, phase) =>
       setProgress((p) => ({ ...p, percent, phase })),
     );
@@ -547,7 +566,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
 
       const form = new FormData();
       form.append("file", file);
-      form.append("folder", folder);
+      form.append("folder", saveTo);
       form.append("maxEdge", String(maxEdge));
       const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", form, (percent, phase) =>
         setProgress((p) => ({ ...p, percent, phase })),
@@ -902,6 +921,68 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
             </div>
           )}
         </div>
+
+        <span className="h-5 w-px bg-gray-200" />
+
+        {/*
+          ปลายทางของไฟล์ที่จะแนบ — เลือกได้ทุกครั้งก่อนอัป
+          ตั้งต้นเป็นโฟลเดอร์ของหน้านี้ แต่บางไฟล์ใช้ร่วมหลายหน้า (แบบฟอร์มกลาง ระเบียบ)
+          เก็บไว้ที่เดียวแล้วลิงก์จากหลายหน้า ดีกว่าอัปไฟล์เดิมซ้ำหลายที่
+        */}
+        <span className="text-[11px] font-medium text-gray-400">เก็บไฟล์ที่</span>
+
+        {newFolder ? (
+          <span className="inline-flex items-center gap-1">
+            <span className="rounded-l-lg bg-gray-100 px-2 py-1.5 font-mono text-[11px] text-gray-500">
+              assets/pages/
+            </span>
+            <input
+              autoFocus
+              value={saveTo.replace(/^pages\//, "")}
+              onChange={(e) => setSaveTo(`pages/${e.target.value.replace(/^pages\//, "")}`)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === "Escape") setNewFolder(false);
+              }}
+              placeholder="ชื่อโฟลเดอร์ใหม่"
+              className="w-36 rounded-lg border border-brand-300 px-2 py-1.5 font-mono text-xs outline-none focus:border-brand-500"
+            />
+            <button
+              type="button"
+              onClick={() => setNewFolder(false)}
+              className="rounded-lg bg-brand-50 px-2 py-1.5 text-xs font-medium text-brand-700 transition hover:bg-brand-100"
+            >
+              ใช้ชื่อนี้
+            </button>
+          </span>
+        ) : (
+          <select
+            value={folderList.some((f) => f.value === saveTo) ? saveTo : "__current"}
+            onMouseDown={() => void loadFolders()}
+            onFocus={() => void loadFolders()}
+            onChange={(e) => {
+              if (e.target.value === "__new") {
+                // ตั้งชื่อใหม่โดยเริ่มจากค่าว่าง จะได้ไม่เผลอทับชื่อเดิม
+                setSaveTo("pages/");
+                setNewFolder(true);
+                return;
+              }
+              if (e.target.value !== "__current") setSaveTo(e.target.value);
+            }}
+            title={`ไฟล์ที่แนบจะไปเก็บที่ assets/${saveTo}`}
+            className="max-w-52 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-600 outline-none focus:border-brand-400"
+          >
+            {/* ค่าที่ใช้อยู่ต้องมีในรายการเสมอ ถึงจะยังไม่เคยมีไฟล์ไปลง */}
+            {!folderList.some((f) => f.value === saveTo) && (
+              <option value="__current">{saveTo}</option>
+            )}
+            {folderList.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.value} — {f.label}
+              </option>
+            ))}
+            <option value="__new">＋ สร้างโฟลเดอร์ใหม่…</option>
+          </select>
+        )}
 
         <span className="h-5 w-px bg-gray-200" />
         <span className="text-[11px] font-medium text-gray-400">ไฟล์</span>
