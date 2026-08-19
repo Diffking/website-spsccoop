@@ -436,3 +436,30 @@ body {
 .prose-page table.tight-last td:last-child {
   width: 1%; white-space: nowrap; text-align: center;
 }
+
+/* ---- พลิกหน้าหนังสือใน E-Book ----
+   ภาพหน้าเดิมหมุนรอบขอบด้านที่ยึดไว้ เผยหน้าใหม่ที่วาดรออยู่ข้างล่าง
+   หรี่แสงตอนใกล้จบเพื่อให้กระดาษ "หายเข้าเล่ม" ไม่ใช่ค้างเป็นแผ่นทึบกลางจอ */
+@keyframes ebook-flip-next {
+  from { transform: rotateY(0deg);    filter: brightness(1); }
+  70%  { filter: brightness(.82); }
+  to   { transform: rotateY(-168deg); filter: brightness(.6); opacity: 0; }
+}
+@keyframes ebook-flip-prev {
+  from { transform: rotateY(0deg);    filter: brightness(1); }
+  70%  { filter: brightness(.82); }
+  to   { transform: rotateY(168deg);  filter: brightness(.6); opacity: 0; }
+}
+.ebook-flip-next {
+  transform-origin: left center;
+  animation: ebook-flip-next .52s cubic-bezier(.4, .05, .35, 1) forwards;
+  backface-visibility: hidden;
+}
+.ebook-flip-prev {
+  transform-origin: right center;
+  animation: ebook-flip-prev .52s cubic-bezier(.4, .05, .35, 1) forwards;
+  backface-visibility: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ebook-flip-next, .ebook-flip-prev { animation: none; opacity: 0; }
+}

@@ -62,6 +62,11 @@ export default function EbookReader({ src, title }: { src: string; title: string
   const [error, setError] = useState("");
   /** ระยะที่กำลังลางอยู่ (บวก = ลากไปขวา = ย้อนกลับ) */
   const [dx, setDx] = useState(0);
+  /**
+   * ภาพหน้าที่กำลังพลิก — เก็บภาพหน้าเดิมไว้แล้วหมุนทับหน้าใหม่ให้เหมือนเปิดหนังสือจริง
+   * ต้องถ่ายภาพไว้ก่อนเปลี่ยนหน้า เพราะ canvas ตัวเดิมจะถูกวาดทับด้วยหน้าใหม่ทันที
+   */
+  const [flip, setFlip] = useState<{ src: string; dir: "next" | "prev" } | null>(null);
   const [dragging, setDragging] = useState(false);
 
   /**
@@ -217,9 +222,35 @@ export default function EbookReader({ src, title }: { src: string; title: string
     };
   }, [pages, draw]);
 
+  /** ถ่ายภาพหน้าที่เห็นอยู่ตอนนี้ ไว้ใช้เป็นแผ่นกระดาษที่กำลังพลิก */
+  const snapshot = useCallback(() => {
+    const canvas = leftCanvas.current;
+    if (!canvas || canvas.width === 0) return null;
+    try {
+      return canvas.toDataURL("image/jpeg", 0.82);
+    } catch {
+      // ถ่ายไม่ได้ก็แค่ไม่มีอนิเมชัน ไม่ใช่เรื่องต้องพัง
+      return null;
+    }
+  }, []);
+
   /** เดินหน้า/ถอยหลังทีละหน้าเสมอ แม้ตอนกางสองหน้า — กด 1 ที ขยับ 1 หน้า */
-  const next = useCallback(() => setPage((p) => Math.min(pages || 1, p + 1)), [pages]);
-  const prev = useCallback(() => setPage((p) => Math.max(1, p - 1)), []);
+  const turn = useCallback(
+    (dir: "next" | "prev") => {
+      const target = dir === "next" ? Math.min(pages || 1, page + 1) : Math.max(1, page - 1);
+      if (target === page) return;
+
+      // เครื่องที่ตั้งลดการเคลื่อนไหวไว้ ให้เปลี่ยนหน้าเฉย ๆ ไม่ต้องพลิก
+      const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const shot = still ? null : snapshot();
+      if (shot) setFlip({ src: shot, dir });
+      setPage(target);
+    },
+    [page, pages, snapshot],
+  );
+
+  const next = useCallback(() => turn("next"), [turn]);
+  const prev = useCallback(() => turn("prev"), [turn]);
 
   // ปุ่มลูกศรซ้าย/ขวาเปลี่ยนหน้าได้เหมือนอ่านหนังสือ
   useEffect(() => {
@@ -394,8 +425,27 @@ export default function EbookReader({ src, title }: { src: string; title: string
             transform: `translateX(${dx}px) rotateY(${dx * -0.025}deg)`,
             transition: dragging ? "none" : "transform 260ms cubic-bezier(.22,1,.36,1)",
           }}
-          className="flex items-stretch"
+          className="relative flex items-stretch [perspective:1800px]"
         >
+          {/*
+            แผ่นกระดาษที่กำลังพลิก — ภาพหน้าเดิมหมุนรอบขอบด้านที่ยึดไว้
+            ไปข้างหน้ายึดขอบซ้าย (กระดาษพลิกจากขวาไปซ้าย) ย้อนกลับยึดขอบขวา
+            เอา pointer-events ออกเพื่อไม่ให้บังการลากหน้าใหม่ที่อยู่ข้างล่าง
+          */}
+          {flip && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={flip.src.slice(-24)}
+              src={flip.src}
+              alt=""
+              aria-hidden="true"
+              onAnimationEnd={() => setFlip(null)}
+              className={`pointer-events-none absolute inset-y-0 z-20 h-full w-auto rounded-lg shadow-2xl ${
+                flip.dir === "next" ? "ebook-flip-next left-0" : "ebook-flip-prev right-0"
+              }`}
+            />
+          )}
+
           <canvas
             ref={leftCanvas}
             aria-label={title}
