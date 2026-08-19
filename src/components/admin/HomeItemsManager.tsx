@@ -26,6 +26,7 @@ import {
 } from "@/lib/serviceCategories";
 import UploadProgress from "@/components/admin/UploadProgress";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
+import AssetImage from "@/components/admin/AssetImage";
 
 /**
  * ตัวจัดการรายการของหน้าแรก ใช้ตัวเดียวกับทุกส่วน — บอกว่าส่วนนี้ใช้ช่องไหนบ้าง
@@ -462,8 +463,7 @@ export default function HomeItemsManager({
                       {i + 1}
                     </span>
                     {item.imageUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <AssetImage
                         src={item.imageUrl}
                         alt=""
                         className="h-10 w-14 shrink-0 rounded-lg bg-gray-50 object-contain ring-1 ring-gray-200"

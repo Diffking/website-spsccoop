@@ -5,6 +5,7 @@ import { ImagePlus, Loader2, Save, X } from "lucide-react";
 import type { SiteBrand } from "@/lib/nav";
 import UploadProgress from "@/components/admin/UploadProgress";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
+import AssetImage from "@/components/admin/AssetImage";
 
 /** ชื่อเว็บและโลโก้ที่ขึ้นบนแถบบนสุดของทุกหน้า */
 export default function BrandForm({ initial }: { initial: SiteBrand }) {
@@ -89,9 +90,7 @@ export default function BrandForm({ initial }: { initial: SiteBrand }) {
         <div className="flex items-center gap-3">
           <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full bg-gray-100 ring-1 ring-black/5">
             {brand.logoUrl ? (
-              // โลโก้ที่อัปมา ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={brand.logoUrl} alt="โลโก้" className="h-12 w-12 object-contain" />
+              <AssetImage src={brand.logoUrl} alt="โลโก้" className="h-12 w-12 object-contain" />
             ) : (
               <ImagePlus className="h-5 w-5 text-gray-400" />
             )}

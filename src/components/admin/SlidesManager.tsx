@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import UploadProgress from "@/components/admin/UploadProgress";
+import AssetImage from "@/components/admin/AssetImage";
 import ThaiDatePicker from "@/components/admin/ThaiDatePicker";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
 import { motion, AnimatePresence } from "motion/react";
@@ -343,8 +344,7 @@ export default function SlidesManager({
 
         {imageUrl && (
           <div className="mt-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <AssetImage
               src={imageUrl}
               alt=""
               className="h-32 w-auto rounded-lg bg-gray-50 object-contain ring-1 ring-gray-200"
@@ -532,8 +532,7 @@ export default function SlidesManager({
                     {positions[i] ?? "–"}
                   </span>
 
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <AssetImage
                   src={slide.imageUrl}
                   alt=""
                   className="h-12 w-16 shrink-0 rounded-lg bg-gray-50 object-cover ring-1 ring-gray-200"
