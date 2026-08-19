@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Save, Loader2, Plus, Trash2, Eye, GripVertical } from "lucide-react";
-import type { SplashContent, SplashOccasion } from "@/content/splash";
+import type { SplashContent, SplashOccasion, SplashRepeat, SplashTiming } from "@/content/splash";
 import { DEFAULT_SPLASH_BG, SPLASH_BACKGROUNDS } from "@/lib/splashTheme";
 
 const BLANK: SplashOccasion = {
@@ -17,6 +17,32 @@ const BLANK: SplashOccasion = {
   bg: DEFAULT_SPLASH_BG,
   subtext: "",
 };
+
+const TIMING_CHOICES: { value: SplashTiming; label: string; hint: string }[] = [
+  {
+    value: "schedule",
+    label: "ตามวันที่ที่ตั้งไว้",
+    hint: "ขึ้นเองเมื่อถึงช่วงวันของแต่ละวันสำคัญ แล้วหยุดเองเมื่อเลยวัน",
+  },
+  {
+    value: "now",
+    label: "แสดงเดี๋ยวนี้เลย",
+    hint: "ไม่ต้องรอถึงวัน ใช้ตอนอยากประกาศทันที หรือขอดูก่อนถึงวันจริง",
+  },
+];
+
+const REPEAT_CHOICES: { value: SplashRepeat; label: string; hint: string }[] = [
+  {
+    value: "session",
+    label: "ครั้งเดียวต่อการเข้าเว็บ",
+    hint: "เห็นแล้วเดินดูหน้าอื่นต่อได้ ไม่โดนเด้งซ้ำจนกว่าจะปิดเบราว์เซอร์",
+  },
+  {
+    value: "always",
+    label: "ทุกครั้งที่กลับมาหน้าแรก",
+    hint: "เด้งซ้ำได้เรื่อย ๆ (เว้น 3 นาทีหลังกดเข้าเว็บ ไม่งั้นจะวนจนเข้าเว็บไม่ได้)",
+  },
+];
 
 /** "MM-DD" หรือ "YYYY-MM-DD" เท่านั้น — เช็คฝั่งหน้าจอก่อนจะได้บอกทันทีไม่ต้องรอเซิร์ฟเวอร์ */
 function badDate(value: string): boolean {
@@ -98,6 +124,46 @@ export default function SplashManager({ initial }: { initial: SplashContent }) {
             {content.enabled ? "เปิดใช้งานหน้าวันสำคัญ" : "ปิดอยู่ — ผู้เข้าเว็บจะเข้าหน้าแรกตรงๆ"}
           </span>
         </label>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <fieldset className="rounded-xl bg-gray-50 p-3">
+            <legend className="px-1 text-xs font-medium text-gray-600">แสดงเมื่อไหร่</legend>
+            {TIMING_CHOICES.map((choice) => (
+              <label key={choice.value} className="mt-1.5 flex items-start gap-2">
+                <input
+                  type="radio"
+                  name="splash-timing"
+                  checked={(content.timing ?? "schedule") === choice.value}
+                  onChange={() => setContent((prev) => ({ ...prev, timing: choice.value }))}
+                  className="mt-0.5 h-4 w-4 accent-brand-500"
+                />
+                <span>
+                  <span className="block text-sm text-gray-700">{choice.label}</span>
+                  <span className="block text-xs leading-relaxed text-gray-500">{choice.hint}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+
+          <fieldset className="rounded-xl bg-gray-50 p-3">
+            <legend className="px-1 text-xs font-medium text-gray-600">แสดงบ่อยแค่ไหน</legend>
+            {REPEAT_CHOICES.map((choice) => (
+              <label key={choice.value} className="mt-1.5 flex items-start gap-2">
+                <input
+                  type="radio"
+                  name="splash-repeat"
+                  checked={(content.repeat ?? "session") === choice.value}
+                  onChange={() => setContent((prev) => ({ ...prev, repeat: choice.value }))}
+                  className="mt-0.5 h-4 w-4 accent-brand-500"
+                />
+                <span>
+                  <span className="block text-sm text-gray-700">{choice.label}</span>
+                  <span className="block text-xs leading-relaxed text-gray-500">{choice.hint}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        </div>
 
         <label className="mt-3 block">
           <span className="text-sm text-gray-600">ข้อความบนปุ่มเข้าเว็บ</span>

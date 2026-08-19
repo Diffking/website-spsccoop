@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { saveSetting } from "@/lib/settings";
-import type { SplashContent, SplashOccasion } from "@/content/splash";
+import type { SplashContent, SplashOccasion, SplashRepeat, SplashTiming } from "@/content/splash";
 import { DEFAULT_SPLASH_BG, isSplashBackground } from "@/lib/splashTheme";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 
@@ -63,9 +63,15 @@ export async function PUT(request: Request) {
     });
   }
 
+  // ค่าที่ไม่รู้จักถอยไปใช้พฤติกรรมเดิม (ตามวันที่ · ครั้งเดียวต่อการเข้าเว็บ)
+  const timing: SplashTiming = body.timing === "now" ? "now" : "schedule";
+  const repeat: SplashRepeat = body.repeat === "always" ? "always" : "session";
+
   await saveSetting("splash", {
     enabled: Boolean(body.enabled),
     buttonText: body.buttonText.trim(),
+    timing,
+    repeat,
     occasions,
   } satisfies SplashContent);
 

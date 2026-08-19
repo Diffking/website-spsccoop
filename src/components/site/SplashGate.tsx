@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getActiveOccasion, type SplashContent } from "@/content/splash";
+import { SPLASH_GRACE_MS, getActiveOccasion, type SplashContent } from "@/content/splash";
 
 /**
  * เด้งไปหน้า splash (/splash) ก่อนเข้าเว็บ — เฉพาะการเข้าครั้งแรกของแต่ละ session
@@ -19,9 +19,18 @@ export default function SplashGate({ content }: { content: SplashContent }) {
   useEffect(() => {
     if (!getActiveOccasion(content)) return;
     try {
-      if (!sessionStorage.getItem("spsc_entered")) {
-        router.replace("/splash/");
-      }
+      const entered = Number(sessionStorage.getItem("spsc_entered"));
+
+      /*
+       * โหมด "ทุกครั้ง" — เด้งอีกได้เมื่อพ้นช่วงผ่อนผันหลังกดเข้าเว็บ
+       * ไม่มีช่วงผ่อนผัน = กดเข้าเว็บแล้วเด้งกลับทันที วนจนเข้าเว็บไม่ได้
+       */
+      const done =
+        content.repeat === "always"
+          ? Number.isFinite(entered) && entered > 0 && Date.now() - entered < SPLASH_GRACE_MS
+          : sessionStorage.getItem("spsc_entered") !== null;
+
+      if (!done) router.replace("/splash/");
     } catch {}
   }, [router, content]);
   return null;

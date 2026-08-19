@@ -21,7 +21,8 @@ export default function EnterSiteButton({
   const router = useRouter();
   const enter = () => {
     try {
-      sessionStorage.setItem("spsc_entered", "1");
+      // เก็บเป็นเวลา ไม่ใช่แค่ธง — โหมด "เด้งทุกครั้ง" ต้องรู้ว่าเพิ่งกดเข้าไปเมื่อไหร่
+      sessionStorage.setItem("spsc_entered", String(Date.now()));
     } catch {}
     router.push("/");
   };

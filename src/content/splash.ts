@@ -28,12 +28,37 @@ export type SplashOccasion = {
   bg?: string;
 };
 
+/** จะให้ขึ้นเมื่อไหร่ */
+export type SplashTiming =
+  /** เฉพาะช่วงวันที่ที่ตั้งไว้ในแต่ละวันสำคัญ (ปกติใช้แบบนี้) */
+  | "schedule"
+  /** ขึ้นเดี๋ยวนี้เลย ไม่ต้องรอถึงวัน — ใช้ตอนอยากโชว์ประกาศทันที หรือลองดูก่อนถึงวันจริง */
+  | "now";
+
+/** จะให้ขึ้นบ่อยแค่ไหน */
+export type SplashRepeat =
+  /** ครั้งเดียวต่อการเข้าเว็บหนึ่งครั้ง — เข้าแล้วเดินดูต่อจะไม่โดนเด้งซ้ำ */
+  | "session"
+  /** ทุกครั้งที่กลับมาหน้าแรก (เว้นช่วงสั้น ๆ หลังกดเข้าเว็บ ไม่งั้นจะวนไม่จบ) */
+  | "always";
+
 export type SplashContent = {
   /** สวิตช์ใหญ่ — ปิดแล้วหน้า splash ไม่ขึ้นเลยไม่ว่าวันสำคัญจะตรงหรือไม่ */
   enabled: boolean;
   buttonText: string;
+  /** ไม่ระบุ = "schedule" (ของเดิมก่อนมีตัวเลือกนี้) */
+  timing?: SplashTiming;
+  /** ไม่ระบุ = "session" */
+  repeat?: SplashRepeat;
   occasions: SplashOccasion[];
 };
+
+/**
+ * หลังกดปุ่ม "เข้าสู่เว็บไซต์" ให้เว้นไปเท่านี้ก่อนจะเด้งได้อีก (โหมดทุกครั้ง)
+ *
+ * ถ้าไม่เว้น พอกดเข้าเว็บแล้วเด้งกลับหน้าวันสำคัญทันที กลายเป็นวนไม่จบ เข้าเว็บไม่ได้เลย
+ */
+export const SPLASH_GRACE_MS = 3 * 60 * 1000;
 
 export const splashContent = data as SplashContent;
 
@@ -75,5 +100,11 @@ export function getActiveOccasion(
   now: Date = new Date(),
 ): SplashOccasion | null {
   if (!content.enabled) return null;
+
+  // โหมด "แสดงเดี๋ยวนี้" ข้ามการเช็ควันที่ไปเลย เอารายการแรกที่เปิดไว้
+  if (content.timing === "now") {
+    return content.occasions.find((o) => o.enabled) ?? null;
+  }
+
   return content.occasions.find((o) => o.enabled && isOccasionActive(o, now)) ?? null;
 }
