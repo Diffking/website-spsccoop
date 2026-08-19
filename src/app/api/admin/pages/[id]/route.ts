@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser, toSlug } from "@/lib/apiAuth";
 import { cleanPageFolder, pageFolder } from "@/lib/ftp";
+import { repairStructure } from "@/lib/htmlStructure";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -50,7 +51,13 @@ export async function PATCH(request: Request, { params }: Params) {
     data.slug = slug;
   }
 
-  if (typeof body.content === "string") data.body = body.content;
+  /*
+   * ด่านสุดท้ายก่อนลงฐาน — ซ่อมโครงสร้าง <div> ให้สมดุลเสมอ
+   *
+   * หน้าจอแก้ไขซ่อมให้อยู่แล้ว แต่ด่านนี้กันทุกทางที่เขียนเนื้อหา (สคริปต์ เครื่องมืออื่น
+   * หรือหน้าจอที่ยังไม่ได้อัปเดต) ไม่ให้บันทึกโครงที่ทำหน้าเว็บเพี้ยนลงไปได้เลย
+   */
+  if (typeof body.content === "string") data.body = repairStructure(body.content);
   if (typeof body.published === "boolean") data.published = body.published;
 
   /*
