@@ -6,6 +6,7 @@ import { Save, Trash2, Loader2, Eye, Pencil, Sparkles, Undo2 } from "lucide-reac
 import ContentToolbar from "@/components/admin/ContentToolbar";
 import PageContent from "@/components/site/PageContent";
 import { localAssetsInHtml } from "@/lib/assetFallback";
+import { repairStructure, structureProblems } from "@/lib/htmlStructure";
 import Toggle from "@/components/ui/Toggle";
 
 /** จำสวิตช์ AI ไว้ในเครื่องคนใช้ ไม่ใช่ในฐาน — เป็นความชอบส่วนตัวของแต่ละคน ไม่ใช่ค่าของเว็บ */
@@ -61,6 +62,8 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
   const hasStructure = /class="(tabs|tab|image-row|ebook)"|<img|<figure/i.test(content);
   /** เนื้อหาก่อน AI จัด — เก็บไว้ให้กดย้อนกลับได้ถ้าไม่ถูกใจ */
   const [beforeAi, setBeforeAi] = useState<string | null>(null);
+  /** ปัญหาโครงสร้างในเนื้อหาตอนนี้ — คำนวณสดทุกครั้งที่พิมพ์ ไม่ต้องกดตรวจเอง */
+  const problems = structureProblems(content);
 
   /**
    * กันปิดแท็บ/กดย้อนกลับระหว่างกำลังบันทึก — งานที่ให้ AI จัดใช้เวลาถึงเกือบนาที
@@ -259,6 +262,30 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
           <PageContent html={localAssetsInHtml(content)} className="min-h-[60vh] p-4" />
         )}
       </div>
+
+      {/*
+        เตือนเมื่อโครงสร้างเพี้ยน — </div> เกินหรือแท็บหลุดออกนอกกล่อง
+        อาการนี้หน้าเว็บจะดูเหมือนพัง (ปุ่มแท็บขึ้นไม่ครบ เนื้อหากองใต้หน้า)
+        แต่ในช่องพิมพ์ดูปกติ ถ้าไม่บอกไว้ตรงนี้จะไม่มีทางรู้จนกว่าจะเปิดหน้าเว็บจริง
+      */}
+      {problems.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200">
+          <span>โครงสร้างเนื้อหาเพี้ยน: {problems.join(" · ")}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setContent(repairStructure(content));
+              setStatus({
+                kind: "ok",
+                text: "ซ่อมโครงสร้างให้แล้ว — ข้อความเหมือนเดิมทุกตัวอักษร ตรวจแล้วกดบันทึกด้วย",
+              });
+            }}
+            className="ml-auto rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-700"
+          >
+            ซ่อมโครงสร้างให้
+          </button>
+        </div>
+      )}
 
       {status && (
         <p
