@@ -102,6 +102,22 @@ services:
       - -c
       - while true; do pg_dump -h db -U coopsmile coopsmile > /backups/coopsmile-$$(date +%F).sql && echo "db backup OK $$(date)"; tar -czf /backups/uploads-$$(date +%F).tar.gz -C /uploads . && echo "uploads backup OK $$(date)"; find /backups -name 'coopsmile-*.sql' -mtime +14 -delete; find /backups -name 'uploads-*.tar.gz' -mtime +14 -delete; sleep 86400; done
 
+  # อุ่นสำเนาหน้าเว็บบนโฮสต์ทุกชั่วโมง
+  #
+  # ทำจากเครื่องนี้ ไม่ใช่ cron ฝั่งโฮสต์ เพราะการอุ่นต้องดึงของจากเครื่องนี้ — เครื่องนี้
+  # เท่านั้นที่รู้ว่าตัวเองเปิดอยู่ ตั้ง cron ฝั่งโฮสต์ไว้ พอเครื่องนี้ปิดมันก็ดึงไม่ได้อยู่ดี
+  #
+  # ผลคือก่อนปิดเครื่องเย็นวันศุกร์ สำเนาบนโฮสต์จะใหม่เสมอ สมาชิกเปิดเว็บได้ครบทุกหน้า
+  # ตลอดเสาร์อาทิตย์ · ไม่ตั้ง MIRROR_PURGE_TOKEN ใน .env = ไม่ทำอะไร
+  mirror-warm:
+    image: alpine:3.20
+    restart: unless-stopped
+    env_file: .env
+    entrypoint:
+      - sh
+      - -c
+      - apk add --no-cache curl >/dev/null 2>&1; while true; do if [ -n "$$MIRROR_PURGE_TOKEN" ]; then echo "อุ่นแคช $$(date '+%F %H:%M')"; curl -s -m 900 "$${MIRROR_WARM_URL:-https://www.spsccoop.com/warm.php}?token=$$MIRROR_PURGE_TOKEN" | tail -2; fi; sleep 3600; done
+
   # Cloudflare Tunnel — ชี้โดเมนเข้า web:3000 (ตั้ง ingress ฝั่ง Cloudflare)
   # TUNNEL_TOKEN อยู่ในไฟล์ .env ข้างไฟล์นี้ (ไม่ commit)
   cloudflared:
