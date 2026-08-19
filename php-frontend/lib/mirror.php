@@ -45,6 +45,9 @@ final class Mirror
     /** ไฟล์แนบ/รูป/ไฟล์ประกอบเว็บ — เก็บได้นานกว่าหน้าเว็บ */
     public function isAsset(string $path): bool
     {
+        // ตัดพารามิเตอร์ท้ายที่อยู่ก่อนดูนามสกุล — Next ต่อรหัสรุ่นไว้ เช่น /icon.png?9a3f
+        $path = strtok($path, '?') ?: $path;
+
         return str_starts_with($path, '/uploads/')
             || str_starts_with($path, '/_next/')
             || str_starts_with($path, '/api/pdf')
