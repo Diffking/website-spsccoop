@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { assetCandidates } from "@/lib/assetFallback";
+import { assetCandidates, localAsset } from "@/lib/assetFallback";
+import { localFileResponse } from "@/lib/localFile";
 
 /**
  * ส่งไฟล์ PDF ของเอกสารผ่านโดเมนเดียวกับเว็บ
@@ -29,6 +30,13 @@ export async function GET(request: Request, { params }: Params) {
   const range = request.headers.get("range");
 
   // สำเนาในเครื่องก่อน แล้วค่อยตกไปที่โดเมน assets (ดู src/lib/assetFallback.ts)
+  /*
+   * สำเนาในเครื่องอ่านจากดิสก์ตรง ๆ ก่อนเสมอ — เร็วกว่าและไม่ต้องวิ่งออกอินเทอร์เน็ต
+   * (เรียกเว็บตัวเองผ่านโดเมนจริงจากในคอนเทนเนอร์ไม่ได้ เคยทำให้ทุกไฟล์ 502)
+   */
+  const fromDisk = await localFileResponse(localAsset(item.fileUrl) || item.fileUrl, range);
+  if (fromDisk) return fromDisk;
+
   let upstream: Response | null = null;
   for (const target of assetCandidates(item.fileUrl, request.url)) {
     const tried = await fetch(target, {
