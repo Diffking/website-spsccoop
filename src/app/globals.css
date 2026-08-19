@@ -429,3 +429,13 @@ body {
 .badge-swatch-pink   { background: #fde8f1; color: #9d174d; --tw-ring-color: #f9c9dd; }
 .badge-swatch-purple { background: #f1e9fd; color: #5b21b6; --tw-ring-color: #ddcbfa; }
 .badge-swatch-teal   { background: #e2f6f8; color: #0e6f7d; --tw-ring-color: #b8e6ec; }
+
+/* ---- ตาราง: บีบคอลัมน์ริมที่มีแต่ของสั้น ๆ ----
+   คลาสถูกใส่โดย PageContent ตอนแสดงผล (ดูเงื่อนไขในไฟล์นั้น) ไม่ต้องพิมพ์เอง
+   ลำดับซ้ายสุดกับไอคอนไฟล์ขวาสุดกินพื้นที่เท่าที่ต้องใช้ ที่เหลือยกให้คอลัมน์รายละเอียด */
+.prose-page table.tight-first th:first-child,
+.prose-page table.tight-first td:first-child,
+.prose-page table.tight-last th:last-child,
+.prose-page table.tight-last td:last-child {
+  width: 1%; white-space: nowrap; text-align: center;
+}

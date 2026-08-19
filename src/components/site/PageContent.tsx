@@ -36,6 +36,33 @@ export default function PageContent({ html, className = "" }: { html: string; cl
 
     // ตารางกว้างเกินจอ: ห่อให้เลื่อนแนวนอนได้ในกรอบตัวเอง ไม่ดันทั้งหน้าให้เลื่อนซ้ายขวา
     root.querySelectorAll("table").forEach((table) => {
+      /*
+       * คอลัมน์ริมซ้าย/ริมขวาที่มีแต่ของสั้น ๆ (เลขลำดับ, ไอคอนดาวน์โหลด) บีบให้พอดีเนื้อหา
+       * ไม่งั้นเบราว์เซอร์เฉลี่ยความกว้างให้เท่า ๆ กัน คอลัมน์ไฟล์กว้างเป็นฝ่ามือทั้งที่มีไอคอนใบเดียว
+       * ส่วนคอลัมน์รายละเอียดที่ข้อความยาวกลับถูกบีบจนตัดคำ
+       */
+      /*
+       * ดูเฉพาะแถวข้อมูล ไม่รวมแถวหัวตาราง — หัวตารางมักเป็นคำยาวกว่าข้อมูล
+       * ("ดาวน์โหลด" คร่อมไอคอนใบเดียว) ถ้าเอามาคิดด้วยจะไม่มีคอลัมน์ไหนผ่านเลย
+       * ส่วนหัวตารางไม่ตัดคำอยู่แล้ว คอลัมน์จึงกว้างพอสำหรับหัวข้อเสมอ
+       */
+      const rows = Array.from(table.tBodies[0]?.rows ?? []).length
+        ? Array.from(table.tBodies[0].rows)
+        : Array.from(table.rows).slice(1);
+
+      const narrow = (index: number) =>
+        rows.length > 0 &&
+        rows.every((row) => {
+          const cell = row.cells[index < 0 ? row.cells.length + index : index];
+          if (!cell) return false;
+          // มีไอคอน/ลิงก์ไฟล์ หรือข้อความสั้น ๆ อย่าง "1." "New 1." ถึงจะนับว่าแคบได้
+          if (cell.querySelector("a.pdf-icon")) return true;
+          return cell.textContent!.trim().length <= 8;
+        });
+
+      if (narrow(0)) table.classList.add("tight-first");
+      if (rows.some((row) => row.cells.length > 1) && narrow(-1)) table.classList.add("tight-last");
+
       if (table.parentElement?.classList.contains("table-scroll")) return;
       const wrap = document.createElement("div");
       wrap.className = "table-scroll";
