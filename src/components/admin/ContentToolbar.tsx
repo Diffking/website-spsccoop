@@ -19,6 +19,7 @@ import {
   PanelsTopLeft,
   LayoutGrid,
   UserSquare2,
+  Tag,
   Users,
   WandSparkles,
 } from "lucide-react";
@@ -271,6 +272,19 @@ function FolderChoice({
 /** ความกว้างแผงที่กางจากปุ่ม — ใช้หนีบไม่ให้เลยขอบจอ */
 const MENU_WIDTH = 288;
 
+/**
+ * สีป้ายข้อความ — ใช้ชุดสีเดียวกับการ์ดลิงก์ จะได้ไม่มีสีแปลกปลอมโผล่มาในหน้าเดียวกัน
+ * ชื่อ class ต้องอยู่ใน ALLOWED_CLASSES ของ src/lib/pageHtml.ts ด้วย
+ */
+const BADGE_COLORS = [
+  { key: "blue", label: "ฟ้า" },
+  { key: "green", label: "เขียว" },
+  { key: "amber", label: "เหลือง" },
+  { key: "pink", label: "ชมพู" },
+  { key: "purple", label: "ม่วง" },
+  { key: "teal", label: "เขียวทะเล" },
+] as const;
+
 /** จำนวนคอลัมน์ที่เลือกได้ของการ์ดลิงก์ — มากกว่า 4 การ์ดจะแคบจนอ่านชื่อไม่ออก */
 const CARD_COLS = [2, 3, 4];
 
@@ -322,7 +336,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
   /** แทรกของลงแท็บไหน — "" = ตรงตำแหน่งเคอร์เซอร์เหมือนเดิม */
   const [target, setTarget] = useState<string>("");
   /** แผงที่กางอยู่ตอนนี้ — เปิดได้ทีละอัน */
-  const [openMenu, setOpenMenu] = useState<null | "image" | "cards" | "pdf">(null);
+  const [openMenu, setOpenMenu] = useState<null | "image" | "cards" | "pdf" | "badge">(null);
   /** การ์ดลิงก์ที่จะสร้างใหม่ ให้แถวละกี่ใบ */
   const [cardsCols, setCardsCols] = useState(3);
   /*
@@ -649,7 +663,7 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
     }
 
     const where = tabs[Number(target)] ? ` ในแท็บ “${tabs[Number(target)].title}”` : "";
-    const what = pdfMode === "link" ? "ลิงก์ดาวน์โหลด" : "การ์ดอ่าน E-Book";
+    const what = pdfMode === "link" ? "ไอคอนดาวน์โหลด" : "การ์ดอ่าน E-Book";
     setHint(`แนบไฟล์ PDF แบบ${what}แล้ว${where} — ต้องกดบันทึกด้านล่างด้วย ถึงจะขึ้นบนหน้าเว็บจริง`);
   }
 
@@ -764,6 +778,58 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
             <tool.icon className="h-4 w-4" />
           </button>
         ))}
+
+        {/* ป้ายข้อความ — ครอบคำที่เลือกไว้ให้เป็นป้ายสี เน้นคำสำคัญกลางย่อหน้าได้ */}
+        <div className="relative">
+          <button
+            data-menu-btn
+            type="button"
+            title="ป้ายข้อความ — เลือกข้อความก่อนแล้วกดเลือกสี"
+            onClick={(e) => {
+              const box = e.currentTarget.getBoundingClientRect();
+              setMenuAt({
+                top: box.bottom + 4,
+                left: Math.max(8, Math.min(box.left, window.innerWidth - MENU_WIDTH - 16)),
+              });
+              setOpenMenu((v) => (v === "badge" ? null : "badge"));
+            }}
+            className={`inline-flex h-8 items-center gap-1 rounded-lg px-2 text-gray-500 transition hover:bg-white hover:text-brand-600 hover:shadow-sm ${
+              openMenu === "badge" ? "bg-white text-brand-600 shadow-sm" : ""
+            }`}
+          >
+            <Tag className="h-4 w-4" />
+            <ChevronDown className="h-3 w-3" />
+          </button>
+
+          {openMenu === "badge" && (
+            <div
+              ref={menuBox}
+              style={{ top: menuAt.top, left: menuAt.left, width: MENU_WIDTH }}
+              className="fixed z-50 rounded-xl bg-white p-2 shadow-xl ring-1 ring-black/10"
+            >
+              <p className="px-1 text-sm font-medium text-gray-800">ป้ายข้อความ</p>
+              <p className="mb-2 px-1 text-xs text-gray-500">
+                เลือกข้อความในเนื้อหาก่อน แล้วกดสี — ไม่ได้เลือกไว้จะได้ป้ายตัวอย่างมาแก้ทับ
+              </p>
+
+              <div className="grid grid-cols-3 gap-1.5">
+                {BADGE_COLORS.map((color) => (
+                  <button
+                    key={color.key}
+                    type="button"
+                    onClick={() => {
+                      setOpenMenu(null);
+                      wrap(`<span class="badge ${color.key}">`, "</span>", "ข้อความ");
+                    }}
+                    className={`badge-swatch-${color.key} rounded-lg px-2 py-2 text-xs font-medium ring-1 transition hover:brightness-95`}
+                  >
+                    {color.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         <span className="h-5 w-px bg-gray-200" />
         <span className="text-[11px] font-medium text-gray-400">บล็อก</span>
@@ -1134,9 +1200,9 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
                   }}
                   className="w-full rounded-lg bg-gray-100 px-2.5 py-2 text-left text-xs font-semibold text-gray-700 transition hover:bg-gray-200"
                 >
-                  ลิงก์ดาวน์โหลดอย่างเดียว
+                  ไอคอน PDF อย่างเดียว
                   <span className="mt-0.5 block text-[11px] font-normal text-gray-500">
-                    ไอคอน PDF อย่างเดียว ไม่มีข้อความ กดที่ไอคอนแล้วโหลดไฟล์ทันที
+                    ไอคอนตัวเดียว ไม่มีชื่อไฟล์ ไม่มีข้อความ กดแล้วโหลดไฟล์ทันที
                   </span>
                 </button>
               </div>

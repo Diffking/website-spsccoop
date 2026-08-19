@@ -391,3 +391,27 @@ body {
 .prose-page {
   --pdf-icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z'/><path d='M14 2v6h6'/><path d='M12 18v-6'/><path d='m9 15 3 3 3-3'/></svg>");
 }
+
+/* ---- ป้ายข้อความ (badge) ----
+   ครอบคำสำคัญกลางย่อหน้าให้เด่นขึ้นโดยไม่ต้องทำเป็นหัวข้อ เช่น "ฉบับปรับปรุง" "ใหม่"
+   ใช้ชุดสีเดียวกับการ์ดลิงก์ จะได้ไม่มีสีแปลกปลอมโผล่มาในหน้าเดียวกัน */
+.prose-page .badge {
+  display: inline-block; vertical-align: baseline;
+  padding: .1rem .55rem; margin: 0 .15rem;
+  border-radius: 999px; font-size: .85em; font-weight: 600; line-height: 1.6;
+  background: #eaf4fc; color: #0f5390;
+}
+.prose-page .badge.blue   { background: #eaf4fc; color: #0f5390; }
+.prose-page .badge.green  { background: #e6f7f3; color: #0f8a72; }
+.prose-page .badge.amber  { background: #fef4de; color: #92600a; }
+.prose-page .badge.pink   { background: #fde8f1; color: #9d174d; }
+.prose-page .badge.purple { background: #f1e9fd; color: #5b21b6; }
+.prose-page .badge.teal   { background: #e2f6f8; color: #0e6f7d; }
+
+/* สีปุ่มเลือกป้ายในแถบเครื่องมือหลังบ้าน — ให้เห็นสีจริงก่อนกด ไม่ต้องเดาจากชื่อ */
+.badge-swatch-blue   { background: #eaf4fc; color: #0f5390; --tw-ring-color: #cfe6f8; }
+.badge-swatch-green  { background: #e6f7f3; color: #0f8a72; --tw-ring-color: #bfe9df; }
+.badge-swatch-amber  { background: #fef4de; color: #92600a; --tw-ring-color: #fbe1a8; }
+.badge-swatch-pink   { background: #fde8f1; color: #9d174d; --tw-ring-color: #f9c9dd; }
+.badge-swatch-purple { background: #f1e9fd; color: #5b21b6; --tw-ring-color: #ddcbfa; }
+.badge-swatch-teal   { background: #e2f6f8; color: #0e6f7d; --tw-ring-color: #b8e6ec; }
