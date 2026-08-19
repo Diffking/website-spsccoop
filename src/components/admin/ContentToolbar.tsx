@@ -276,6 +276,19 @@ const MENU_WIDTH = 288;
  * สีป้ายข้อความ — ใช้ชุดสีเดียวกับการ์ดลิงก์ จะได้ไม่มีสีแปลกปลอมโผล่มาในหน้าเดียวกัน
  * ชื่อ class ต้องอยู่ใน ALLOWED_CLASSES ของ src/lib/pageHtml.ts ด้วย
  */
+/** ขนาดไอคอน PDF ที่เลือกได้ — ต้องตรงกับ class size-* ใน globals.css */
+const ICON_SIZES = [40, 50, 64, 80];
+
+/** สีไอคอน PDF — ค่าว่างคือสีแดงตามค่าตั้งต้น */
+const ICON_COLORS = [
+  { key: "", label: "แดง", swatch: "#dc2626" },
+  { key: "blue", label: "ฟ้า", swatch: "#1568b0" },
+  { key: "green", label: "เขียว", swatch: "#0f8a72" },
+  { key: "amber", label: "ส้ม", swatch: "#b45309" },
+  { key: "purple", label: "ม่วง", swatch: "#6d28d9" },
+  { key: "gray", label: "เทา", swatch: "#4b5563" },
+] as const;
+
 const BADGE_COLORS = [
   { key: "blue", label: "ฟ้า" },
   { key: "green", label: "เขียว" },
@@ -352,6 +365,9 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
    * "link" คือลิงก์ดาวน์โหลดล้วน ๆ ไม่มีข้อความอธิบายใด ๆ กดแล้วได้ไฟล์เลย
    */
   const [pdfMode, setPdfMode] = useState<"card" | "link">("card");
+  /** ขนาดไอคอน PDF (พิกเซล) และสี — ใช้ตอนแนบแบบไอคอนอย่างเดียว */
+  const [iconSize, setIconSize] = useState(50);
+  const [iconColor, setIconColor] = useState("");
   /** มุมบนซ้ายของแผง วัดจากจอ (position: fixed) — ตั้งตอนกดปุ่ม */
   const [menuAt, setMenuAt] = useState({ top: 0, left: 0 });
   /** ทำเนียบที่จะสร้างใหม่ ให้แถวละกี่คน */
@@ -650,8 +666,9 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
        * ชื่อไฟล์ยังใส่ไว้ใน title/aria-label เพื่อให้เอาเมาส์ชี้แล้วเห็น และโปรแกรมอ่านหน้าจอ
        * อ่านออกว่ากำลังจะโหลดไฟล์อะไร (ไอคอนเปล่า ๆ คนตาบอดจะไม่รู้เลยว่าลิงก์นี้คืออะไร)
        */
+      const style = `pdf-icon size-${iconSize}${iconColor ? ` ${iconColor}` : ""}`;
       insert(
-        `<a class="pdf-icon" href="${result.data.url}" download ` +
+        `<a class="${style}" href="${result.data.url}" download ` +
           `title="${name}" aria-label="ดาวน์โหลด ${name}"></a>`,
       );
     } else {
@@ -1191,20 +1208,62 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
                   </span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPdfMode("link");
-                    setOpenMenu(null);
-                    pdfInput.current?.click();
-                  }}
-                  className="w-full rounded-lg bg-gray-100 px-2.5 py-2 text-left text-xs font-semibold text-gray-700 transition hover:bg-gray-200"
-                >
-                  ไอคอน PDF อย่างเดียว
-                  <span className="mt-0.5 block text-[11px] font-normal text-gray-500">
+                <div className="rounded-lg bg-gray-50 p-2 ring-1 ring-gray-200">
+                  <p className="px-1 text-xs font-semibold text-gray-700">ไอคอน PDF อย่างเดียว</p>
+                  <p className="px-1 text-[11px] text-gray-500">
                     ไอคอนตัวเดียว ไม่มีชื่อไฟล์ ไม่มีข้อความ กดแล้วโหลดไฟล์ทันที
-                  </span>
-                </button>
+                  </p>
+
+                  {/* ขนาดกับสีเลือกก่อนแนบ จะได้ไม่ต้องไปแก้ class ในโค้ดทีหลัง */}
+                  <div className="mt-2 flex items-center gap-1.5 px-1">
+                    <span className="text-[11px] text-gray-500">ขนาด</span>
+                    {ICON_SIZES.map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => setIconSize(size)}
+                        className={`h-7 flex-1 rounded-lg text-[11px] font-medium transition ${
+                          iconSize === size
+                            ? "bg-brand-600 text-white"
+                            : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-100"
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mt-1.5 flex items-center gap-1.5 px-1">
+                    <span className="text-[11px] text-gray-500">สี</span>
+                    {ICON_COLORS.map((color) => (
+                      <button
+                        key={color.key || "default"}
+                        type="button"
+                        onClick={() => setIconColor(color.key)}
+                        title={color.label}
+                        aria-label={`สี${color.label}`}
+                        style={{ backgroundColor: color.swatch }}
+                        className={`h-6 w-6 rounded-full transition ${
+                          iconColor === color.key
+                            ? "ring-2 ring-gray-800 ring-offset-2"
+                            : "ring-1 ring-black/10 hover:scale-110"
+                        }`}
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPdfMode("link");
+                      setOpenMenu(null);
+                      pdfInput.current?.click();
+                    }}
+                    className="mt-2 w-full rounded-lg bg-gray-700 px-2.5 py-2 text-xs font-semibold text-white transition hover:bg-gray-800"
+                  >
+                    เลือกไฟล์ PDF (ไอคอน {iconSize}px)
+                  </button>
+                </div>
               </div>
             </div>
           )}

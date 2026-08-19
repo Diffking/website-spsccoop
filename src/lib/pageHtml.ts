@@ -24,10 +24,12 @@ const ALLOWED_CLASSES = new Set([
   "left", "right", "small", "wide", "image-row",
   // แท็บเมนูและการ์ดเอกสาร PDF — PageContent เอาไปทำเป็นแท็บกดได้จริงตอนแสดงผล
   "tabs", "tab", "ebook", "pdf-icon", "badge",
+  // ขนาดไอคอน PDF
+  "size-40", "size-50", "size-64", "size-80",
   // การ์ดลิงก์แบบตาราง (ดู .cards ใน globals.css)
   "cards", "card", "card-badge", "card-text", "card-title", "card-sub",
   // สีของการ์ด
-  "blue", "green", "amber", "pink", "purple", "teal",
+  "blue", "green", "amber", "pink", "purple", "teal", "gray",
   // ทำเนียบบุคลากร (ดู .people ใน globals.css) — cols-N คือจำนวนคนต่อแถว
   "people", "person", "person-name", "person-role",
   "cols-2", "cols-3", "cols-4", "cols-5",
