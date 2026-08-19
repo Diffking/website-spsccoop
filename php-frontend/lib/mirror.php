@@ -192,6 +192,23 @@ final class Mirror
         $size = (int) filesize($item['file']);
         header('Content-Type: ' . $item['type']);
         header('X-Mirror: ' . $state);
+
+        /*
+         * บอกเบราว์เซอร์ให้ชัดว่าเก็บของไว้เองได้แค่ไหน
+         *
+         * ไม่บอกอะไรเลย เบราว์เซอร์จะเดาเอง (มักเดาจาก Last-Modified แล้วเก็บไว้เป็นชั่วโมง)
+         * เจ้าหน้าที่แก้เนื้อหาแล้วสำเนาบนโฮสต์ใหม่แล้วก็จริง แต่เครื่องคนอ่านยังโชว์ของเก่า
+         * แล้วสรุปว่าระบบไม่อัปเดต — เจอมาแล้ว
+         *
+         * หน้าเว็บ: ให้ถามใหม่ทุกครั้ง (ถามมาก็ตอบจากสำเนาบนโฮสต์ ไม่ได้ไปกวนเครื่องที่สำนักงาน)
+         * รูป/ไฟล์แนบ/ไฟล์ประกอบ: ชื่อไฟล์เป็นรหัสไม่ซ้ำอยู่แล้ว เปลี่ยนไฟล์ = เปลี่ยนชื่อ
+         *   เก็บไว้ยาว ๆ ได้ เว็บจะได้เร็วและไม่กินเน็ตของโฮสต์
+         */
+        if (str_contains((string) $item['type'], 'html')) {
+            header('Cache-Control: no-cache, must-revalidate');
+        } else {
+            header('Cache-Control: public, max-age=604800');
+        }
         header('Accept-Ranges: bytes');
 
         foreach ((array) ($item['extra'] ?? []) as $name => $value) {
