@@ -12,11 +12,17 @@ import { SPLASH_GRACE_MS, getActiveOccasion, type SplashContent } from "@/conten
  *
  * ที่อยู่ต้องมี / ปิดท้ายเสมอ เว็บนี้ตั้งไว้แบบนั้น — ไม่ใส่จะโดนพาไปที่อยู่ใหม่อีกจังหวะหนึ่ง
  * ซึ่งเวลาอ่านผ่านสำเนาบนโฮสต์แล้วสะดุด กดเข้าเว็บครั้งแรกจะไม่เด้งไปหน้าวันสำคัญ
- * ครอว์เลอร์ไม่รัน JS → หน้า Home ยังถูก index ตามปกติ (SEO ไม่กระทบ)
+ * ⚠️ ครอว์เลอร์ของกูเกิลรัน JS ด้วย (เมื่อก่อนไม่รัน) ถ้าปล่อยให้มันโดนเด้งไปหน้าวันสำคัญ
+ * มันจะไปเจอป้ายห้ามเก็บที่หน้านั้น แล้วสรุปว่า "หน้าแรกจัดทำดัชนีไม่ได้" — เว็บหายจากกูเกิล
+ * ทั้งเว็บโดยที่หน้าเว็บสำหรับคนยังปกติดีทุกอย่าง หาสาเหตุยากมาก จึงต้องข้ามให้บอทเสมอ
  */
+/** ตัวไต่เว็บของเครื่องมือค้นหา — ต้องไม่โดนเด้ง ไม่งั้นหน้าแรกจะจัดทำดัชนีไม่ได้ */
+const CRAWLER = /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|lighthouse|headless/i;
+
 export default function SplashGate({ content }: { content: SplashContent }) {
   const router = useRouter();
   useEffect(() => {
+    if (CRAWLER.test(navigator.userAgent)) return;
     if (!getActiveOccasion(content)) return;
     try {
       const entered = Number(sessionStorage.getItem("spsc_entered"));
