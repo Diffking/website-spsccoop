@@ -20,12 +20,15 @@ import {
   LayoutGrid,
   UserSquare2,
   Users,
+  WandSparkles,
 } from "lucide-react";
 import UploadProgress from "@/components/admin/UploadProgress";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
 import { findBlocks, type HtmlBlock } from "@/lib/htmlBlocks";
 import { parsePersonFile, sortByFileOrder } from "@/lib/personName";
 import { tidyPeopleHtml } from "@/lib/peopleHtml";
+import { prettyHtml } from "@/lib/prettyHtml";
+import { repairStructure } from "@/lib/htmlStructure";
 
 /**
  * แถบเครื่องมือจัดข้อความสำหรับช่องเนื้อหา HTML — ใช้ซ้ำได้ทุกที่ที่พิมพ์เนื้อหาเป็น HTML
@@ -1037,6 +1040,28 @@ export default function ContentToolbar({ textarea, value, onChange, folder = "pa
 
         <span className="h-5 w-px bg-gray-200" />
         <span className="text-[11px] font-medium text-gray-400">ไฟล์</span>
+
+        <span className="h-5 w-px bg-gray-200" />
+
+        {/* จัดย่อหน้าโค้ดทั้งหน้าให้เป็นระเบียบเดียวกัน — ของที่ก๊อปมาจากที่อื่นมักย่อหน้าเละ */}
+        <button
+          type="button"
+          onClick={() => {
+            const next = prettyHtml(repairStructure(value));
+            if (next === value) {
+              setHint("โค้ดเป็นระเบียบดีอยู่แล้ว ไม่มีอะไรต้องจัด");
+              return;
+            }
+            onChange(next);
+            setError(null);
+            setHint("จัดย่อหน้าโค้ดให้แล้ว — ข้อความเหมือนเดิมทุกตัวอักษร");
+          }}
+          title="จัดย่อหน้าโค้ดให้อ่านง่าย ไม่แตะข้อความ"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-200"
+        >
+          <WandSparkles className="h-3.5 w-3.5" />
+          จัดโค้ดให้สวย
+        </button>
 
         <div className="relative">
           <button

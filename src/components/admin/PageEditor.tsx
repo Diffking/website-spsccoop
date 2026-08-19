@@ -7,6 +7,7 @@ import ContentToolbar from "@/components/admin/ContentToolbar";
 import PageContent from "@/components/site/PageContent";
 import { localAssetsInHtml } from "@/lib/assetFallback";
 import { repairStructure, structureProblems } from "@/lib/htmlStructure";
+import { prettyHtml } from "@/lib/prettyHtml";
 import Toggle from "@/components/ui/Toggle";
 
 /** จำสวิตช์ AI ไว้ในเครื่องคนใช้ ไม่ใช่ในฐาน — เป็นความชอบส่วนตัวของแต่ละคน ไม่ใช่ค่าของเว็บ */
@@ -124,11 +125,12 @@ export default function PageEditor({ page, aiReady = false, aiFormatDefault = tr
     const repairNotes = structureProblems(body);
     if (repairNotes.length > 0) {
       body = repairStructure(body);
-      if (body !== beforeRepair) {
-        setContent(body);
-        note += ` · ซ่อมโครงสร้างให้ (${repairNotes.join(" · ")})`;
-      }
+      if (body !== beforeRepair) note += ` · ซ่อมโครงสร้างให้ (${repairNotes.join(" · ")})`;
     }
+
+    // จัดย่อหน้าให้เป็นระเบียบเดียวกันทุกครั้งที่บันทึก — แตะแค่ช่องว่าง ไม่แตะข้อความ
+    body = prettyHtml(body);
+    if (body !== beforeRepair) setContent(body);
 
     const response = await fetch(`/api/admin/pages/${page.id}/`, {
       method: "PATCH",
