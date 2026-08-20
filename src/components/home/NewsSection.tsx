@@ -35,14 +35,21 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
         {KIND_HEADING[kind]}
       </p>
 
+      {/*
+        ล็อกจำนวนช่องของรายการไว้เท่ากับ PER_PAGE เสมอ — หน้าสุดท้ายที่มีไม่ครบจะได้ไม่หดสั้น
+        แล้วปุ่มเปลี่ยนหน้าด้านล่างเด้งขึ้นลงตอนกดไปมา
+      */}
       {items.length === 0 ? (
         <p className="flex-1 grid place-items-center py-10 text-center text-sm text-gray-400">
           ยังไม่มี{KIND_LABEL[kind]}
         </p>
       ) : (
-        <ul className="flex-1 divide-y divide-gray-100">
+        <ul
+          style={{ gridTemplateRows: `repeat(${PER_PAGE}, minmax(4.25rem, auto))` }}
+          className="grid flex-1 divide-y divide-gray-100"
+        >
           {shown.map((a) => (
-            <li key={a.id} className="min-h-[4.25rem]">
+            <li key={a.id}>
               <MaybeLink
                 href={readerHref(a.kind, a.id, a.href)}
                 className="group flex items-start gap-3 py-3 transition hover:bg-brand-50/60 rounded-lg px-2 -mx-2"
@@ -162,7 +169,11 @@ function CommitteeCard({
       <p className="mt-4 line-clamp-1 flex-1 text-base font-semibold text-gray-700" title={c.title}>
         {c.title}
       </p>
-      <p className="line-clamp-1 text-sm text-gray-400" title={c.subtitle ?? ""}>
+      {/*
+        กันบรรทัดตำแหน่งหายตอนเจอคนที่ไม่ได้กรอกตำแหน่งไว้ — ถ้าปล่อยให้หาย
+        การ์ดจะเตี้ยลงหนึ่งบรรทัดแล้วกระตุกทุกครั้งที่กดเปลี่ยนคน
+      */}
+      <p className="line-clamp-1 min-h-[1.25rem] text-sm text-gray-400" title={c.subtitle ?? ""}>
         {c.subtitle}
       </p>
       <div className="mt-4 flex items-center justify-center gap-3">

@@ -12,6 +12,12 @@ export type HeroSlide = { src: string | StaticImageData; title: string; desc: st
 
 const SLIDE_MS = 6500; // เลื่อนช้าๆ ไม่เร็วเกินไป
 
+/**
+ * ความสูงหนึ่งแถวของตารางดอกเบี้ย (px) — ต้องพอกับตัวเลข text-lg ที่สูง 28px
+ * บวกช่องไฟบนล่าง · ใช้เป็นตัวล็อกความสูงของการ์ดไม่ให้ขยับตอนเปลี่ยนหน้า
+ */
+const ROW_H = 48;
+
 function BannerSlider({ slides }: { slides: HeroSlide[] }) {
   const reduce = useReducedMotion();
   const [i, setI] = useState(0);
@@ -80,7 +86,8 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.18, duration: 0.5 }}
                 // เข้มขึ้นจาก brand-700 เป็น brand-800 — อ่านง่ายขึ้นบนพื้นไล่สีอ่อน
-                className="mt-3 text-lg font-bold leading-snug tracking-tight text-brand-800 sm:mt-4 sm:text-xl md:text-2xl"
+                // จำกัดบรรทัด — หัวข้อยาวผิดปกติจะได้ไม่ดันคำอธิบายจนล้นกรอบ
+                className="mt-3 line-clamp-3 text-lg font-bold leading-snug tracking-tight text-brand-800 sm:mt-4 sm:text-xl md:text-2xl"
               >
                 {slide.title}
               </motion.h3>
@@ -294,11 +301,21 @@ function RateCard({ rates }: { rates: InterestRates }) {
       <p className="mt-4 text-xs text-gray-400">อัตราดอกเบี้ย (ต่อปี)</p>
 
       {/*
-        ความสูงล็อกตาม perPage — แถวละ 46px จะได้ไม่ขยับตอนหน้าสุดท้ายมีไม่ครบ
+        ล็อกขนาดสองอย่าง ไม่งั้นเปลี่ยนหน้าแล้วสะดุดตา
+        (เคยเป็นมาแล้วกับดอกเบี้ยเงินกู้ตอนเลื่อนไปหน้าท้าย ๆ)
+
+        1. **ความสูง** — วางเป็นกริดที่มีช่องเท่ากับ perPage เสมอ ช่องละ ROW_H พอดี
+           หน้าไหนมีไม่ครบก็เหลือช่องว่างไว้ ความสูงจึงเท่ากันทุกหน้าเป๊ะ
+           (ของเดิมใช้ minHeight เดาไว้ที่แถวละ 46px แต่แถวจริงสูง 48px
+           หน้าที่เต็มจึงดันสูงกว่าหน้าที่ไม่เต็ม 14px แล้วการ์ดกระตุกทุกครั้งที่วนกลับ)
+
+        2. **ความกว้างคอลัมน์ตัวเลข** — ตรึงไว้ ไม่งั้นหน้าไหนมีเลข 2 หลักคอลัมน์จะกว้างขึ้น
+           แล้วชื่อรายการฝั่งซ้ายขยับตามทุกครั้งที่เปลี่ยนหน้า
+
         เปลี่ยนหน้าแบบค่อย ๆ จาง ไม่ใช่สลับทันที — เดิมตัวเลขกระพริบเปลี่ยนวูบเดียวจนสะดุดตา
         (เครื่องที่ตั้งค่าลดการเคลื่อนไหวไว้จะสลับทันทีเหมือนเดิม)
       */}
-      <div style={{ minHeight: perPage * 46 }} className="relative mt-2 flex-1">
+      <div className="relative mt-2 flex-1">
         <AnimatePresence mode="wait" initial={false}>
           <motion.ul
             key={index}
@@ -306,15 +323,16 @@ function RateCard({ rates }: { rates: InterestRates }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: reduce ? 0 : -6 }}
             transition={{ duration: reduce ? 0 : 0.45, ease: "easeOut" }}
-            className="divide-y divide-gray-100"
+            style={{ gridTemplateRows: `repeat(${perPage}, ${ROW_H}px)` }}
+            className="grid divide-y divide-gray-100"
           >
             {current.rows.map((r, i) => (
               // ชื่อรายการซ้ำกันได้ (เจ้าหน้าที่พิมพ์เอง) จึงผูก key กับลำดับด้วย
-              <li key={`${r.label}-${i}`} className="flex items-center justify-between gap-3 py-2.5">
+              <li key={`${r.label}-${i}`} className="flex items-center justify-between gap-3">
                 <span className="min-w-0 flex-1 truncate text-sm text-gray-600" title={r.label}>
                   {r.label}
                 </span>
-                <span className={`shrink-0 text-lg font-bold ${valueColor}`}>
+                <span className={`w-24 shrink-0 text-right text-lg font-bold ${valueColor}`}>
                   {r.rate} <span className="text-sm font-medium text-gray-400">%</span>
                 </span>
               </li>

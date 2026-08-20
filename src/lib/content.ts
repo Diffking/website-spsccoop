@@ -123,41 +123,6 @@ export async function getHolidayToday(): Promise<string | null> {
   }
 }
 
-/** วันหยุดที่จะถึง — ป้ายบนหัวเว็บบอกล่วงหน้าว่าสหกรณ์จะปิดวันไหน */
-export type NextHoliday = { title: string; date: string; inDays: number };
-
-/**
- * วันหยุดสหกรณ์ครั้งถัดไปนับจากพรุ่งนี้ (ของวันนี้ใช้ getHolidayToday แยกต่างหาก)
- * แปลงวันที่เป็นข้อความไทยฝั่งเซิร์ฟเวอร์ กัน hydration ไม่ตรงกับฝั่งเบราว์เซอร์
- */
-export async function getNextHoliday(): Promise<NextHoliday | null> {
-  try {
-    const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
-    const today = new Date(`${ymd}T00:00:00+07:00`);
-    const tomorrow = new Date(today.getTime() + 24 * 3_600_000);
-
-    const row = await db.holiday.findFirst({
-      where: { published: true, date: { gte: tomorrow } },
-      orderBy: { date: "asc" },
-      select: { title: true, date: true },
-    });
-    if (!row) return null;
-
-    return {
-      title: row.title,
-      date: new Intl.DateTimeFormat("th-TH", {
-        day: "numeric",
-        month: "short",
-        timeZone: "Asia/Bangkok",
-      }).format(row.date),
-      inDays: Math.round((row.date.getTime() - today.getTime()) / 86_400_000),
-    };
-  } catch (error) {
-    console.error("อ่านวันหยุดถัดไปไม่ได้:", error);
-    return null;
-  }
-}
-
 /**
  * วันหยุดสหกรณ์ของ "เดือนนี้" สำหรับปฏิทินหน้าแรก (ปฏิทินแสดงทีละเดือน)
  * ตัดเดือนตามเวลาไทย ไม่ใช่ UTC ไม่งั้นต้นเดือน/ปลายเดือนจะคลาดไปหนึ่งวัน
