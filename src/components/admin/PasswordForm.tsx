@@ -140,14 +140,38 @@ export default function PasswordForm({ userId, ownPassword }: { userId: string; 
         </p>
       )}
 
+      {/*
+        รายการที่ต้องครบก่อนกดได้ — ติ๊กเขียวทีละข้อ
+        เดิมปุ่มแค่จางลงเฉย ๆ ใครกรอกรหัสใหม่สั้นไปจะกดแล้วไม่มีอะไรเกิดขึ้น
+        แล้วนึกว่าระบบเสีย (เกิดขึ้นจริงกับ 07337) — ต้องบอกให้เห็นว่าติดตรงไหน
+      */}
+      <ul className="mt-4 space-y-1 text-xs">
+        {[
+          { ok: current.length > 0, text: "ใส่รหัสผ่านที่ใช้อยู่ตอนนี้" },
+          { ok: next.trim().length >= 8, text: "รหัสผ่านใหม่ยาวอย่างน้อย 8 ตัวอักษร" },
+          { ok: next.length > 0 && next === again, text: "พิมพ์รหัสผ่านใหม่ซ้ำให้ตรงกัน" },
+        ].map((item) => (
+          <li
+            key={item.text}
+            className={`flex items-center gap-1.5 ${item.ok ? "text-emerald-700" : "text-gray-400"}`}
+          >
+            <Check className={`h-3.5 w-3.5 shrink-0 ${item.ok ? "" : "opacity-30"}`} />
+            {item.text}
+          </li>
+        ))}
+      </ul>
+
       <button
         type="submit"
         disabled={busy || !ready}
-        className="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 font-medium text-white transition hover:bg-brand-700 disabled:opacity-50"
+        className="mt-3 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
         เปลี่ยนรหัสผ่าน
       </button>
+      {!ready && !busy && (
+        <span className="ml-3 text-xs text-gray-400">กรอกให้ครบทั้ง 3 ข้อก่อนถึงจะกดได้</span>
+      )}
 
       <p className="mt-3 text-xs leading-relaxed text-gray-400">
         จำรหัสไม่ได้ให้แจ้งผู้ดูแลระบบ (07337) กด “ตั้งรหัสใหม่จากเบอร์โทร” ให้
