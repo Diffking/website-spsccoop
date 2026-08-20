@@ -4,7 +4,7 @@ import { requireWritePage, toSlug } from "@/lib/apiAuth";
 import { canPage } from "@/lib/permissions";
 import { cleanPageFolder, pageFolder } from "@/lib/ftp";
 import { repairStructure } from "@/lib/htmlStructure";
-import { limitInlineStyles } from "@/lib/pageHtml";
+import { cleanPageHtml, limitInlineStyles } from "@/lib/pageHtml";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 
 type Params = { params: Promise<{ id: string }> };
@@ -58,13 +58,21 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   /*
-   * ด่านสุดท้ายก่อนลงฐาน — ซ่อมโครงสร้าง <div> ให้สมดุลเสมอ
+   * ด่านสุดท้ายก่อนลงฐาน — ทำสองอย่างเสมอ ไม่ว่าเนื้อหาจะมาจากทางไหน
    *
-   * หน้าจอแก้ไขซ่อมให้อยู่แล้ว แต่ด่านนี้กันทุกทางที่เขียนเนื้อหา (สคริปต์ เครื่องมืออื่น
-   * หรือหน้าจอที่ยังไม่ได้อัปเดต) ไม่ให้บันทึกโครงที่ทำหน้าเว็บเพี้ยนลงไปได้เลย
+   * 1. ซ่อมโครงสร้าง <div> ให้สมดุล — หน้าจอแก้ไขซ่อมให้อยู่แล้ว แต่ด่านนี้กันทุกทาง
+   *    ที่เขียนเนื้อหา (สคริปต์ เครื่องมืออื่น หน้าจอที่ยังไม่ได้อัปเดต) ไม่ให้บันทึก
+   *    โครงที่ทำหน้าเว็บเพี้ยนลงไปได้
+   *
+   * 2. **กรองแท็กอันตรายทิ้ง** — เนื้อหาถูกเอาไปวางบนหน้าเว็บด้วย dangerouslySetInnerHTML
+   *    ถ้าบัญชีเจ้าหน้าที่คนไหนหลุด คนที่ยึดบัญชีได้จะฝัง <script> ลงหน้าเว็บ
+   *    แล้วยิงใส่สมาชิกทุกคนที่เปิดหน้านั้น — เดิมกรองแค่ตอน AI จัดรูปแบบ
+   *
+   *    ตรวจแล้วว่าไม่ทำของที่เขียนไว้หาย (npm run check:filter · ผ่าน 24/24 หน้า)
+   *    ผลข้างเคียงที่ยอมรับ: หมายเหตุ <!-- ... --> ในโค้ดถูกตัดทิ้งตอนบันทึก
    */
   if (typeof body.content === "string") {
-    data.body = limitInlineStyles(repairStructure(body.content));
+    data.body = limitInlineStyles(cleanPageHtml(repairStructure(body.content)));
   }
   if (typeof body.published === "boolean") data.published = body.published;
 

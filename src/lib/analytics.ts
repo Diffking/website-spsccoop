@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
+import { publicPaths } from "@/lib/publicPaths";
 
 /**
  * นับผู้เข้าชมเว็บเอง ไม่ใช้บริการภายนอก
@@ -64,13 +65,45 @@ function fingerprint(ip: string, userAgent: string, day: Date): string {
     .digest("hex");
 }
 
-/** บันทึกการเข้าชมหนึ่งครั้ง — เงียบเสมอ ไม่ให้กระทบการแสดงหน้าเว็บ */
+/**
+ * ที่อยู่ของหน้าที่มีอยู่จริง — เก็บไว้ในหน่วยความจำสั้น ๆ
+ *
+ * ตัวแจ้งนับถูกยิงทุกครั้งที่มีคนเปิดหน้า ถ้าไปถามฐานทุกครั้งจะเปลืองเปล่า ๆ
+ * ห้านาทีพอ — เพิ่มหน้าใหม่แล้วรออีกนิดเดียวก็เริ่มนับ
+ */
+let knownPaths: { at: number; set: Set<string> } | null = null;
+const KNOWN_TTL_MS = 5 * 60_000;
+
+async function isRealPage(path: string): Promise<boolean> {
+  // หน้าอ่าน PDF กับ E-Book สร้างที่อยู่จากรหัสไฟล์ ไม่ได้อยู่ในรายการหน้าเว็บ
+  if (path === "/read" || /^\/ebook\/[A-Za-z0-9_-]{1,40}$/.test(path)) return true;
+
+  if (!knownPaths || Date.now() - knownPaths.at > KNOWN_TTL_MS) {
+    const list = await publicPaths();
+    knownPaths = {
+      at: Date.now(),
+      set: new Set(list.map((p) => p.replace(/\/+$/, "") || "/")),
+    };
+  }
+  return knownPaths.set.has(path);
+}
+
+/**
+ * บันทึกการเข้าชมหนึ่งครั้ง — เงียบเสมอ ไม่ให้กระทบการแสดงหน้าเว็บ
+ *
+ * **นับเฉพาะที่อยู่ของหน้าที่มีอยู่จริง** — เส้นทางนี้เปิดให้ยิงได้โดยไม่ต้องล็อกอิน
+ * (หน้าเว็บต้องยิงเองได้) ถ้ารับที่อยู่อะไรก็ได้ คนไม่หวังดีจะยิงที่อยู่มั่ว ๆ
+ * สร้างแถวใหม่ได้ไม่จำกัด ทั้งทำให้ฐานบวม ไฟล์สำรองใหญ่ ตัวเลขบนเว็บเพี้ยน
+ * และหน้ายอดนิยมในหลังบ้านเต็มไปด้วยขยะ (ทดสอบแล้วว่ายิงได้จริง 20 ส.ค. 2026)
+ */
 export async function record(path: string, ip: string, userAgent: string): Promise<void> {
   if (!shouldTrack(path)) return;
 
   const day = thaiDay();
   // ตัด query string และ trailing slash ให้เหลือรูปเดียว ไม่งั้นหน้าเดียวจะถูกนับแยกกัน
   const clean = (path.split("?")[0].replace(/\/+$/, "") || "/").slice(0, 200);
+
+  if (!(await isRealPage(clean))) return;
 
   try {
     await db.pageView.upsert({
