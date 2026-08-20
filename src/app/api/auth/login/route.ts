@@ -4,36 +4,57 @@ import { createSession, purgeExpiredSessions, verifyPassword } from "@/lib/auth"
 /**
  * เข้าสู่ระบบหลังบ้าน
  *
- * กันเดารหัส: ผิดเกิน 5 ครั้งจาก IP เดิม ล็อก 15 นาที
+ * **กันเดารหัสสองชั้น: นับทั้งตามไอพี และตามชื่อผู้ใช้**
+ *
+ * นับตามไอพีอย่างเดียวไม่พอ เพราะไอพีที่เห็นมาจากหัวคำขอ (`cf-connecting-ip` /
+ * `x-forwarded-for`) ซึ่งคนยิงตั้งเองได้ถ้าต่อตรงเข้าเครื่องนี้โดยไม่ผ่าน Cloudflare
+ * — เปลี่ยนหัวทุกครั้งก็เดาได้ไม่จำกัด (ทดสอบแล้วว่าทะลุจริง 20 ส.ค. 2026)
+ *
+ * ชั้นที่กันไม่ได้คือ **ชื่อผู้ใช้** เพราะคนจะเดารหัสของใครก็ต้องส่งชื่อคนนั้นมาเสมอ
+ * เรื่องนี้สำคัญเป็นพิเศษกับระบบนี้ เพราะรหัสผ่านคือเลข 4 ตัวท้ายเบอร์โทร
+ * = ความเป็นไปได้แค่หมื่นแบบ ถ้าปล่อยให้ยิงรัวได้ก็เดาเจอในไม่กี่นาที
+ *
+ * ผลข้างเคียงที่ยอมรับ: คนอื่นแกล้งใส่รหัสผิดใส่ชื่อเรา จะทำให้เราเข้าไม่ได้ 15 นาที
+ * — ยอมแลกกับการกันเดารหัส และ 15 นาทีก็หายเอง ไม่ต้องให้ใครมาปลดให้
+ *
  * เก็บในหน่วยความจำของ process พอ เพราะรัน container เดียว รีสตาร์ทแล้วรีเซ็ตก็ไม่เสียหาย
  */
 
 const MAX_ATTEMPTS = 5;
 const LOCK_MS = 15 * 60_000;
 
+/** คีย์เป็น "ip:<ไอพี>" หรือ "user:<ชื่อผู้ใช้>" — ใช้ตารางเดียวกันทั้งสองชั้น */
 const attempts = new Map<string, { count: number; firstAt: number }>();
 
-function rateLimit(ip: string): { blocked: boolean; retryInMinutes: number } {
-  const record = attempts.get(ip);
-  if (!record) return { blocked: false, retryInMinutes: 0 };
+function blockedFor(key: string): number {
+  const record = attempts.get(key);
+  if (!record) return 0;
 
   const elapsed = Date.now() - record.firstAt;
   if (elapsed > LOCK_MS) {
-    attempts.delete(ip);
-    return { blocked: false, retryInMinutes: 0 };
+    attempts.delete(key);
+    return 0;
   }
-  if (record.count >= MAX_ATTEMPTS) {
-    return { blocked: true, retryInMinutes: Math.ceil((LOCK_MS - elapsed) / 60_000) };
-  }
-  return { blocked: false, retryInMinutes: 0 };
+  return record.count >= MAX_ATTEMPTS ? Math.ceil((LOCK_MS - elapsed) / 60_000) : 0;
 }
 
-function recordFailure(ip: string): void {
-  const record = attempts.get(ip);
+function recordFailure(key: string): void {
+  const record = attempts.get(key);
   if (record && Date.now() - record.firstAt <= LOCK_MS) {
     record.count += 1;
   } else {
-    attempts.set(ip, { count: 1, firstAt: Date.now() });
+    attempts.set(key, { count: 1, firstAt: Date.now() });
+  }
+}
+
+/*
+ * ตารางนี้โตได้เรื่อย ๆ ถ้ามีคนยิงด้วยชื่อสุ่ม — เก็บกวาดของหมดอายุทุกครั้งที่มีคนล็อกอิน
+ * ไม่ต้องตั้งตัวจับเวลาแยก และจำนวนผู้ใช้จริงมีไม่กี่คน ตารางจึงเล็กเสมอ
+ */
+function purgeOldAttempts(): void {
+  const now = Date.now();
+  for (const [key, record] of attempts) {
+    if (now - record.firstAt > LOCK_MS) attempts.delete(key);
   }
 }
 
@@ -43,13 +64,7 @@ export async function POST(request: Request) {
     request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     "unknown";
 
-  const limit = rateLimit(ip);
-  if (limit.blocked) {
-    return NextResponse.json(
-      { error: `ใส่รหัสผิดหลายครั้งเกินไป กรุณารออีก ${limit.retryInMinutes} นาที` },
-      { status: 429 },
-    );
-  }
+  purgeOldAttempts();
 
   const body = (await request.json().catch(() => ({}))) as { username?: string; password?: string };
   const username = typeof body.username === "string" ? body.username.trim() : "";
@@ -59,13 +74,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" }, { status: 400 });
   }
 
+  // ต้องเช็คชั้นชื่อผู้ใช้ด้วย จึงอ่าน body ก่อนแล้วค่อยตัดสิน
+  const wait = Math.max(blockedFor(`ip:${ip}`), blockedFor(`user:${username.toLowerCase()}`));
+  if (wait > 0) {
+    return NextResponse.json(
+      { error: `ใส่รหัสผิดหลายครั้งเกินไป กรุณารออีก ${wait} นาที` },
+      { status: 429 },
+    );
+  }
+
   const user = await verifyPassword(username, password);
   if (!user) {
-    recordFailure(ip);
+    recordFailure(`ip:${ip}`);
+    recordFailure(`user:${username.toLowerCase()}`);
     return NextResponse.json({ error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }, { status: 401 });
   }
 
-  attempts.delete(ip);
+  attempts.delete(`ip:${ip}`);
+  attempts.delete(`user:${username.toLowerCase()}`);
   await createSession(user.id);
   await purgeExpiredSessions();
 
