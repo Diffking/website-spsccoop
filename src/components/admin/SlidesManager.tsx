@@ -388,12 +388,19 @@ function SlideCard({
 
   return (
     <div
-      className={`edit-frame relative grid aspect-[16/10] grid-cols-[1.05fr_1fr] items-center gap-3 overflow-hidden rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm sm:gap-5 sm:p-7 ${
+      className={`edit-frame relative grid aspect-[16/10] grid-cols-[1.05fr_1fr] items-center gap-4 overflow-hidden rounded-3xl bg-gradient-to-br from-white via-sky-50 to-brand-50 p-6 shadow-sm ring-1 ring-brand-100 sm:gap-7 sm:p-9 ${
         isLive(slide) ? "" : "opacity-60"
       }`}
     >
+      {/* แสงนุ่มหลังภาพ — ต้องเหมือนหน้าแรกจริง (ดู src/components/home/Hero.tsx) */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-20 top-1/2 h-[130%] w-2/3 -translate-y-1/2 rounded-full bg-gradient-to-br from-brand-200/70 via-sky-100/60 to-transparent blur-2xl"
+      />
+
       {/* ข้อความด้านซ้าย — คลิกแล้วพิมพ์ทับได้ทั้งสองบรรทัด */}
-      <div className="min-w-0 text-left">
+      <div className="relative min-w-0 text-left">
+        <span className="block h-1 w-10 rounded-full bg-gradient-to-r from-brand-600 to-brand-400" />
         <RichText
           plain
           singleLine
@@ -402,7 +409,7 @@ function SlideCard({
             if (title.trim() && title !== slide.title) onChange({ title });
           }}
           placeholder="พิมพ์หัวข้อสไลด์"
-          className="text-lg font-bold leading-snug text-brand-700 sm:text-xl md:text-2xl"
+          className="mt-3 text-lg font-bold leading-snug tracking-tight text-brand-800 sm:mt-4 sm:text-xl md:text-2xl"
         />
         <RichText
           plain
@@ -411,7 +418,7 @@ function SlideCard({
             if (caption !== (slide.caption ?? "")) onChange({ caption });
           }}
           placeholder="คำอธิบายใต้หัวข้อ (เว้นว่างได้)"
-          className="mt-2 text-sm leading-relaxed text-gray-600 sm:mt-3 sm:text-base"
+          className="mt-2.5 text-sm leading-relaxed text-gray-700 sm:mt-3.5 sm:text-base"
         />
       </div>
 
@@ -420,7 +427,7 @@ function SlideCard({
         <AssetImage
           src={slide.imageUrl}
           alt={slide.title}
-          className="h-full w-full object-contain object-right drop-shadow-md"
+          className="h-full w-full object-contain object-right drop-shadow-[0_14px_28px_rgb(15_83_144_/_.28)]"
         />
       </div>
 

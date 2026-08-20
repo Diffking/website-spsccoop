@@ -43,10 +43,18 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
   return (
     <>
       <div
-        className="group relative aspect-[16/10] overflow-hidden rounded-2xl border border-sky-200 bg-sky-50 shadow-lg"
+        className="group relative aspect-[16/10] overflow-hidden rounded-3xl bg-gradient-to-br from-white via-sky-50 to-brand-50 shadow-[0_22px_55px_-20px_rgb(15_83_144_/_.5)] ring-1 ring-brand-100"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
       >
+        {/*
+          แสงนุ่ม ๆ หลังฝั่งภาพ — ทำให้กรอบมีมิติ ไม่แบนเหมือนพื้นสีเดียว
+          และแยกฝั่งข้อความกับฝั่งภาพออกจากกันด้วยน้ำหนักสี ไม่ต้องขีดเส้นแบ่ง
+        */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -right-20 top-1/2 h-[130%] w-2/3 -translate-y-1/2 rounded-full bg-gradient-to-br from-brand-200/70 via-sky-100/60 to-transparent blur-2xl"
+        />
         {/* crossfade: ข้อความด้านซ้าย + ภาพด้านขวา */}
         <AnimatePresence>
           <motion.div
@@ -56,15 +64,23 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.9, ease: "easeInOut" }}
             onClick={() => setZoom(true)}
-            className="absolute inset-0 grid cursor-zoom-in grid-cols-[1.05fr_1fr] items-center gap-3 p-5 sm:gap-5 sm:p-7"
+            className="absolute inset-0 grid cursor-zoom-in grid-cols-[1.05fr_1fr] items-center gap-4 p-6 sm:gap-7 sm:p-9"
           >
             {/* ข้อความด้านซ้าย (ตัวใหญ่) */}
-            <div className="text-left">
+            <div className="min-w-0 text-left">
+              {/* แถบสีสั้น ๆ นำหัวข้อ — ให้สายตารู้ว่าเริ่มอ่านตรงไหน และได้สีมาคั่นพื้นอ่อน ๆ */}
+              <motion.span
+                initial={{ opacity: 0, scaleX: 0 }}
+                animate={{ opacity: 1, scaleX: 1 }}
+                transition={{ delay: 0.1, duration: 0.45 }}
+                className="block h-1 w-10 origin-left rounded-full bg-gradient-to-r from-brand-600 to-brand-400"
+              />
               <motion.h3
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15, duration: 0.5 }}
-                className="text-lg font-bold leading-snug text-brand-700 sm:text-xl md:text-2xl"
+                transition={{ delay: 0.18, duration: 0.5 }}
+                // เข้มขึ้นจาก brand-700 เป็น brand-800 — อ่านง่ายขึ้นบนพื้นไล่สีอ่อน
+                className="mt-3 text-lg font-bold leading-snug tracking-tight text-brand-800 sm:mt-4 sm:text-xl md:text-2xl"
               >
                 {slide.title}
               </motion.h3>
@@ -72,8 +88,8 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
                 <motion.p
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.28, duration: 0.5 }}
-                  className="mt-2 line-clamp-4 text-sm leading-relaxed text-gray-600 sm:mt-3 sm:text-base"
+                  transition={{ delay: 0.3, duration: 0.5 }}
+                  className="mt-2.5 line-clamp-4 text-sm leading-relaxed text-gray-700 sm:mt-3.5 sm:text-base"
                 >
                   {slide.desc}
                 </motion.p>
@@ -96,7 +112,7 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
                 fill
                 priority={i === 0}
                 sizes="(max-width: 768px) 45vw, 30vw"
-                className="object-contain object-right drop-shadow-md"
+                className="object-contain object-right drop-shadow-[0_14px_28px_rgb(15_83_144_/_.28)]"
               />
             </motion.div>
           </motion.div>
@@ -107,31 +123,54 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
           <ZoomIn className="h-3.5 w-3.5" /> คลิกดูภาพใหญ่
         </span>
 
+        {/*
+          ปุ่มเลื่อนต้องเห็นตลอด ไม่ใช่โผล่ตอนเอาเมาส์ชี้ — บนมือถือไม่มี hover
+          สมาชิกจึงไม่มีทางรู้เลยว่าเลื่อนสไลด์เองได้
+        */}
         <button
           onClick={() => go(-1)}
-          aria-label="ก่อนหน้า"
-          className="absolute left-3 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white text-brand-600 shadow ring-1 ring-black/5 opacity-0 transition group-hover:opacity-100 hover:bg-brand-50 focus-visible:opacity-100"
+          aria-label="สไลด์ก่อนหน้า"
+          className="absolute left-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-brand-700 shadow-lg ring-1 ring-brand-100 backdrop-blur transition hover:scale-110 hover:bg-white hover:text-brand-800 active:scale-95"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
         <button
           onClick={() => go(1)}
-          aria-label="ถัดไป"
-          className="absolute right-3 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white text-brand-600 shadow ring-1 ring-black/5 opacity-0 transition group-hover:opacity-100 hover:bg-brand-50 focus-visible:opacity-100"
+          aria-label="สไลด์ถัดไป"
+          className="absolute right-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-brand-700 shadow-lg ring-1 ring-brand-100 backdrop-blur transition hover:scale-110 hover:bg-white hover:text-brand-800 active:scale-95"
         >
           <ChevronRight className="h-5 w-5" />
         </button>
 
-        <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 gap-2">
+        {/* จุดบอกลำดับ — ใส่แผ่นขาวรองไว้ จะได้เห็นชัดไม่ว่าสไลด์นั้นพื้นสีอะไร */}
+        <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-white/85 px-2.5 py-1.5 shadow-md ring-1 ring-brand-100 backdrop-blur">
           {slides.map((_, idx) => (
             <button
               key={idx}
-              aria-label={`สไลด์ ${idx + 1}`}
+              aria-label={`ไปสไลด์ที่ ${idx + 1}`}
+              aria-current={idx === i}
               onClick={() => setI(idx)}
-              className={`h-2 rounded-full transition-all ${idx === i ? "w-6 bg-brand-500" : "w-2 bg-brand-200 hover:bg-brand-300"}`}
+              className={`h-2 rounded-full transition-all ${
+                idx === i ? "w-7 bg-brand-600" : "w-2 bg-brand-200 hover:bg-brand-400"
+              }`}
             />
           ))}
         </div>
+
+        {/*
+          เส้นบอกว่าอีกนานแค่ไหนจะเปลี่ยนสไลด์ — วิ่งจากซ้ายไปขวาตามเวลาจริง
+          หยุดค้างตอนเอาเมาส์ชี้หรือเปิดภาพใหญ่ ให้ตรงกับที่ autoplay หยุดจริง
+          (ทำด้วย CSS ล้วนเพื่อให้หยุด/เดินต่อได้โดยไม่ต้องคำนวณเวลาที่เหลือเอง)
+        */}
+        <span
+          key={i}
+          aria-hidden
+          style={{
+            animationDuration: `${SLIDE_MS}ms`,
+            animationPlayState: paused || zoom ? "paused" : "running",
+          }}
+          className="hero-progress absolute inset-x-0 bottom-0 z-20 h-1 origin-left bg-gradient-to-r from-brand-600 to-brand-400"
+        />
       </div>
 
       {/* ภาพใหญ่ — เปิดเมื่อคลิกที่สไลด์ (กด Esc / คลิกพื้นหลัง เพื่อปิด) */}
