@@ -3,6 +3,8 @@ import { currentUser } from "@/lib/auth";
 import { ADMIN_HOME, canArea } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import HolidaysManager from "@/components/admin/HolidaysManager";
+import HolidayImport from "@/components/admin/HolidayImport";
+import { holidaySourceLabel, holidaySourceUrl } from "@/lib/holidaySource";
 
 export default async function AdminHolidaysPage() {
   const user = await currentUser();
@@ -16,6 +18,9 @@ export default async function AdminHolidaysPage() {
     <main className="mx-auto max-w-3xl px-4 py-6">
       <h1 className="mb-1 text-xl font-bold text-gray-800">วันหยุด</h1>
       <p className="mb-5 text-sm text-gray-500">วันหยุดทำการของสหกรณ์</p>
+
+      {/* ไม่ได้ตั้ง HOLIDAY_SOURCE_URL ก็ไม่ต้องโชว์ปุ่มที่กดแล้วพังแน่ ๆ */}
+      {holidaySourceUrl() && <HolidayImport from={holidaySourceLabel()} />}
 
       <HolidaysManager
         items={holidays.map((h) => ({
