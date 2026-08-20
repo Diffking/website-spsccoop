@@ -57,14 +57,24 @@ export default async function NewsTicker({ bg = "bg-white" }: { bg?: string }) {
         </span>
         <div className="ticker-pause relative flex-1 overflow-hidden">
           {/* วิ่งครบรอบใน (จำนวนรายการ × วินาทีต่อรายการ) — ตั้งค่าได้ที่ /admin/home/ticker */}
+          {/*
+            สองครึ่งต้องกว้าง "เท่ากันเป๊ะ" เพราะภาพเคลื่อนไหวเลื่อนไป -50% พอดี
+            ถ้าไม่เท่า พอวนกลับจะกระตุกทุกรอบ
+
+            เดิมครึ่งแรกเป็นรายการลอย ๆ ครึ่งหลังห่ออยู่ใน span ช่องไฟจึงไม่เท่ากัน
+            (ครึ่งแรกขาดช่องไฟท้ายไปหนึ่งช่อง) เลยเพี้ยนไปครึ่งช่องไฟทุกรอบ
+            ตอนนี้ห่อทั้งสองครึ่งเหมือนกัน และใส่ช่องไฟท้ายด้วย pr-10 ให้ครบทั้งคู่
+          */}
           <div
             style={{ animationDuration: `${entries.length * settings.secondsPerItem}s` }}
-            className="animate-ticker flex w-max gap-10 whitespace-nowrap text-sm text-gray-600"
+            className="animate-ticker flex w-max whitespace-nowrap text-sm text-gray-600"
           >
-            {entries.map((entry, i) => (
-              <Item key={`a-${i}`} entry={entry} blink={settings.badgeBlink} />
-            ))}
-            <span aria-hidden="true" className="flex w-max gap-10">
+            <span className="flex w-max gap-10 pr-10">
+              {entries.map((entry, i) => (
+                <Item key={`a-${i}`} entry={entry} blink={settings.badgeBlink} />
+              ))}
+            </span>
+            <span aria-hidden="true" className="flex w-max gap-10 pr-10">
               {entries.map((entry, i) => (
                 <Item key={`b-${i}`} entry={entry} blink={settings.badgeBlink} />
               ))}

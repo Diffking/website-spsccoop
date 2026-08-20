@@ -3,11 +3,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { CalendarOff, ChevronDown, ChevronRight, Clock, Menu, X, Minus, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, Menu, X, Minus, Plus } from "lucide-react";
 import { useIsClient } from "@/lib/useIsClient";
 import type { NavNode, SiteBrand } from "@/lib/nav";
 import { officeStatus, type OfficeHours } from "@/lib/officeHours";
-import type { NextHoliday } from "@/lib/content";
 import logo from "@/data/asset/logo_vector.svg";
 
 const THAI_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
@@ -19,11 +18,9 @@ const THAI_MONTHS = [
 function ThaiClock({
   hours,
   holidayToday,
-  nextHoliday,
 }: {
   hours: OfficeHours;
   holidayToday: string | null;
-  nextHoliday: NextHoliday | null;
 }) {
   const isClient = useIsClient();
   const [tick, setTick] = useState<Date | null>(null);
@@ -58,19 +55,11 @@ function ThaiClock({
         {status.note && <span className="opacity-80">· {status.note}</span>}
       </span>
 
-      {/* วันหยุดครั้งถัดไป — เตือนล่วงหน้าว่าสหกรณ์จะปิดวันไหน (ไม่มีวันหยุดข้างหน้า = ไม่ขึ้น) */}
-      {!holidayToday && nextHoliday && (
-        <span
-          title={`วันหยุดถัดไป ${nextHoliday.date} — ${nextHoliday.title}`}
-          className="hidden items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[11px] lg:inline-flex"
-        >
-          <CalendarOff className="h-3 w-3" />
-          หยุด {nextHoliday.date}
-          <span className="opacity-80">
-            {nextHoliday.inDays === 1 ? "· พรุ่งนี้" : `· อีก ${nextHoliday.inDays} วัน`}
-          </span>
-        </span>
-      )}
+      {/*
+        ไม่มีป้ายนับถอยหลังวันหยุดครั้งถัดไปแล้ว — ปฏิทินหน้าแรกบอกวันหยุดอยู่แล้ว
+        และถ้าวันนี้เป็นวันหยุดจริง ป้ายสถานะเปิด/ปิดข้างบนก็บอกให้แล้ว
+        เอามาขึ้นซ้ำบนหัวเว็บทุกหน้าคือข้อมูลซ้ำที่ไม่ได้ช่วยอะไร
+      */}
     </span>
   );
 }
@@ -104,7 +93,6 @@ export default function HeaderClient({
   logoSvg,
   hours,
   holidayToday,
-  nextHoliday,
 }: {
   nav: NavNode[];
   brand: SiteBrand;
@@ -112,7 +100,6 @@ export default function HeaderClient({
   logoSvg?: string | null;
   hours: OfficeHours;
   holidayToday: string | null;
-  nextHoliday: NextHoliday | null;
 }) {
   const [open, setOpen] = useState(false);
   const [openSub, setOpenSub] = useState<string | null>(null);
@@ -145,7 +132,7 @@ export default function HeaderClient({
           </Link>
           <div className="flex items-center gap-3">
             <div className="hidden sm:block">
-              <ThaiClock hours={hours} holidayToday={holidayToday} nextHoliday={nextHoliday} />
+              <ThaiClock hours={hours} holidayToday={holidayToday} />
             </div>
             <FontSizeControl />
           </div>
