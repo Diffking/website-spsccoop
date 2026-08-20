@@ -51,10 +51,7 @@ const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
  * ต่อไม่ติดไม่ใช่เรื่องผิดปกติ (ปิดเครื่อง เน็ตสำนักงานหลุด) จึงคืนเป็นข้อความบอกสาเหตุ
  * ไม่ใช่ throw ให้หน้าหลังบ้านพังทั้งหน้า
  */
-export async function fetchHolidaySource(): Promise<SourceResult> {
-  const url = holidaySourceUrl();
-  if (!url) return { ok: false, error: "ยังไม่ได้ตั้งค่าที่อยู่ระบบต้นทาง (HOLIDAY_SOURCE_URL)" };
-
+async function fetchYear(url: string): Promise<SourceResult> {
   try {
     // ตัดจบที่ 6 วินาที — เครื่องต้นทางอยู่ในวงแลน ถ้าไม่ตอบใน 6 วิ คือปิดอยู่ ไม่ใช่ช้า
     const response = await fetch(url, {
@@ -91,6 +88,40 @@ export async function fetchHolidaySource(): Promise<SourceResult> {
     console.error("ดึงวันหยุดจากระบบสำนักงานไม่สำเร็จ:", error);
     return { ok: false, error: `${reason} — ${holidaySourceLabel()}` };
   }
+}
+
+/**
+ * ดึงวันหยุด — เอาทั้งปีนี้และปีหน้า
+ *
+ * ต้นทางคืนเฉพาะปีปัจจุบันเมื่อไม่ระบุ `?year=` พอถึงช่วงที่ ครม. ประกาศวันหยุดปีหน้า
+ * (ราว ก.ย.–พ.ย.) สำนักงานจะลงตารางปีหน้าไว้ก่อน — ถามปีหน้าไปด้วยเลย เว็บจะได้
+ * รับมาเองโดยไม่ต้องมีใครจำว่าต้องมากดตอนขึ้นปีใหม่
+ *
+ * ปีหน้ายังไม่มีข้อมูลก็แค่ได้ลิสต์ว่าง ไม่ถือว่าพัง · ปีหน้าล้มก็ยังใช้ของปีนี้ต่อได้
+ */
+export async function fetchHolidaySource(): Promise<SourceResult> {
+  const url = holidaySourceUrl();
+  if (!url) return { ok: false, error: "ยังไม่ได้ตั้งค่าที่อยู่ระบบต้นทาง (HOLIDAY_SOURCE_URL)" };
+
+  const thisYear = await fetchYear(url);
+  if (!thisYear.ok) return thisYear;
+
+  const nextYear = Number(
+    new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric" }).format(
+      new Date(),
+    ),
+  ) + 1;
+
+  const ahead = await fetchYear(`${url}${url.includes("?") ? "&" : "?"}year=${nextYear}`);
+
+  const merged = new Map(thisYear.holidays.map((h) => [h.date, h]));
+  if (ahead.ok) for (const item of ahead.holidays) merged.set(item.date, item);
+
+  return {
+    ok: true,
+    enabled: thisYear.enabled,
+    holidays: [...merged.values()].sort((a, b) => a.date.localeCompare(b.date)),
+  };
 }
 
 export type CompareStatus = "new" | "same" | "renamed";
