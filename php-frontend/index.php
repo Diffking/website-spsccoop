@@ -27,12 +27,31 @@ if ($mirror->blocked($path)) {
  * หลังบ้านดับก็ตอบ 204 ให้จบ ๆ ไป หน้าเว็บจะได้ไม่ค้างรอ
  */
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+    /*
+     * บอกหลังบ้านว่าใครเป็นคนกดจริง
+     *
+     * คำขอเดินทางสองต่อ (เบราว์เซอร์ → โฮสต์นี้ → หลังบ้าน) หลังบ้านจึงเห็นแต่ไอพีของโฮสต์
+     * ไม่บอกไป คนทั้งเว็บจะถูกนับรวมเป็นคนเดียวกัน ยอด "จำนวนคน" ค้างที่ 1 คนต่อวัน
+     * ส่วน x-public-host บอกว่าคนอ่านเปิดโดเมนไหนอยู่ — หลังบ้านนับเฉพาะโดเมนสาธารณะ
+     *
+     * ล้างอักขระแปลกออกก่อนส่ง ค่าพวกนี้มาจากคำขอของคนนอก ถ้ามีขึ้นบรรทัดใหม่ปนมา
+     * จะกลายเป็นการแทรกหัวคำขอปลอมเข้าไปในคำขอที่เราส่งต่อ
+     */
+    $visitorIp = preg_replace('/[^0-9a-fA-F.:]/', '', (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+    $visitorAgent = substr(preg_replace('/[^\x20-\x7E]/', '', (string) ($_SERVER['HTTP_USER_AGENT'] ?? '')), 0, 200);
+    $contentType = preg_replace('/[^\x20-\x7E]/', '', (string) ($_SERVER['CONTENT_TYPE'] ?? '')) ?: 'application/json';
+
     $ch = curl_init($config['backend'] . $path);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => file_get_contents('php://input'),
-        CURLOPT_HTTPHEADER => ['Content-Type: ' . ($_SERVER['CONTENT_TYPE'] ?? 'application/json')],
+        CURLOPT_USERAGENT => $visitorAgent === '' ? 'unknown' : $visitorAgent,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: ' . $contentType,
+            'X-Public-Host: ' . ($config['public_host'] ?? 'www.spsccoop.com'),
+            'X-Visitor-Ip: ' . ($visitorIp === '' ? 'unknown' : $visitorIp),
+        ],
         CURLOPT_TIMEOUT => 5,
     ]);
     $out = curl_exec($ch);

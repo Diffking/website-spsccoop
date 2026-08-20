@@ -20,6 +20,29 @@ export function shouldTrack(path: string): boolean {
   return !/^\/(admin|api|_next|uploads|robots\.txt|sitemap\.xml)/.test(path);
 }
 
+/**
+ * นับเฉพาะคนที่เปิดโดเมนสาธารณะจริง (www.spsccoop.com)
+ *
+ * เว็บเดียวกันเปิดได้หลายทาง: สมาชิกเข้า www.spsccoop.com · เจ้าหน้าที่กับตัวมิเรอร์
+ * เข้า coopsmile.org ตรง ๆ ถ้านับหมดทุกทาง ยอดจะบวกงานของเจ้าหน้าที่กับการทดสอบเข้าไปด้วย
+ * ตัวเลขในหน้าภาพรวมจึงไม่ใช่ยอดผู้เข้าชมจริง
+ *
+ * ตัวมิเรอร์บนโฮสต์บอกโดเมนที่คนเปิดจริงมาทางหัว x-public-host (ดู php-frontend/index.php)
+ * เปลี่ยนโดเมนที่นับได้ที่ ANALYTICS_HOST ใน .env
+ */
+export function countedHost(raw: string | null | undefined): boolean {
+  const host = (raw ?? "").split(":")[0].trim().toLowerCase();
+  if (!host) return false;
+
+  // ตอนพัฒนาในเครื่องต้องนับได้ ไม่งั้นทดสอบไม่ได้เลย (เว็บจริงตั้ง NODE_ENV=production)
+  if (process.env.NODE_ENV !== "production" && (host === "localhost" || host === "127.0.0.1")) {
+    return true;
+  }
+
+  const counted = (process.env.ANALYTICS_HOST ?? "spsccoop.com").trim().toLowerCase();
+  return host === counted || host.endsWith(`.${counted}`);
+}
+
 function fingerprint(ip: string, userAgent: string, day: Date): string {
   // ค่าลับกันคนเดารหัสย้อนกลับ — ไม่ตั้งก็ยังใช้ได้ แค่ค่าเดาง่ายขึ้น
   const salt = process.env.ANALYTICS_SALT ?? "coopsmile";
