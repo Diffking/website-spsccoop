@@ -8,7 +8,7 @@ import { COMMITTEE_PHOTO_BASE, COMMITTEE_PHOTO_SCALES } from "@/lib/committee";
 /**
  * ชุดคณะกรรมการดำเนินการที่กำลังทำหน้าที่อยู่
  *
- * ใช้สองที่: หัวการ์ดบนหน้าแรก ("คณะกรรมการชุดที่ 45")
+ * ใช้สองที่: หัวการ์ดบนหน้าแรก ("คณะกรรมการดำเนินการชุดที่ 45")
  * และชื่อโฟลเดอร์เก็บรูปฝั่ง FTP (assets/committees/set45)
  * แยกโฟลเดอร์ตามชุดไว้ พอเปลี่ยนชุดใหม่รูปชุดเก่าจะยังอยู่ครบ ไม่ปนกัน
  */
@@ -85,7 +85,9 @@ export default function CommitteeSetForm({
         <div className="min-w-0 flex-1 space-y-1 text-xs">
           <p className="text-gray-500">
             หัวการ์ดหน้าแรก:{" "}
-            <span className="font-medium text-gray-700">คณะกรรมการชุดที่ {set || "—"}</span>
+            <span className="font-medium text-gray-700">
+              คณะกรรมการดำเนินการชุดที่ {set || "—"}
+            </span>
           </p>
           <p className="text-gray-500">
             รูปเก็บที่:{" "}
