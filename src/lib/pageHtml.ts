@@ -23,7 +23,9 @@ const ALLOWED = new Set([
 export const ALLOWED_CLASSES = new Set([
   "left", "right", "small", "wide", "image-row",
   // แท็บเมนูและการ์ดเอกสาร PDF — PageContent เอาไปทำเป็นแท็บกดได้จริงตอนแสดงผล
-  "tabs", "tab", "ebook", "pdf-icon", "pdf-icon-read", "read", "badge",
+  // ebook-name = ชื่อไฟล์บนการ์ด PDF ที่แถบเครื่องมือเป็นคนใส่ให้เอง
+  // ลืมใส่ไว้ตั้งแต่แรก ผลคือถ้า AI จัดรูปแบบหน้าที่มีการ์ด PDF ชื่อไฟล์จะกลายเป็นข้อความเปล่า
+  "tabs", "tab", "ebook", "ebook-name", "pdf-icon", "pdf-icon-read", "read", "badge",
   // ขนาดไอคอน PDF
   "size-40", "size-50", "size-64", "size-80",
   // การ์ดลิงก์แบบตาราง (ดู .cards ใน globals.css)
