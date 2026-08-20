@@ -331,6 +331,11 @@ python -c "import io; io.open('a.sql','w',encoding='utf-8').write(\"UPDATE ...'�
 docker compose exec -T db psql -U coopsmile coopsmile < a.sql
 ```
 
+**กฎเดียวกันใช้กับข้อความ commit ภาษาไทย** — `git commit -m "ไทย"` หรือ heredoc `-F -`
+เพี้ยนเป็น cp874 ทั้งคู่ (พลาดมาแล้ว 20 ส.ค. 2026 ต้อง amend แก้) ให้เขียนข้อความลงไฟล์
+ด้วยเครื่องมือที่เขียน UTF-8 ตรง ๆ แล้วค่อย `git commit -F ไฟล์.txt`
+ตรวจว่าเพี้ยนไหม: `git log -1 --pretty=%B` แล้วลอง decode utf-8 ถ้า throw คือเพี้ยนแล้ว
+
 ตรวจว่าเสียหรือไม่: `select char_length(title), octet_length(title)` ภาษาไทยที่ถูกต้อง
 ไบต์จะราว 3 เท่าของจำนวนตัวอักษร ถ้าใกล้เคียงกันแปลว่าเพี้ยนแล้ว
 
