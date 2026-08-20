@@ -24,6 +24,8 @@ export default function LoginForm() {
     });
 
     if (response.ok) {
+      // มาจาก /login/ ซึ่งพอเข้าระบบได้แล้วไม่มีอะไรให้ดูต่อ — พาไปหลังบ้านเลย
+      router.replace("/admin/");
       router.refresh();
       return;
     }

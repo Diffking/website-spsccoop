@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { currentView } from "@/lib/auth";
 import Sidebar from "@/components/admin/Sidebar";
 import ViewAsBar from "@/components/admin/ViewAsBar";
+import { publicSiteUrl } from "@/lib/siteUrl";
 
 export const metadata: Metadata = {
   title: "หลังบ้าน",
@@ -23,7 +24,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Sidebar role={user.role} areas={user.areas} userName={user.name} userCode={user.username} />
+      <Sidebar
+        role={user.role}
+        areas={user.areas}
+        userName={user.name}
+        userCode={user.username}
+        siteUrl={publicSiteUrl()}
+      />
       <div className="md:pl-64">
         {viewing && <ViewAsBar name={user.name} code={user.username} realName={real.name} />}
         {/*

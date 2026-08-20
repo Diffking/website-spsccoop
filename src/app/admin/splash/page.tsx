@@ -8,7 +8,7 @@ import SplashManager from "@/components/admin/SplashManager";
 
 export default async function AdminSplashPage() {
   const user = await currentUser();
-  if (!user) redirect("/admin/");
+  if (!user) redirect("/login/");
   // ไม่ได้ดูแลส่วนนี้ก็ไม่ต้องเห็น — เมนูซ่อนให้แล้ว ตรงนี้กันคนพิมพ์ที่อยู่เข้ามาเอง
   if (!canArea(user, "splash")) redirect(ADMIN_HOME);
 

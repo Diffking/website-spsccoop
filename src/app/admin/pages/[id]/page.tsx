@@ -12,11 +12,14 @@ import { usedCategories } from "@/lib/pageGroups";
 
 export default async function EditPagePage({ params }: { params: Promise<{ id: string }> }) {
   const user = await currentUser();
-  if (!user) redirect("/admin/");
+  if (!user) redirect("/login/");
 
   const { id } = await params;
-  // สวิตช์ AI ที่ผู้ใช้เลือกไว้ครั้งก่อน — ไม่เคยเลือก ถือว่าเปิด
-  const aiFormatDefault = (await cookies()).get("spsc_page_ai_format")?.value !== "0";
+  // ค่าที่ผู้ใช้เลือกไว้ครั้งก่อน — สวิตช์ AI ไม่เคยเลือก ถือว่าเปิด · โหมดแก้ไขเริ่มที่ EditUI
+  const jar = await cookies();
+  const aiFormatDefault = jar.get("spsc_page_ai_format")?.value !== "0";
+  const savedMode = jar.get("spsc_page_edit_mode")?.value;
+  const modeDefault = savedMode === "code" || savedMode === "preview" ? savedMode : "ui";
   const page = await db.page.findUnique({ where: { id } });
   if (!page) notFound();
   // หน้านี้อยู่หมวดของคนอื่น — เด้งกลับ ไม่ต้องบอกว่ามีหน้านี้อยู่
@@ -53,6 +56,7 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
           categories={usedCategories(filterPages(user, others))}
           aiReady={AI_READY}
           aiFormatDefault={aiFormatDefault}
+          modeDefault={modeDefault}
         />
       </main>
     </>
