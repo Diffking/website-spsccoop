@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
+  Code2,
   Copy,
   FileText,
   ImagePlus,
@@ -18,25 +19,27 @@ import {
   BLOCK_LABEL,
   type Block,
   type BlockKind,
+  type Card,
+  type Person,
   blockId,
   blocksToHtml,
   emptyBlock,
   htmlToBlocks,
-  plainText,
 } from "@/lib/pageBlocks";
 
 /**
- * EditUI — แก้เนื้อหาหน้าเว็บโดยไม่ต้องอ่านโค้ดออก
+ * EditUI — แก้หน้าเว็บบนหน้าเว็บ
  *
- * เนื้อหาหน้าหนึ่งถูกอ่านออกมาเป็น "ก้อน" เรียงจากบนลงล่างตามที่ปรากฏบนหน้าเว็บจริง
- * (หัวข้อ · ย่อหน้า · ตาราง · การ์ด PDF ฯลฯ) แต่ละก้อนมีช่องกรอกของตัวเอง
- * เลื่อนขึ้นลง ก๊อป ลบ ได้ทีละก้อน — ไม่ต้องไปนั่งนับ </div> เอง
+ * สิ่งที่เห็นในนี้ **คือหน้าเว็บจริง** ไม่ใช่ฟอร์มที่แทนหน้าเว็บ — ใช้ CSS ชุดเดียวกับที่
+ * สมาชิกเห็น (`.prose-page` ใน globals.css) หัวข้อจึงใหญ่เท่าของจริง ตารางมีเส้นเหมือนของจริง
+ * การ์ด PDF หน้าตาเหมือนของจริง · จะแก้ตรงไหนก็คลิกที่ตัวหนังสือนั้นแล้วพิมพ์ทับได้เลย
  *
- * ทำงานบนเนื้อหาก้อนเดียวกับ EditCode สลับไปมาได้ตลอด: พิมพ์ที่นี่แล้วไปดู EditCode
- * ก็เห็น HTML ที่เพิ่งเปลี่ยน · แก้ที่ EditCode แล้วกลับมาที่นี่ก็อ่านของใหม่เข้ามา
+ * ปุ่มจัดการ (เลื่อนขึ้นลง · ทำสำเนา · ลบ) ซ่อนไว้จนกว่าจะเอาเมาส์ชี้ที่ก้อนนั้น
+ * ของที่ตั้งค่าด้วยการพิมพ์ไม่ได้ (ขนาดรูป สีการ์ด จำนวนคอลัมน์) โผล่เป็นแถบเล็ก ๆ
+ * เมื่อคลิกเลือกก้อนนั้น — ไม่ได้กางทุกช่องค้างไว้ให้รก
  *
- * อะไรที่ระบบอ่านไม่ออกจะกลายเป็นก้อน "โค้ด HTML" ที่ยังแก้เป็นข้อความได้ตามเดิม
- * — ไม่มีทางที่เนื้อหาจะหายไปเพราะเปิดหน้าจอนี้
+ * แก้เนื้อหาก้อนเดียวกับ EditCode สลับไปมาได้ตลอด · ก้อนที่ระบบอ่านไม่ออกยังเก็บไว้ครบ
+ * (ดู src/lib/pageBlocks.ts และตัวตรวจ npm run check:blocks)
  */
 
 type Props = {
@@ -49,6 +52,7 @@ type Props = {
 export default function VisualEditor({ value, onChange, folder }: Props) {
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [ready, setReady] = useState(false);
+  const [picked, setPicked] = useState<string | null>(null);
   /** HTML ที่เราเพิ่งเขียนออกไปเอง — เจอค่านี้กลับเข้ามาก็ไม่ต้องอ่านใหม่ให้ก้อนกระพริบ */
   const written = useRef<string | null>(null);
 
@@ -59,7 +63,6 @@ export default function VisualEditor({ value, onChange, folder }: Props) {
     setReady(true);
   }, [value]);
 
-  /** บันทึกก้อนชุดใหม่แล้วส่ง HTML กลับให้หน้าแม่ทันที */
   const commit = (next: Block[]) => {
     setBlocks(next);
     const html = blocksToHtml(next);
@@ -67,89 +70,175 @@ export default function VisualEditor({ value, onChange, folder }: Props) {
     onChange(html);
   };
 
-  const replaceAt = (index: number, block: Block) =>
-    commit(blocks.map((b, i) => (i === index ? block : b)));
-
-  const insertAt = (index: number, kind: BlockKind) =>
-    commit([...blocks.slice(0, index), emptyBlock(kind), ...blocks.slice(index)]);
-
-  const removeAt = (index: number) => commit(blocks.filter((_, i) => i !== index));
-
-  const duplicateAt = (index: number) => {
-    const copy = JSON.parse(JSON.stringify(blocks[index])) as Block;
-    copy.id = blockId();
-    commit([...blocks.slice(0, index + 1), copy, ...blocks.slice(index + 1)]);
-  };
-
-  const moveAt = (index: number, step: -1 | 1) => {
-    const to = index + step;
-    if (to < 0 || to >= blocks.length) return;
-    const next = [...blocks];
-    [next[index], next[to]] = [next[to], next[index]];
-    commit(next);
-  };
-
   if (!ready) {
     return (
-      <p className="flex items-center gap-2 p-6 text-sm text-gray-400">
-        <Loader2 className="h-4 w-4 animate-spin" /> กำลังอ่านเนื้อหา…
+      <p className="flex items-center gap-2 p-8 text-sm text-gray-400">
+        <Loader2 className="h-4 w-4 animate-spin" /> กำลังเปิดหน้าเว็บ…
       </p>
     );
   }
 
   return (
-    <div className="space-y-2 bg-gray-50/70 p-3">
-      {blocks.length === 0 && (
-        <p className="rounded-xl bg-white p-6 text-center text-sm text-gray-500 ring-1 ring-gray-200">
-          หน้านี้ยังไม่มีเนื้อหา — กด “เพิ่มก้อนเนื้อหา” ด้านล่างเพื่อเริ่ม
-        </p>
-      )}
-
-      {blocks.map((block, index) => (
-        <BlockCard
-          key={block.id}
-          block={block}
-          index={index}
-          total={blocks.length}
+    <div className="bg-gray-100 p-4 sm:p-6">
+      {/* กระดาษหน้าเว็บ — กว้างเท่าของจริงและใช้สไตล์ชุดเดียวกัน */}
+      <div className="mx-auto max-w-3xl rounded-xl bg-white p-6 shadow-sm sm:p-10">
+        <BlockList
+          blocks={blocks}
           folder={folder}
-          onChange={(next) => replaceAt(index, next)}
-          onMove={(step) => moveAt(index, step)}
-          onDuplicate={() => duplicateAt(index)}
-          onRemove={() => removeAt(index)}
-          onInsertBelow={(kind) => insertAt(index + 1, kind)}
+          picked={picked}
+          onPick={setPicked}
+          onChange={commit}
         />
-      ))}
-
-      <AddMenu onPick={(kind) => insertAt(blocks.length, kind)} wide />
+      </div>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ *
- * เมนูเพิ่มก้อน
+ * รายการก้อน — ใช้ซ้ำได้ทั้งหน้าหลักและเนื้อในแท็ปเมนู
  * ------------------------------------------------------------------ */
 
-function AddMenu({ onPick, wide = false }: { onPick: (kind: BlockKind) => void; wide?: boolean }) {
+function BlockList({
+  blocks,
+  folder,
+  picked,
+  onPick,
+  onChange,
+  nested = false,
+}: {
+  blocks: Block[];
+  folder: string;
+  picked: string | null;
+  onPick: (id: string | null) => void;
+  onChange: (next: Block[]) => void;
+  nested?: boolean;
+}) {
+  const replaceAt = (i: number, block: Block) =>
+    onChange(blocks.map((b, n) => (n === i ? block : b)));
+
+  const insertAt = (i: number, kind: BlockKind) => {
+    const block = emptyBlock(kind);
+    onChange([...blocks.slice(0, i), block, ...blocks.slice(i)]);
+    onPick(block.id);
+  };
+
+  const move = (i: number, step: -1 | 1) => {
+    const to = i + step;
+    if (to < 0 || to >= blocks.length) return;
+    const next = [...blocks];
+    [next[i], next[to]] = [next[to], next[i]];
+    onChange(next);
+  };
+
+  const duplicate = (i: number) => {
+    const copy = JSON.parse(JSON.stringify(blocks[i])) as Block;
+    copy.id = blockId();
+    onChange([...blocks.slice(0, i + 1), copy, ...blocks.slice(i + 1)]);
+  };
+
+  return (
+    <div className={`prose-page prose-edit ${nested ? "" : "min-h-[50vh]"}`}>
+      <InsertLine onPick={(kind) => insertAt(0, kind)} first />
+
+      {blocks.length === 0 && (
+        <p className="edit-hint">หน้านี้ยังว่างอยู่ — กดเครื่องหมาย ＋ ด้านบนเพื่อเริ่มใส่เนื้อหา</p>
+      )}
+
+      {blocks.map((block, i) => (
+        <div key={block.id} data-block className="edit-block">
+          <div
+            className={`edit-frame ${picked === block.id ? "is-picked" : ""}`}
+            onMouseDown={() => onPick(block.id)}
+          >
+            <BlockView
+              block={block}
+              folder={folder}
+              picked={picked === block.id}
+              onChange={(next) => replaceAt(i, next)}
+              onPick={onPick}
+            />
+          </div>
+
+          {/* ปุ่มจัดการก้อน — โผล่ตอนเอาเมาส์ชี้ ไม่งั้นบังหน้าเว็บ */}
+          <div className="edit-tools">
+            <span className="edit-kind">{BLOCK_LABEL[block.kind]}</span>
+            <Tool icon={ChevronUp} title="เลื่อนขึ้น" disabled={i === 0} onClick={() => move(i, -1)} />
+            <Tool
+              icon={ChevronDown}
+              title="เลื่อนลง"
+              disabled={i === blocks.length - 1}
+              onClick={() => move(i, 1)}
+            />
+            <Tool icon={Copy} title="ทำสำเนา" onClick={() => duplicate(i)} />
+            <Tool
+              icon={Trash2}
+              title="ลบก้อนนี้"
+              danger
+              onClick={() => {
+                if (confirm(`ลบ “${BLOCK_LABEL[block.kind]}” นี้ออกจากหน้า?`))
+                  onChange(blocks.filter((_, n) => n !== i));
+              }}
+            />
+          </div>
+
+          <InsertLine onPick={(kind) => insertAt(i + 1, kind)} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Tool({
+  icon: Icon,
+  title,
+  onClick,
+  disabled = false,
+  danger = false,
+}: {
+  icon: typeof Copy;
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      disabled={disabled}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+      className={`rounded p-1 transition disabled:opacity-25 ${
+        danger ? "hover:bg-red-500 hover:text-white" : "hover:bg-white/15"
+      }`}
+    >
+      <Icon className="h-3.5 w-3.5" />
+    </button>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * เส้นแทรกก้อนใหม่ — เส้นบาง ๆ ระหว่างก้อน กดแล้วเลือกว่าจะใส่อะไร
+ * ------------------------------------------------------------------ */
+
+function InsertLine({ onPick, first = false }: { onPick: (kind: BlockKind) => void; first?: boolean }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className={`relative ${wide ? "" : "inline-block"}`}>
+    <div className={`edit-insert ${first ? "is-first" : ""}`}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-300 bg-white text-sm text-gray-500 transition hover:border-brand-400 hover:text-brand-700 ${
-          wide ? "w-full py-3" : "px-2 py-1 text-xs"
-        }`}
+        title="แทรกเนื้อหาตรงนี้"
+        className="edit-insert-button"
       >
-        <Plus className={wide ? "h-4 w-4" : "h-3.5 w-3.5"} />
-        {wide ? "เพิ่มก้อนเนื้อหา" : "แทรกด้านล่าง"}
+        <Plus className="h-3.5 w-3.5" />
       </button>
 
       {open && (
         <>
-          {/* คลิกที่ไหนก็ได้เพื่อปิดเมนู */}
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 z-20 mt-1 grid w-64 grid-cols-2 gap-0.5 rounded-xl bg-white p-1.5 shadow-lg ring-1 ring-black/10">
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="edit-insert-menu">
             {ADDABLE.map((kind) => (
               <button
                 key={kind}
@@ -158,7 +247,6 @@ function AddMenu({ onPick, wide = false }: { onPick: (kind: BlockKind) => void; 
                   onPick(kind);
                   setOpen(false);
                 }}
-                className="rounded-lg px-2.5 py-2 text-left text-sm text-gray-700 transition hover:bg-brand-50 hover:text-brand-800"
               >
                 {BLOCK_LABEL[kind]}
               </button>
@@ -171,298 +259,38 @@ function AddMenu({ onPick, wide = false }: { onPick: (kind: BlockKind) => void; 
 }
 
 /* ------------------------------------------------------------------ *
- * กรอบของก้อนหนึ่งก้อน
+ * แถบตั้งค่าของก้อนที่เลือก — เฉพาะของที่พิมพ์เป็นข้อความไม่ได้
  * ------------------------------------------------------------------ */
 
-function BlockCard({
-  block,
-  index,
-  total,
-  folder,
-  onChange,
-  onMove,
-  onDuplicate,
-  onRemove,
-  onInsertBelow,
-}: {
-  block: Block;
-  index: number;
-  total: number;
-  folder: string;
-  onChange: (next: Block) => void;
-  onMove: (step: -1 | 1) => void;
-  onDuplicate: () => void;
-  onRemove: () => void;
-  onInsertBelow: (kind: BlockKind) => void;
-}) {
-  return (
-    <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-      <div className="flex items-center gap-1.5 border-b border-gray-100 px-3 py-1.5">
-        <span className="w-6 shrink-0 text-xs tabular-nums text-gray-300">{index + 1}</span>
-        <span className="min-w-0 flex-1 truncate text-xs font-medium text-gray-500">
-          {BLOCK_LABEL[block.kind]}
-          <BlockHint block={block} />
-        </span>
-
-        <button
-          type="button"
-          onClick={() => onMove(-1)}
-          disabled={index === 0}
-          title="เลื่อนขึ้น"
-          className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30"
-        >
-          <ChevronUp className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => onMove(1)}
-          disabled={index === total - 1}
-          title="เลื่อนลง"
-          className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30"
-        >
-          <ChevronDown className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={onDuplicate}
-          title="ทำสำเนาก้อนนี้"
-          className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
-        >
-          <Copy className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (confirm(`ลบก้อน “${BLOCK_LABEL[block.kind]}” นี้?`)) onRemove();
-          }}
-          title="ลบก้อนนี้"
-          className="rounded-lg p-1 text-gray-400 transition hover:bg-red-50 hover:text-red-600"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div className="p-3">
-        <BlockFields block={block} folder={folder} onChange={onChange} />
-      </div>
-
-      <div className="px-3 pb-2">
-        <AddMenu onPick={onInsertBelow} />
-      </div>
-    </div>
-  );
+function Options({ children }: { children: React.ReactNode }) {
+  return <div className="edit-options">{children}</div>;
 }
 
-/** คำโปรยข้าง ๆ ชื่อชนิดก้อน — บอกให้รู้ว่าก้อนนี้คือก้อนไหนโดยไม่ต้องอ่านทั้งก้อน */
-function BlockHint({ block }: { block: Block }) {
-  const text = (() => {
-    switch (block.kind) {
-      case "heading":
-        return `H${block.level} · ${plainText(block.html)}`;
-      case "list":
-        return `${block.items.length} รายการ`;
-      case "table":
-        return `${block.rows.length} แถว × ${block.head.length || block.rows[0]?.length || 0} คอลัมน์`;
-      case "pdfCard":
-        return block.name;
-      case "cards":
-        return `${block.cards.length} การ์ด`;
-      case "people":
-        return `${block.people.length} คน`;
-      case "tabs":
-        return block.tabs.map((t) => t.title).join(" · ");
-      case "imageRow":
-        return `${block.images.length} รูป`;
-      default:
-        return "";
-    }
-  })();
-
-  return text ? <span className="ml-1.5 font-normal text-gray-400">— {text}</span> : null;
+function Choice({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+      className={active ? "is-on" : ""}
+    >
+      {label}
+    </button>
+  );
 }
 
 /* ------------------------------------------------------------------ *
- * ช่องกรอกของแต่ละชนิดก้อน
+ * อัปไฟล์
  * ------------------------------------------------------------------ */
 
-const input =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500";
-const smallLabel = "block text-xs text-gray-500";
-
-function BlockFields({
-  block,
-  folder,
-  onChange,
-}: {
-  block: Block;
-  folder: string;
-  onChange: (next: Block) => void;
-}) {
-  switch (block.kind) {
-    case "heading":
-      return (
-        <div className="flex items-start gap-2">
-          <select
-            value={block.level}
-            onChange={(e) => onChange({ ...block, level: Number(e.target.value) as 2 | 3 | 4 })}
-            className="shrink-0 rounded-lg border border-gray-300 px-2 py-2 text-sm outline-none focus:border-brand-500"
-          >
-            <option value={2}>ใหญ่</option>
-            <option value={3}>กลาง</option>
-            <option value={4}>เล็ก</option>
-          </select>
-          <RichText
-            singleLine
-            value={block.html}
-            onChange={(html) => onChange({ ...block, html })}
-            placeholder="ข้อความหัวข้อ"
-            className="flex-1"
-          />
-        </div>
-      );
-
-    case "paragraph":
-    case "quote":
-      return (
-        <RichText
-          value={block.html}
-          onChange={(html) => onChange({ ...block, html })}
-          placeholder={block.kind === "quote" ? "ข้อความที่ยกมา" : "พิมพ์ย่อหน้าที่นี่"}
-        />
-      );
-
-    case "divider":
-      return <hr className="my-2 border-gray-200" />;
-
-    case "list":
-      return <ListFields block={block} onChange={onChange} />;
-
-    case "image":
-      return <ImageFields block={block} folder={folder} onChange={onChange} />;
-
-    case "imageRow":
-      return <ImageRowFields block={block} folder={folder} onChange={onChange} />;
-
-    case "table":
-      return <TableFields block={block} onChange={onChange} />;
-
-    case "pdfCard":
-      return <PdfCardFields block={block} folder={folder} onChange={onChange} />;
-
-    case "pdfIcon":
-      return <PdfIconFields block={block} onChange={onChange} />;
-
-    case "cards":
-      return <CardsFields block={block} onChange={onChange} />;
-
-    case "people":
-      return <PeopleFields block={block} folder={folder} onChange={onChange} />;
-
-    case "tabs":
-      return <TabsFields block={block} folder={folder} onChange={onChange} />;
-
-    case "html":
-      return (
-        <>
-          <textarea
-            value={block.html}
-            onChange={(e) => onChange({ ...block, html: e.target.value })}
-            rows={4}
-            className={`${input} font-mono`}
-          />
-          <p className="mt-1 text-xs text-gray-400">
-            ก้อนนี้ระบบแปลงเป็นช่องกรอกให้ไม่ได้ จึงแสดงเป็นโค้ดตามเดิม — ไม่แน่ใจอย่าแก้
-          </p>
-        </>
-      );
-  }
-}
-
-/* ---------- รายการ ---------- */
-
-function ListFields({
-  block,
-  onChange,
-}: {
-  block: Extract<Block, { kind: "list" }>;
-  onChange: (next: Block) => void;
-}) {
-  const setItem = (i: number, html: string) =>
-    onChange({ ...block, items: block.items.map((v, n) => (n === i ? html : v)) });
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex gap-1.5">
-        {([false, true] as const).map((ordered) => (
-          <button
-            key={String(ordered)}
-            type="button"
-            onClick={() => onChange({ ...block, ordered })}
-            className={`rounded-lg px-2.5 py-1 text-xs transition ${
-              block.ordered === ordered
-                ? "bg-brand-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            {ordered ? "เลข 1. 2. 3." : "จุดนำหน้า"}
-          </button>
-        ))}
-      </div>
-
-      {block.items.map((item, i) => (
-        <div key={i} className="flex items-start gap-2">
-          <span className="w-5 shrink-0 pt-2 text-center text-xs text-gray-400">
-            {block.ordered ? `${i + 1}.` : "•"}
-          </span>
-          <RichText
-            singleLine
-            value={item}
-            onChange={(html) => setItem(i, html)}
-            placeholder={`รายการที่ ${i + 1}`}
-            className="flex-1"
-          />
-          <button
-            type="button"
-            onClick={() => onChange({ ...block, items: block.items.filter((_, n) => n !== i) })}
-            className="shrink-0 rounded-lg p-2 text-gray-300 transition hover:bg-red-50 hover:text-red-600"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      ))}
-
-      <button
-        type="button"
-        onClick={() => onChange({ ...block, items: [...block.items, ""] })}
-        className="rounded-lg px-2 py-1 text-xs text-brand-700 transition hover:bg-brand-50"
-      >
-        ＋ เพิ่มรายการ
-      </button>
-    </div>
-  );
-}
-
-/* ---------- อัปไฟล์ ---------- */
-
-/** อัปไฟล์หนึ่งไฟล์ขึ้นระบบ — คืน URL ที่เอาไปใส่เนื้อหาได้ หรือ null ถ้าไม่สำเร็จ */
-async function uploadOne(
-  file: File,
-  folder: string,
-  maxEdge: number | null,
-  onPercent: (percent: number) => void,
-): Promise<string | null> {
-  const form = new FormData();
-  form.append("file", file);
-  form.append("folder", folder);
-  if (maxEdge !== null) form.append("maxEdge", String(maxEdge));
-
-  const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", form, (percent) =>
-    onPercent(percent),
-  );
-  return result.ok ? result.data.url : null;
-}
-
-/** ปุ่มเลือกไฟล์ที่อัปให้เสร็จแล้วส่ง URL กลับมา — ใช้ซ้ำทั้งรูปและ PDF */
 function UploadButton({
   label,
   accept,
@@ -483,12 +311,8 @@ function UploadButton({
   const [error, setError] = useState("");
 
   return (
-    <div>
-      <label
-        className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs text-gray-700 transition hover:bg-gray-200 ${
-          busy ? "pointer-events-none opacity-60" : ""
-        }`}
-      >
+    <>
+      <label className={`edit-upload ${busy ? "is-busy" : ""}`}>
         {busy ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
         ) : accept.includes("pdf") ? (
@@ -510,332 +334,47 @@ function UploadButton({
             setBusy(true);
             setError("");
             const done: { url: string; name: string }[] = [];
-            // อัปทีละไฟล์ ไม่ยิงพร้อมกัน — แถบความคืบหน้ามีอันเดียวและปลายทางก็รับทีละไฟล์อยู่ดี
+            // อัปทีละไฟล์ ไม่ยิงพร้อมกัน — ปลายทางรับทีละไฟล์อยู่แล้ว
             for (const file of files) {
               setPercent(0);
-              const url = await uploadOne(file, folder, maxEdge, setPercent);
-              if (!url) {
+              const form = new FormData();
+              form.append("file", file);
+              form.append("folder", folder);
+              if (maxEdge !== null) form.append("maxEdge", String(maxEdge));
+
+              const result = await uploadWithProgress<{ url: string }>(
+                "/api/admin/upload/",
+                form,
+                (p) => setPercent(p),
+              );
+              if (!result.ok) {
                 setError(`อัป ${file.name} ไม่สำเร็จ`);
                 break;
               }
-              done.push({ url, name: file.name });
+              done.push({ url: result.data.url, name: file.name });
             }
             setBusy(false);
             if (done.length > 0) onDone(done);
           }}
         />
       </label>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-    </div>
+      {error && <span className="edit-error">{error}</span>}
+    </>
   );
 }
 
-/* ---------- รูปภาพ ---------- */
+/* ------------------------------------------------------------------ *
+ * ก้อนแต่ละชนิด — วาดด้วยแท็กจริงของหน้าเว็บ
+ * ------------------------------------------------------------------ */
 
-const LAYOUTS = [
+const IMAGE_LAYOUTS = [
   { key: "", label: "เต็มความกว้าง" },
-  { key: "small", label: "ขนาดเล็ก" },
+  { key: "small", label: "เล็ก" },
   { key: "left", label: "ชิดซ้าย" },
   { key: "right", label: "ชิดขวา" },
 ] as const;
 
-function ImageFields({
-  block,
-  folder,
-  onChange,
-}: {
-  block: Extract<Block, { kind: "image" }>;
-  folder: string;
-  onChange: (next: Block) => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-start gap-3">
-        {block.src ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={block.src}
-            alt=""
-            className="h-24 w-24 shrink-0 rounded-lg object-cover ring-1 ring-gray-200"
-          />
-        ) : (
-          <span className="grid h-24 w-24 shrink-0 place-items-center rounded-lg bg-gray-100 text-gray-300">
-            <ImagePlus className="h-6 w-6" />
-          </span>
-        )}
-
-        <div className="min-w-0 flex-1 space-y-2">
-          <UploadButton
-            label={block.src ? "เปลี่ยนรูป" : "เลือกรูป"}
-            accept="image/*"
-            folder={folder}
-            maxEdge={600}
-            onDone={([file]) =>
-              onChange({
-                ...block,
-                src: file.url,
-                alt: block.alt || file.name.replace(/\.[^.]+$/, ""),
-              })
-            }
-          />
-          <label className={smallLabel}>
-            คำอธิบายรูปสำหรับคนตาบอด
-            <input
-              value={block.alt}
-              onChange={(e) => onChange({ ...block, alt: e.target.value })}
-              placeholder="เช่น ภาพหมู่คณะกรรมการชุดที่ 45"
-              className={`mt-0.5 ${input}`}
-            />
-          </label>
-        </div>
-      </div>
-
-      <label className={smallLabel}>
-        คำบรรยายใต้ภาพ (เว้นว่างได้)
-        <RichText
-          singleLine
-          value={block.caption}
-          onChange={(caption) => onChange({ ...block, caption })}
-          placeholder="คำบรรยายใต้ภาพ"
-          className="mt-0.5"
-        />
-      </label>
-
-      <div className="flex flex-wrap gap-1.5">
-        {LAYOUTS.map((l) => (
-          <button
-            key={l.key}
-            type="button"
-            onClick={() => onChange({ ...block, layout: l.key })}
-            className={`rounded-lg px-2.5 py-1 text-xs transition ${
-              block.layout === l.key
-                ? "bg-brand-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            {l.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ImageRowFields({
-  block,
-  folder,
-  onChange,
-}: {
-  block: Extract<Block, { kind: "imageRow" }>;
-  folder: string;
-  onChange: (next: Block) => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-2">
-        {block.images.map((img, i) => (
-          <div key={i} className="relative">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={img.src}
-              alt={img.alt}
-              className="h-20 w-20 rounded-lg object-cover ring-1 ring-gray-200"
-            />
-            <button
-              type="button"
-              onClick={() => onChange({ ...block, images: block.images.filter((_, n) => n !== i) })}
-              className="absolute -right-1.5 -top-1.5 rounded-full bg-white p-1 text-gray-400 shadow ring-1 ring-gray-200 transition hover:text-red-600"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <UploadButton
-        label="เพิ่มรูปในแถว"
-        accept="image/*"
-        folder={folder}
-        maxEdge={600}
-        multiple
-        onDone={(files) =>
-          onChange({
-            ...block,
-            images: [
-              ...block.images,
-              ...files.map((f) => ({ url: f.url, name: f.name })).map((f) => ({
-                src: f.url,
-                alt: f.name.replace(/\.[^.]+$/, ""),
-              })),
-            ],
-          })
-        }
-      />
-    </div>
-  );
-}
-
-/* ---------- ตาราง ---------- */
-
-function TableFields({
-  block,
-  onChange,
-}: {
-  block: Extract<Block, { kind: "table" }>;
-  onChange: (next: Block) => void;
-}) {
-  const cols = Math.max(block.head.length, ...block.rows.map((r) => r.length), 1);
-
-  /** ทำให้ทุกแถวยาวเท่ากันเสมอ — แถวสั้นกว่าคนอื่นทำให้ตารางบนหน้าเว็บเบี้ยว */
-  const pad = (row: string[], size: number) =>
-    Array.from({ length: size }, (_, i) => row[i] ?? "");
-
-  const setCell = (rowIndex: number, colIndex: number, html: string) =>
-    onChange({
-      ...block,
-      rows: block.rows.map((r, n) =>
-        n === rowIndex ? pad(r, cols).map((c, i) => (i === colIndex ? html : c)) : pad(r, cols),
-      ),
-    });
-
-  const setHead = (colIndex: number, html: string) =>
-    onChange({ ...block, head: pad(block.head, cols).map((c, i) => (i === colIndex ? html : c)) });
-
-  const addCol = () =>
-    onChange({
-      ...block,
-      head: [...pad(block.head, cols), `หัวข้อ ${cols + 1}`],
-      rows: block.rows.map((r) => [...pad(r, cols), ""]),
-    });
-
-  const removeCol = (colIndex: number) =>
-    onChange({
-      ...block,
-      head: pad(block.head, cols).filter((_, i) => i !== colIndex),
-      rows: block.rows.map((r) => pad(r, cols).filter((_, i) => i !== colIndex)),
-    });
-
-  return (
-    <div className="space-y-2">
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr>
-              {Array.from({ length: cols }, (_, c) => (
-                <th key={c} className="border border-gray-200 bg-gray-50 p-1 align-top">
-                  <RichText
-                    singleLine
-                    value={block.head[c] ?? ""}
-                    onChange={(html) => setHead(c, html)}
-                    placeholder={`หัวข้อ ${c + 1}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeCol(c)}
-                    title="ลบคอลัมน์นี้"
-                    className="mt-0.5 w-full rounded text-[11px] text-gray-400 transition hover:bg-red-50 hover:text-red-600"
-                  >
-                    ลบคอลัมน์
-                  </button>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {block.rows.map((row, r) => (
-              <tr key={r}>
-                {Array.from({ length: cols }, (_, c) => (
-                  <td key={c} className="border border-gray-200 p-1 align-top">
-                    <RichText
-                      value={row[c] ?? ""}
-                      onChange={(html) => setCell(r, c, html)}
-                      placeholder="…"
-                    />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="flex flex-wrap gap-1.5">
-        <button
-          type="button"
-          onClick={() => onChange({ ...block, rows: [...block.rows, Array(cols).fill("")] })}
-          className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs text-gray-700 transition hover:bg-gray-200"
-        >
-          ＋ เพิ่มแถว
-        </button>
-        <button
-          type="button"
-          onClick={addCol}
-          className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs text-gray-700 transition hover:bg-gray-200"
-        >
-          ＋ เพิ่มคอลัมน์
-        </button>
-        {block.rows.length > 1 && (
-          <button
-            type="button"
-            onClick={() => onChange({ ...block, rows: block.rows.slice(0, -1) })}
-            className="rounded-lg px-2.5 py-1 text-xs text-gray-500 transition hover:bg-red-50 hover:text-red-600"
-          >
-            ลบแถวสุดท้าย
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ---------- ไฟล์ PDF ---------- */
-
-function PdfCardFields({
-  block,
-  folder,
-  onChange,
-}: {
-  block: Extract<Block, { kind: "pdfCard" }>;
-  folder: string;
-  onChange: (next: Block) => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <label className={smallLabel}>
-        ชื่อไฟล์ที่แสดงบนการ์ด
-        <input
-          value={block.name}
-          onChange={(e) => onChange({ ...block, name: e.target.value })}
-          placeholder="เช่น ประกาศที่ 20-2569 จรรยาบรรณ.pdf"
-          className={`mt-0.5 ${input}`}
-        />
-      </label>
-
-      <UploadButton
-        label={block.fileHref ? "เปลี่ยนไฟล์ PDF" : "เลือกไฟล์ PDF"}
-        accept="application/pdf"
-        folder={folder}
-        maxEdge={null}
-        onDone={([file]) =>
-          onChange({
-            ...block,
-            name: file.name,
-            fileHref: file.url,
-            // ลิงก์อ่านในเว็บสร้างจากที่อยู่ไฟล์ + ชื่อ ให้เหมือนที่ EditCode เขียนทุกตัวอักษร
-            readHref: `/read/?src=${encodeURIComponent(file.url)}&title=${encodeURIComponent(file.name)}`,
-          })
-        }
-      />
-
-      {block.fileHref ? (
-        <p className="truncate font-mono text-[11px] text-gray-400">{block.fileHref}</p>
-      ) : (
-        <p className="text-xs text-amber-700">ยังไม่มีไฟล์ — การ์ดนี้จะกดอะไรไม่ได้บนหน้าเว็บ</p>
-      )}
-    </div>
-  );
-}
-
+const CARD_COLORS = ["blue", "green", "amber", "pink", "purple", "teal"];
 const ICON_COLORS = [
   { key: "", label: "แดง" },
   { key: "blue", label: "ฟ้า" },
@@ -845,291 +384,690 @@ const ICON_COLORS = [
   { key: "gray", label: "เทา" },
 ];
 
-function PdfIconFields({
+function BlockView({
   block,
+  folder,
+  picked,
+  onChange,
+  onPick,
+}: {
+  block: Block;
+  folder: string;
+  picked: boolean;
+  onChange: (next: Block) => void;
+  onPick: (id: string | null) => void;
+}) {
+  switch (block.kind) {
+    case "heading":
+      return (
+        <>
+          <RichText
+            singleLine
+            as={`h${block.level}` as "h2" | "h3" | "h4"}
+            value={block.html}
+            onChange={(html) => onChange({ ...block, html })}
+            placeholder="พิมพ์หัวข้อ"
+          />
+          {picked && (
+            <Options>
+              <span>ขนาด</span>
+              {([2, 3, 4] as const).map((level) => (
+                <Choice
+                  key={level}
+                  label={level === 2 ? "ใหญ่" : level === 3 ? "กลาง" : "เล็ก"}
+                  active={block.level === level}
+                  onClick={() => onChange({ ...block, level })}
+                />
+              ))}
+            </Options>
+          )}
+        </>
+      );
+
+    case "paragraph":
+      return (
+        <RichText
+          as="p"
+          value={block.html}
+          onChange={(html) => onChange({ ...block, html })}
+          placeholder="พิมพ์ข้อความที่นี่"
+        />
+      );
+
+    case "quote":
+      return (
+        <RichText
+          as="blockquote"
+          value={block.html}
+          onChange={(html) => onChange({ ...block, html })}
+          placeholder="ข้อความที่ยกมา"
+        />
+      );
+
+    case "divider":
+      return <hr />;
+
+    case "list":
+      return <ListView block={block} picked={picked} onChange={onChange} />;
+
+    case "image":
+      return (
+        <>
+          <figure className={block.layout || undefined}>
+            {block.src ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={block.src} alt={block.alt} />
+            ) : (
+              <span className="edit-placeholder">
+                <ImagePlus className="h-6 w-6" /> ยังไม่ได้เลือกรูป
+              </span>
+            )}
+            <RichText
+              as="figcaption"
+              singleLine
+              value={block.caption}
+              onChange={(caption) => onChange({ ...block, caption })}
+              placeholder="คำบรรยายใต้ภาพ (เว้นว่างได้)"
+            />
+          </figure>
+          {picked && (
+            <Options>
+              <UploadButton
+                label={block.src ? "เปลี่ยนรูป" : "เลือกรูป"}
+                accept="image/*"
+                folder={folder}
+                maxEdge={600}
+                onDone={([f]) =>
+                  onChange({
+                    ...block,
+                    src: f.url,
+                    alt: block.alt || f.name.replace(/\.[^.]+$/, ""),
+                  })
+                }
+              />
+              <span>การวาง</span>
+              {IMAGE_LAYOUTS.map((l) => (
+                <Choice
+                  key={l.key}
+                  label={l.label}
+                  active={block.layout === l.key}
+                  onClick={() => onChange({ ...block, layout: l.key })}
+                />
+              ))}
+              <label className="edit-field">
+                คำอธิบายรูปสำหรับคนตาบอด
+                <input
+                  value={block.alt}
+                  onChange={(e) => onChange({ ...block, alt: e.target.value })}
+                  placeholder="เช่น ภาพหมู่คณะกรรมการ"
+                />
+              </label>
+            </Options>
+          )}
+        </>
+      );
+
+    case "imageRow":
+      return (
+        <>
+          <div className="image-row">
+            {block.images.map((img, i) => (
+              <figure key={i} className="edit-removable">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img.src} alt={img.alt} />
+                <button
+                  type="button"
+                  title="เอารูปนี้ออก"
+                  onClick={() =>
+                    onChange({ ...block, images: block.images.filter((_, n) => n !== i) })
+                  }
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </figure>
+            ))}
+            {block.images.length === 0 && (
+              <span className="edit-placeholder">ยังไม่มีรูปในแถวนี้</span>
+            )}
+          </div>
+          {picked && (
+            <Options>
+              <UploadButton
+                label="เพิ่มรูปในแถว"
+                accept="image/*"
+                folder={folder}
+                maxEdge={600}
+                multiple
+                onDone={(files) =>
+                  onChange({
+                    ...block,
+                    images: [
+                      ...block.images,
+                      ...files.map((f) => ({ src: f.url, alt: f.name.replace(/\.[^.]+$/, "") })),
+                    ],
+                  })
+                }
+              />
+            </Options>
+          )}
+        </>
+      );
+
+    case "table":
+      return <TableView block={block} picked={picked} onChange={onChange} />;
+
+    case "pdfCard":
+      return (
+        <>
+          <div className="ebook">
+            <span className="ebook-name">{block.name || "ยังไม่ได้เลือกไฟล์"}</span>
+            {block.readHref && <a href={block.readHref}>เปิดอ่านแบบ E-Book</a>}
+            {block.fileHref && <a href={block.fileHref}>ดาวน์โหลด PDF</a>}
+          </div>
+          {picked && (
+            <Options>
+              <UploadButton
+                label={block.fileHref ? "เปลี่ยนไฟล์ PDF" : "เลือกไฟล์ PDF"}
+                accept="application/pdf"
+                folder={folder}
+                maxEdge={null}
+                onDone={([f]) =>
+                  onChange({
+                    ...block,
+                    name: f.name,
+                    fileHref: f.url,
+                    readHref: `/read/?src=${encodeURIComponent(f.url)}&title=${encodeURIComponent(f.name)}`,
+                  })
+                }
+              />
+              <label className="edit-field">
+                ชื่อที่แสดงบนการ์ด
+                <input
+                  value={block.name}
+                  onChange={(e) => onChange({ ...block, name: e.target.value })}
+                  placeholder="เช่น ประกาศที่ 20-2569.pdf"
+                />
+              </label>
+            </Options>
+          )}
+        </>
+      );
+
+    case "pdfIcon":
+      return (
+        <>
+          <a
+            className={`pdf-icon${block.read ? " read" : ""}${block.color ? ` ${block.color}` : ""}`}
+            style={{ ["--pdf-size" as string]: `${block.size}px` }}
+            title={block.label}
+            onClick={(e) => e.preventDefault()}
+          />
+          {picked && (
+            <Options>
+              <span>กดแล้ว</span>
+              <Choice
+                label="เปิดอ่านในเว็บ"
+                active={block.read}
+                onClick={() => onChange({ ...block, read: true })}
+              />
+              <Choice
+                label="โหลดไฟล์"
+                active={!block.read}
+                onClick={() => onChange({ ...block, read: false })}
+              />
+              <span>สี</span>
+              {ICON_COLORS.map((c) => (
+                <Choice
+                  key={c.key}
+                  label={c.label}
+                  active={block.color === c.key}
+                  onClick={() => onChange({ ...block, color: c.key })}
+                />
+              ))}
+              <label className="edit-field">
+                ขนาด (px)
+                <input
+                  type="number"
+                  min={20}
+                  max={200}
+                  value={block.size}
+                  onChange={(e) => onChange({ ...block, size: Number(e.target.value) || 50 })}
+                />
+              </label>
+            </Options>
+          )}
+        </>
+      );
+
+    case "cards":
+      return <CardsView block={block} picked={picked} onChange={onChange} />;
+
+    case "people":
+      return <PeopleView block={block} picked={picked} folder={folder} onChange={onChange} />;
+
+    case "tabs":
+      return <TabsView block={block} folder={folder} onChange={onChange} onPick={onPick} />;
+
+    case "html":
+      return <HtmlView block={block} picked={picked} onChange={onChange} />;
+  }
+}
+
+/* ---------- รายการ ---------- */
+
+function ListView({
+  block,
+  picked,
   onChange,
 }: {
-  block: Extract<Block, { kind: "pdfIcon" }>;
+  block: Extract<Block, { kind: "list" }>;
+  picked: boolean;
   onChange: (next: Block) => void;
 }) {
+  const Tag = block.ordered ? "ol" : "ul";
+
   return (
-    <div className="space-y-2">
-      <label className={smallLabel}>
-        ชื่อไฟล์ (ขึ้นตอนเอาเมาส์ชี้ และโปรแกรมอ่านหน้าจออ่านให้คนตาบอด)
-        <input
-          value={block.label}
-          onChange={(e) => onChange({ ...block, label: e.target.value })}
-          className={`mt-0.5 ${input}`}
-        />
-      </label>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={block.read ? "read" : "download"}
-          onChange={(e) => onChange({ ...block, read: e.target.value === "read" })}
-          className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-brand-500"
-        >
-          <option value="read">กดแล้วเปิดอ่านในเว็บ</option>
-          <option value="download">กดแล้วโหลดไฟล์ทันที</option>
-        </select>
-
-        <select
-          value={block.color}
-          onChange={(e) => onChange({ ...block, color: e.target.value })}
-          className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-brand-500"
-        >
-          {ICON_COLORS.map((c) => (
-            <option key={c.key} value={c.key}>
-              สี{c.label}
-            </option>
-          ))}
-        </select>
-
-        <label className="flex items-center gap-1.5 text-xs text-gray-500">
-          ขนาด
-          <input
-            type="number"
-            min={20}
-            max={200}
-            value={block.size}
-            onChange={(e) => onChange({ ...block, size: Number(e.target.value) || 50 })}
-            className="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-brand-500"
+    <>
+      <Tag>
+        {block.items.map((item, i) => (
+          <RichText
+            key={i}
+            as="li"
+            singleLine
+            value={item}
+            onChange={(html) =>
+              onChange({ ...block, items: block.items.map((v, n) => (n === i ? html : v)) })
+            }
+            placeholder={`ข้อ ${i + 1}`}
           />
-          px
-        </label>
+        ))}
+      </Tag>
+      {picked && (
+        <Options>
+          <span>แบบ</span>
+          <Choice
+            label="จุดนำหน้า"
+            active={!block.ordered}
+            onClick={() => onChange({ ...block, ordered: false })}
+          />
+          <Choice
+            label="เลข 1. 2. 3."
+            active={block.ordered}
+            onClick={() => onChange({ ...block, ordered: true })}
+          />
+          <button type="button" onClick={() => onChange({ ...block, items: [...block.items, ""] })}>
+            ＋ เพิ่มข้อ
+          </button>
+          {block.items.length > 1 && (
+            <button type="button" onClick={() => onChange({ ...block, items: block.items.slice(0, -1) })}>
+              ลบข้อสุดท้าย
+            </button>
+          )}
+        </Options>
+      )}
+    </>
+  );
+}
+
+/* ---------- ตาราง ---------- */
+
+function TableView({
+  block,
+  picked,
+  onChange,
+}: {
+  block: Extract<Block, { kind: "table" }>;
+  picked: boolean;
+  onChange: (next: Block) => void;
+}) {
+  const cols = Math.max(block.head.length, ...block.rows.map((r) => r.length), 1);
+  /** ทำให้ทุกแถวยาวเท่ากันเสมอ — แถวสั้นกว่าคนอื่นทำให้ตารางบนหน้าเว็บเบี้ยว */
+  const pad = (row: string[]) => Array.from({ length: cols }, (_, i) => row[i] ?? "");
+
+  return (
+    <>
+      <div className="table-scroll">
+        <table>
+          {block.head.length > 0 && (
+            <thead>
+              <tr>
+                {pad(block.head).map((cell, c) => (
+                  <RichText
+                    key={c}
+                    as="th"
+                    singleLine
+                    value={cell}
+                    onChange={(html) =>
+                      onChange({
+                        ...block,
+                        head: pad(block.head).map((v, i) => (i === c ? html : v)),
+                      })
+                    }
+                    placeholder={`หัวข้อ ${c + 1}`}
+                  />
+                ))}
+              </tr>
+            </thead>
+          )}
+          <tbody>
+            {block.rows.map((row, r) => (
+              <tr key={r}>
+                {pad(row).map((cell, c) => (
+                  <RichText
+                    key={c}
+                    as="td"
+                    value={cell}
+                    onChange={(html) =>
+                      onChange({
+                        ...block,
+                        rows: block.rows.map((v, i) =>
+                          i === r ? pad(v).map((x, n) => (n === c ? html : x)) : pad(v),
+                        ),
+                      })
+                    }
+                    placeholder="…"
+                  />
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      <p className="truncate font-mono text-[11px] text-gray-400">{block.href}</p>
-    </div>
+      {picked && (
+        <Options>
+          <button
+            type="button"
+            onClick={() => onChange({ ...block, rows: [...block.rows, Array(cols).fill("")] })}
+          >
+            ＋ เพิ่มแถว
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              onChange({
+                ...block,
+                head: [...pad(block.head), `หัวข้อ ${cols + 1}`],
+                rows: block.rows.map((r) => [...pad(r), ""]),
+              })
+            }
+          >
+            ＋ เพิ่มคอลัมน์
+          </button>
+          {block.rows.length > 1 && (
+            <button type="button" onClick={() => onChange({ ...block, rows: block.rows.slice(0, -1) })}>
+              ลบแถวสุดท้าย
+            </button>
+          )}
+          {cols > 1 && (
+            <button
+              type="button"
+              onClick={() =>
+                onChange({
+                  ...block,
+                  head: pad(block.head).slice(0, -1),
+                  rows: block.rows.map((r) => pad(r).slice(0, -1)),
+                })
+              }
+            >
+              ลบคอลัมน์สุดท้าย
+            </button>
+          )}
+        </Options>
+      )}
+    </>
   );
 }
 
 /* ---------- การ์ดลิงก์ ---------- */
 
-const CARD_COLORS = ["blue", "green", "amber", "pink", "purple", "teal"];
-
-function CardsFields({
+function CardsView({
   block,
+  picked,
   onChange,
 }: {
   block: Extract<Block, { kind: "cards" }>;
+  picked: boolean;
   onChange: (next: Block) => void;
 }) {
-  const setCard = (i: number, patch: Partial<(typeof block.cards)[number]>) =>
+  const [openCard, setOpenCard] = useState<number | null>(null);
+  const set = (i: number, patch: Partial<Card>) =>
     onChange({ ...block, cards: block.cards.map((c, n) => (n === i ? { ...c, ...patch } : c)) });
 
   return (
-    <div className="space-y-2">
-      <label className="flex items-center gap-2 text-xs text-gray-500">
-        การ์ดต่อแถว
-        <select
-          value={block.cols}
-          onChange={(e) => onChange({ ...block, cols: Number(e.target.value) })}
-          className="rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none focus:border-brand-500"
-        >
-          {[2, 3, 4].map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      {block.cards.map((card, i) => (
-        <div key={i} className="space-y-1.5 rounded-lg bg-gray-50 p-2 ring-1 ring-gray-200">
-          <div className="flex items-center gap-1.5">
-            <input
-              value={card.title}
-              onChange={(e) => setCard(i, { title: e.target.value })}
-              placeholder="ชื่อหัวข้อ"
-              className={input}
+    <>
+      <div className={`cards cols-${block.cols}`}>
+        {block.cards.map((card, i) => (
+          <span key={i} className={`card ${card.color} edit-removable`}>
+            <RichText
+              as="span"
+              singleLine
+              className="card-badge"
+              value={card.badge}
+              onChange={(badge) => set(i, { badge })}
+              placeholder="ป้าย"
             />
+            <span className="card-text">
+              <RichText
+                as="span"
+                singleLine
+                className="card-title"
+                value={card.title}
+                onChange={(title) => set(i, { title })}
+                placeholder="ชื่อหัวข้อ"
+              />
+              <RichText
+                as="span"
+                singleLine
+                className="card-sub"
+                value={card.sub}
+                onChange={(sub) => set(i, { sub })}
+                placeholder="คำอธิบายสั้น ๆ"
+              />
+            </span>
             <button
               type="button"
+              title="ลบการ์ดนี้"
               onClick={() => onChange({ ...block, cards: block.cards.filter((_, n) => n !== i) })}
-              className="shrink-0 rounded-lg p-2 text-gray-300 transition hover:bg-red-50 hover:text-red-600"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-3 w-3" />
             </button>
-          </div>
-          <input
-            value={card.sub}
-            onChange={(e) => setCard(i, { sub: e.target.value })}
-            placeholder="คำอธิบายสั้น ๆ"
-            className={input}
-          />
-          <div className="flex flex-wrap gap-1.5">
-            <input
-              value={card.badge}
-              onChange={(e) => setCard(i, { badge: e.target.value })}
-              placeholder="ป้าย เช่น แผน"
-              className={`${input} w-28 flex-none`}
-            />
-            <input
-              value={card.href}
-              onChange={(e) => setCard(i, { href: e.target.value })}
-              placeholder="ลิงก์ เช่น /downloads/"
-              className={`${input} min-w-0 flex-1 font-mono text-xs`}
-            />
-            <select
-              value={card.color}
-              onChange={(e) => setCard(i, { color: e.target.value })}
-              className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-brand-500"
+            <button
+              type="button"
+              className="edit-card-link"
+              title="ตั้งลิงก์และสีของการ์ดนี้"
+              onClick={() => setOpenCard(openCard === i ? null : i)}
             >
-              {CARD_COLORS.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      ))}
+              {card.href || "ยังไม่มีลิงก์"}
+            </button>
+          </span>
+        ))}
+      </div>
 
-      <button
-        type="button"
-        onClick={() =>
-          onChange({
-            ...block,
-            cards: [
-              ...block.cards,
-              { color: "blue", badge: "", title: "ชื่อหัวข้อ", sub: "", href: "#" },
-            ],
-          })
-        }
-        className="rounded-lg px-2 py-1 text-xs text-brand-700 transition hover:bg-brand-50"
-      >
-        ＋ เพิ่มการ์ด
-      </button>
-    </div>
+      {openCard !== null && block.cards[openCard] && (
+        <Options>
+          <label className="edit-field">
+            ลิงก์ปลายทางของการ์ดที่ {openCard + 1}
+            <input
+              value={block.cards[openCard].href}
+              onChange={(e) => set(openCard, { href: e.target.value })}
+              placeholder="เช่น /downloads/doc-loan"
+            />
+          </label>
+          <span>สี</span>
+          {CARD_COLORS.map((c) => (
+            <Choice
+              key={c}
+              label={c}
+              active={block.cards[openCard].color === c}
+              onClick={() => set(openCard, { color: c })}
+            />
+          ))}
+        </Options>
+      )}
+
+      {picked && (
+        <Options>
+          <span>การ์ดต่อแถว</span>
+          {[2, 3, 4].map((n) => (
+            <Choice
+              key={n}
+              label={String(n)}
+              active={block.cols === n}
+              onClick={() => onChange({ ...block, cols: n })}
+            />
+          ))}
+          <button
+            type="button"
+            onClick={() =>
+              onChange({
+                ...block,
+                cards: [
+                  ...block.cards,
+                  { color: "blue", badge: "", title: "ชื่อหัวข้อ", sub: "", href: "#" },
+                ],
+              })
+            }
+          >
+            ＋ เพิ่มการ์ด
+          </button>
+        </Options>
+      )}
+    </>
   );
 }
 
 /* ---------- ทำเนียบบุคลากร ---------- */
 
-function PeopleFields({
+function PeopleView({
   block,
+  picked,
   folder,
   onChange,
 }: {
   block: Extract<Block, { kind: "people" }>;
+  picked: boolean;
   folder: string;
   onChange: (next: Block) => void;
 }) {
-  const setPerson = (i: number, patch: Partial<(typeof block.people)[number]>) =>
+  const set = (i: number, patch: Partial<Person>) =>
     onChange({ ...block, people: block.people.map((p, n) => (n === i ? { ...p, ...patch } : p)) });
 
   return (
-    <div className="space-y-2">
-      <label className="flex items-center gap-2 text-xs text-gray-500">
-        คนต่อแถว
-        <select
-          value={block.cols}
-          onChange={(e) => onChange({ ...block, cols: Number(e.target.value) })}
-          className="rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none focus:border-brand-500"
-        >
-          {[2, 3, 4, 5].map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-      </label>
+    <>
+      <div className={`people cols-${block.cols}`}>
+        {block.people.map((person, i) => (
+          <figure key={i} className="person edit-removable">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={person.src} alt={person.name} />
+            <figcaption>
+              <RichText
+                as="span"
+                singleLine
+                className="person-name"
+                value={person.name}
+                onChange={(name) => set(i, { name })}
+                placeholder="ชื่อ-นามสกุล"
+              />
+              <RichText
+                as="span"
+                singleLine
+                className="person-role"
+                value={person.role}
+                onChange={(role) => set(i, { role })}
+                placeholder="ตำแหน่ง"
+              />
+            </figcaption>
+            <button
+              type="button"
+              title="เอาคนนี้ออก"
+              onClick={() => onChange({ ...block, people: block.people.filter((_, n) => n !== i) })}
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </figure>
+        ))}
+        {block.people.length === 0 && <span className="edit-placeholder">ยังไม่มีรายชื่อ</span>}
+      </div>
 
-      {block.people.map((person, i) => (
-        <div key={i} className="flex items-start gap-2 rounded-lg bg-gray-50 p-2 ring-1 ring-gray-200">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={person.src}
-            alt=""
-            className="h-16 w-16 shrink-0 rounded-lg object-cover ring-1 ring-gray-200"
+      {picked && (
+        <Options>
+          <UploadButton
+            label="เพิ่มรูปบุคคล"
+            accept="image/*"
+            folder={folder}
+            maxEdge={600}
+            multiple
+            onDone={(files) =>
+              onChange({
+                ...block,
+                people: [
+                  ...block.people,
+                  ...files.map((f) => ({
+                    src: f.url,
+                    name: f.name.replace(/\.[^.]+$/, ""),
+                    role: "",
+                  })),
+                ],
+              })
+            }
           />
-          <div className="min-w-0 flex-1 space-y-1.5">
-            <input
-              value={person.name}
-              onChange={(e) => setPerson(i, { name: e.target.value })}
-              placeholder="ชื่อ-นามสกุล"
-              className={input}
+          <span>คนต่อแถว</span>
+          {[2, 3, 4, 5].map((n) => (
+            <Choice
+              key={n}
+              label={String(n)}
+              active={block.cols === n}
+              onClick={() => onChange({ ...block, cols: n })}
             />
-            <input
-              value={person.role}
-              onChange={(e) => setPerson(i, { role: e.target.value })}
-              placeholder="ตำแหน่ง"
-              className={input}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => onChange({ ...block, people: block.people.filter((_, n) => n !== i) })}
-            className="shrink-0 rounded-lg p-2 text-gray-300 transition hover:bg-red-50 hover:text-red-600"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      ))}
-
-      <UploadButton
-        label="เพิ่มรูปบุคคล"
-        accept="image/*"
-        folder={folder}
-        maxEdge={600}
-        multiple
-        onDone={(files) =>
-          onChange({
-            ...block,
-            people: [
-              ...block.people,
-              ...files.map((f) => ({
-                src: f.url,
-                name: f.name.replace(/\.[^.]+$/, ""),
-                role: "",
-              })),
-            ],
-          })
-        }
-      />
-    </div>
+          ))}
+        </Options>
+      )}
+    </>
   );
 }
 
 /* ---------- แท็ปเมนู ---------- */
 
-function TabsFields({
+function TabsView({
   block,
   folder,
   onChange,
+  onPick,
 }: {
   block: Extract<Block, { kind: "tabs" }>;
   folder: string;
   onChange: (next: Block) => void;
+  onPick: (id: string | null) => void;
 }) {
   const [active, setActive] = useState(0);
-  const tab = block.tabs[active];
+  const [inner, setInner] = useState<string | null>(null);
+  const tab = block.tabs[Math.min(active, block.tabs.length - 1)];
+  if (!tab) return null;
+  const at = Math.min(active, block.tabs.length - 1);
 
   const setTabs = (tabs: typeof block.tabs) => onChange({ ...block, tabs });
 
-  const setBlocks = (blocks: Block[]) =>
-    setTabs(block.tabs.map((t, i) => (i === active ? { ...t, blocks } : t)));
-
-  if (!tab) return null;
-
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-1">
+    <div className="tabs">
+      {/* ปุ่มแท็บหน้าตาเดียวกับบนหน้าเว็บจริง กดสลับดูได้เลย */}
+      <div className="tab-buttons" role="tablist">
         {block.tabs.map((t, i) => (
           <button
             key={i}
             type="button"
+            role="tab"
+            className="tab-button"
+            aria-selected={i === at}
             onClick={() => setActive(i)}
-            className={`rounded-lg px-2.5 py-1 text-xs transition ${
-              i === active ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
           >
             {t.title || `หัวข้อที่ ${i + 1}`}
           </button>
         ))}
         <button
           type="button"
+          className="edit-tab-add"
+          title="เพิ่มแท็บ"
           onClick={() => {
             setTabs([
               ...block.tabs,
@@ -1140,87 +1078,88 @@ function TabsFields({
             ]);
             setActive(block.tabs.length);
           }}
-          className="rounded-lg px-2 py-1 text-xs text-brand-700 transition hover:bg-brand-50"
         >
-          ＋ แท็บ
+          <Plus className="h-3.5 w-3.5" />
         </button>
       </div>
 
-      <div className="flex items-center gap-2">
-        <input
-          value={tab.title}
-          onChange={(e) =>
-            setTabs(block.tabs.map((t, i) => (i === active ? { ...t, title: e.target.value } : t)))
-          }
-          placeholder="ชื่อบนปุ่มแท็บ"
-          className={input}
-        />
+      <Options>
+        <label className="edit-field">
+          ชื่อบนปุ่มแท็บนี้
+          <input
+            value={tab.title}
+            onChange={(e) =>
+              setTabs(block.tabs.map((t, i) => (i === at ? { ...t, title: e.target.value } : t)))
+            }
+          />
+        </label>
         {block.tabs.length > 1 && (
           <button
             type="button"
             onClick={() => {
-              setTabs(block.tabs.filter((_, i) => i !== active));
+              setTabs(block.tabs.filter((_, i) => i !== at));
               setActive(0);
             }}
-            title="ลบแท็บนี้"
-            className="shrink-0 rounded-lg p-2 text-gray-300 transition hover:bg-red-50 hover:text-red-600"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            ลบแท็บนี้
           </button>
         )}
-      </div>
+      </Options>
 
-      {/* เนื้อในแท็บก็เป็นก้อนเหมือนกัน — ใช้ตัวแก้ไขตัวเดียวกันซ้อนลงไปอีกชั้น */}
-      <div className="rounded-lg ring-1 ring-gray-200">
-        <NestedBlocks blocks={tab.blocks} folder={folder} onChange={setBlocks} />
+      <div className="tab is-ready">
+        <BlockList
+          nested
+          blocks={tab.blocks}
+          folder={folder}
+          picked={inner}
+          onPick={(id) => {
+            setInner(id);
+            // เลือกก้อนข้างในแล้ว อย่าให้ก้อน "แท็ปเมนู" ข้างนอกถือว่าถูกเลือกด้วย
+            onPick(null);
+          }}
+          onChange={(blocks) => setTabs(block.tabs.map((t, i) => (i === at ? { ...t, blocks } : t)))}
+        />
       </div>
     </div>
   );
 }
 
-/** รายการก้อนที่อยู่ในแท็บ — ตัดปุ่มเพิ่มก้อนซ้อนชั้นลึกออก เหลือชนิดที่ใช้ในแท็บจริง ๆ */
-function NestedBlocks({
-  blocks,
-  folder,
+/* ---------- ก้อนที่ระบบอ่านไม่ออก ---------- */
+
+function HtmlView({
+  block,
+  picked,
   onChange,
 }: {
-  blocks: Block[];
-  folder: string;
-  onChange: (next: Block[]) => void;
+  block: Extract<Block, { kind: "html" }>;
+  picked: boolean;
+  onChange: (next: Block) => void;
 }) {
-  const replaceAt = (index: number, block: Block) =>
-    onChange(blocks.map((b, i) => (i === index ? block : b)));
+  const [asCode, setAsCode] = useState(false);
 
   return (
-    <div className="space-y-2 bg-gray-50/70 p-2">
-      {blocks.map((block, index) => (
-        <BlockCard
-          key={block.id}
-          block={block}
-          index={index}
-          total={blocks.length}
-          folder={folder}
-          onChange={(next) => replaceAt(index, next)}
-          onMove={(step) => {
-            const to = index + step;
-            if (to < 0 || to >= blocks.length) return;
-            const next = [...blocks];
-            [next[index], next[to]] = [next[to], next[index]];
-            onChange(next);
-          }}
-          onDuplicate={() => {
-            const copy = JSON.parse(JSON.stringify(blocks[index])) as Block;
-            copy.id = blockId();
-            onChange([...blocks.slice(0, index + 1), copy, ...blocks.slice(index + 1)]);
-          }}
-          onRemove={() => onChange(blocks.filter((_, i) => i !== index))}
-          onInsertBelow={(kind) =>
-            onChange([...blocks.slice(0, index + 1), emptyBlock(kind), ...blocks.slice(index + 1)])
-          }
+    <>
+      {asCode ? (
+        <textarea
+          value={block.html}
+          onChange={(e) => onChange({ ...block, html: e.target.value })}
+          rows={5}
+          className="edit-code"
         />
-      ))}
+      ) : (
+        // แสดงผลจริงของก้อนนี้ — เนื้อหามาจากฐานของเว็บนี้เอง ผ่านตัวกรองตอนบันทึกแล้ว
+        <div dangerouslySetInnerHTML={{ __html: block.html }} />
+      )}
 
-      <AddMenu onPick={(kind) => onChange([...blocks, emptyBlock(kind)])} wide />
-    </div>
+      {picked && (
+        <Options>
+          <span>ก้อนนี้ระบบแปลงเป็นช่องกรอกให้ไม่ได้</span>
+          <button type="button" onClick={() => setAsCode((v) => !v)}>
+            <Code2 className="mr-1 inline h-3.5 w-3.5" />
+            {asCode ? "ดูผลลัพธ์" : "แก้เป็นโค้ด"}
+          </button>
+        </Options>
+      )}
+    </>
   );
 }
