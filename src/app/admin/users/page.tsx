@@ -8,7 +8,7 @@ import UsersManager from "@/components/admin/UsersManager";
 
 export default async function AdminUsersPage() {
   const me = await currentUser();
-  if (!me) redirect("/admin/");
+  if (!me) redirect("/login/");
   if (me.role !== "ADMIN") redirect("/admin/");
 
   const [users, pages] = await Promise.all([

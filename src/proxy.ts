@@ -55,5 +55,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   // "/" อยู่ในรายการเพราะต้องพาหน้าแรกของโดเมนหลังบ้านไป /admin — หน้าอื่นไม่ถูกแตะ
-  matcher: ["/", "/admin/:path*", "/api/auth/:path*", "/api/admin/:path*"],
+  // /login ต้องอยู่ด้วย ไม่งั้นโดเมนสาธารณะจะเปิดหน้าเข้าสู่ระบบได้ทั้งที่หลังบ้านซ่อนอยู่
+  matcher: ["/", "/login/:path*", "/admin/:path*", "/api/auth/:path*", "/api/admin/:path*"],
 };

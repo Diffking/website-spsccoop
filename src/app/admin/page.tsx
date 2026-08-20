@@ -1,18 +1,17 @@
+import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { canAnyPage, canArea, hasFullAccess } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { getBackupStatus } from "@/lib/backups";
 import { popularPages, visitorsByYear } from "@/lib/analytics";
-import LoginForm from "@/components/admin/LoginForm";
 import Dashboard from "@/components/admin/Dashboard";
 import MirrorPanel from "@/components/admin/MirrorPanel";
 import { mirrorStatus } from "@/lib/mirror";
 
 export default async function AdminPage() {
   const user = await currentUser();
-  if (!user) {
-    return <LoginForm />;
-  }
+  // หน้าเข้าสู่ระบบมีที่อยู่ของตัวเองแล้ว — /admin ไว้สำหรับคนที่เข้าระบบแล้วเท่านั้น
+  if (!user) redirect("/login/");
 
   const [announcements, tickers, holidays, pages, users, backup, visitors, popular] =
     await Promise.all([

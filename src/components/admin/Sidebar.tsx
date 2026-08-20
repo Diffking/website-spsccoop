@@ -253,11 +253,14 @@ export default function Sidebar({
   areas,
   userName,
   userCode,
+  siteUrl,
 }: {
   role: "ADMIN" | "EDITOR";
   areas: string[];
   userName: string;
   userCode: string;
+  /** ที่อยู่เว็บสาธารณะ — คนละโดเมนกับหลังบ้าน ต้องส่งมาเต็ม ๆ ไม่ใช่ "/" */
+  siteUrl: string;
 }) {
   const user: Actor = { role, areas };
   const [open, setOpen] = useState(false);
@@ -279,7 +282,7 @@ export default function Sidebar({
   const footer = (
     <div className="space-y-1 border-t border-white/10 p-3">
       <a
-        href="/"
+        href={siteUrl}
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-brand-50/80 transition hover:bg-white/10 hover:text-white"

@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "prebuild": "node scripts/copy-pdf-worker.mjs",
-    "predev": "node scripts/copy-pdf-worker.mjs"
+    "predev": "node scripts/copy-pdf-worker.mjs",
+    "check:blocks": "tsx scripts/roundtrip-check.mts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
+    "@types/jsdom": "^30.0.0",
     "@types/node": "^20",
     "@types/pg": "^8.21.0",
     "@types/qrcode": "^1.5.6",
@@ -36,6 +38,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
     "typescript": "^5"
