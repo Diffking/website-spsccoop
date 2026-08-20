@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Loader2, Save, X, ShieldCheck, UserCheck, UserX, KeyRound } from "lucide-react";
+import { Plus, Trash2, Loader2, Save, X, ShieldCheck, UserCheck, UserX, KeyRound, Eye } from "lucide-react";
+import AreaPicker from "@/components/admin/AreaPicker";
+import { AREAS, pageAreaCategory } from "@/lib/permissions";
 
 export type UserRow = {
   id: string;
@@ -10,13 +12,42 @@ export type UserRow = {
   name: string;
   phone: string | null;
   role: "ADMIN" | "EDITOR";
+  /** ส่วนของเว็บที่คนนี้ดูแล — ว่าง = ทั้งเว็บ (ดู src/lib/permissions.ts) */
+  areas: string[];
   active: boolean;
   lastLoginAt: string | null;
 };
 
-const empty = { username: "", name: "", phone: "", role: "EDITOR" as "ADMIN" | "EDITOR" };
+const empty = {
+  username: "",
+  name: "",
+  phone: "",
+  role: "EDITOR" as "ADMIN" | "EDITOR",
+  areas: [] as string[],
+};
 
-export default function UsersManager({ users, meId }: { users: UserRow[]; meId: string }) {
+/** สรุปหน้าที่รับผิดชอบเป็นข้อความสั้น ๆ ให้อ่านจากรายการได้เลย ไม่ต้องกดเข้าไปดู */
+function areaSummary(user: UserRow): string {
+  if (user.role === "ADMIN") return "ผู้ดูแลระบบ — ทั้งเว็บ";
+  if (user.areas.length === 0) return "ดูแลทั้งเว็บ";
+
+  const labels = user.areas.map((key) => {
+    const category = pageAreaCategory(key);
+    if (category) return category;
+    return AREAS.find((a) => a.key === key)?.label ?? key;
+  });
+  return labels.join(" · ");
+}
+
+export default function UsersManager({
+  users,
+  meId,
+  pageCategories,
+}: {
+  users: UserRow[];
+  meId: string;
+  pageCategories: string[];
+}) {
   const router = useRouter();
   const [form, setForm] = useState(empty);
   const [adding, setAdding] = useState(false);
@@ -59,6 +90,7 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
       name: form.name,
       phone: form.phone,
       role: form.role,
+      areas: form.areas,
     });
     if (data) {
       setNotice(data.password ? `บันทึกแล้ว — รหัสผ่านใหม่คือ ${data.password}` : "บันทึกแล้ว");
@@ -81,6 +113,20 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
     setBusy(user.id);
     await send(`/api/admin/users/${user.id}/`, "DELETE");
     setBusy("");
+    router.refresh();
+  }
+
+  /**
+   * เปิดหลังบ้านในมุมมองของคนนี้ — ดูว่าเขาเห็นเมนูอะไร เข้าหน้าไหนได้บ้าง
+   * มุมมองนี้แก้อะไรไม่ได้เลย และหน้าผู้ใช้งานก็จะปิดตามไปด้วย (เขาไม่ใช่ ADMIN)
+   * ออกจากมุมมองได้ที่แถบสีเหลืองด้านบน
+   */
+  async function viewAs(user: UserRow) {
+    setBusy(user.id);
+    const data = await send("/api/admin/view-as/", "POST", { userId: user.id });
+    setBusy("");
+    if (!data) return;
+    router.replace("/admin/");
     router.refresh();
   }
 
@@ -137,6 +183,14 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
               <option value="EDITOR">ผู้แก้ไขเนื้อหา</option>
               <option value="ADMIN">ผู้ดูแลระบบ (จัดการผู้ใช้ได้)</option>
             </select>
+            {/* ผู้ดูแลระบบเข้าได้ทุกที่อยู่แล้ว ไม่ต้องมาเลือกส่วน */}
+            {form.role === "EDITOR" && (
+              <AreaPicker
+                value={form.areas}
+                onChange={(areas) => setForm({ ...form, areas })}
+                pageCategories={pageCategories}
+              />
+            )}
           </div>
           <div className="mt-3 flex gap-2">
             <button
@@ -192,14 +246,23 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
               />
               <p className="text-xs text-gray-500">{phoneHint}</p>
               {user.id !== meId && (
-                <select
-                  value={form.role}
-                  onChange={(e) => setForm({ ...form, role: e.target.value as "ADMIN" | "EDITOR" })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500"
-                >
-                  <option value="EDITOR">ผู้แก้ไขเนื้อหา</option>
-                  <option value="ADMIN">ผู้ดูแลระบบ</option>
-                </select>
+                <>
+                  <select
+                    value={form.role}
+                    onChange={(e) => setForm({ ...form, role: e.target.value as "ADMIN" | "EDITOR" })}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500"
+                  >
+                    <option value="EDITOR">ผู้แก้ไขเนื้อหา</option>
+                    <option value="ADMIN">ผู้ดูแลระบบ</option>
+                  </select>
+                  {form.role === "EDITOR" && (
+                    <AreaPicker
+                      value={form.areas}
+                      onChange={(areas) => setForm({ ...form, areas })}
+                      pageCategories={pageCategories}
+                    />
+                  )}
+                </>
               )}
               <div className="flex gap-2 pt-1">
                 <button
@@ -229,6 +292,7 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
                     name: user.name,
                     phone: user.phone ?? "",
                     role: user.role,
+                    areas: user.areas,
                   });
                 }}
                 className="min-w-0 flex-1 text-left"
@@ -245,10 +309,19 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
                 <span className="block truncate font-mono text-xs text-gray-400">
                   {user.username} · {user.phone ?? "ยังไม่มีเบอร์"}
                 </span>
+                <span className="block truncate text-xs text-gray-500">{areaSummary(user)}</span>
               </button>
 
               {user.id !== meId && (
                 <>
+                  <button
+                    onClick={() => viewAs(user)}
+                    disabled={busy === user.id}
+                    title={`เปิดหลังบ้านในมุมมองของ ${user.name} — ดูอย่างเดียว`}
+                    className="shrink-0 rounded-lg p-2 text-gray-400 transition hover:bg-amber-50 hover:text-amber-700"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
                   <button
                     onClick={() => toggleActive(user)}
                     disabled={busy === user.id}
@@ -270,6 +343,12 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
           ),
         )}
       </ul>
+
+      <p className="rounded-lg bg-gray-100 px-3 py-2.5 text-xs leading-relaxed text-gray-600">
+        <Eye className="mr-1 inline h-3.5 w-3.5" />
+        ปุ่มรูปตาข้างชื่อ = เปิดหลังบ้านในมุมมองของคนนั้น เพื่อดูว่าเขาเห็นเมนูอะไรบ้าง ·
+        มุมมองนั้นแก้อะไรไม่ได้เลย กดออกได้ที่แถบสีเหลืองด้านบน
+      </p>
 
       <p className="rounded-lg bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-800">
         รหัสผ่าน = เลข 4 ตัวท้ายของเบอร์โทร · เปลี่ยนเบอร์แล้วรหัสผ่านเปลี่ยนตามทันที ·

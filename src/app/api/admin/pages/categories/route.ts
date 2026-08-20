@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
+import { hasFullAccess } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { groupKeyOf } from "@/lib/pageGroups";
 
@@ -13,8 +14,20 @@ import { groupKeyOf } from "@/lib/pageGroups";
  * to ว่าง = ล้างหมวดของทั้งกลุ่ม กลับไปให้ระบบจัดกลุ่มตามที่อยู่หน้าเอง
  */
 export async function PATCH(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite();
   if (auth instanceof NextResponse) return auth;
+
+  /*
+   * เปลี่ยนชื่อหมวดคือการขยับชั้นวางของทั้งหลังบ้าน ไม่ใช่การแก้เนื้อหาในหมวดตัวเอง
+   * — และชื่อหมวดคือสิ่งที่ระบบใช้ผูกว่าใครดูแลอะไร เปลี่ยนแล้วสิทธิ์ของคนอื่นหลุดตาม
+   * จึงให้เฉพาะคนที่ดูแลทั้งเว็บทำได้
+   */
+  if (!hasFullAccess(auth.user) && !auth.user.areas.includes("pages")) {
+    return NextResponse.json(
+      { error: "เปลี่ยนชื่อหมวดได้เฉพาะผู้ที่ดูแลหน้าเนื้อหาทุกหมวด" },
+      { status: 403 },
+    );
+  }
 
   const body = (await request.json().catch(() => ({}))) as { from?: string; to?: string };
   const from = body.from?.trim() ?? "";

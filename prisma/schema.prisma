@@ -19,6 +19,10 @@ model User {
   phone        String?
   passwordHash String
   role         Role      @default(EDITOR)
+  /// พื้นที่รับผิดชอบของคนนี้ — ว่าง = ดูแลได้ทั้งเว็บ (ผู้ใช้เดิมทุกคนเป็นแบบนี้)
+  /// คีย์ของเมนูหลังบ้าน เช่น "home.announcements" หรือหมวดหน้าเนื้อหา "page:ระเบียบสหกรณ์"
+  /// รายชื่อคีย์ที่ใช้ได้อยู่ใน src/lib/permissions.ts — ADMIN ไม่สนใจค่านี้ เข้าได้ทุกที่เสมอ
+  areas        String[]  @default([])
   active       Boolean   @default(true)
   lastLoginAt  DateTime?
   createdAt    DateTime  @default(now())

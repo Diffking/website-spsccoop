@@ -8,6 +8,8 @@ import { db } from "@/lib/db";
  */
 
 const COOKIE_NAME = "spsc_session";
+/** คุกกี้ "มุมมองผู้ใช้" — ADMIN สวมมุมมองของเจ้าหน้าที่คนอื่นเพื่อดูว่าเขาเห็นอะไร */
+const VIEW_AS_COOKIE = "spsc_viewas";
 const SESSION_DAYS = 7;
 
 export type SessionUser = {
@@ -15,6 +17,21 @@ export type SessionUser = {
   username: string;
   name: string;
   role: "ADMIN" | "EDITOR";
+  /** พื้นที่รับผิดชอบ — ว่าง = ดูแลได้ทั้งเว็บ (ดู src/lib/permissions.ts) */
+  areas: string[];
+};
+
+/**
+ * ตัวตนที่ระบบใช้ตัดสินสิทธิ์ ณ ตอนนี้
+ *
+ * ปกติ user กับ real เป็นคนเดียวกัน จะต่างกันก็ต่อเมื่อ ADMIN กำลังเปิด "มุมมองผู้ใช้"
+ * อยู่ — ตอนนั้น user คือคนที่ถูกสวมมุมมอง ส่วน real คือ ADMIN ตัวจริง และ viewing
+ * เป็น true ซึ่งแปลว่า **ดูได้อย่างเดียว ห้ามเขียนอะไรทั้งสิ้น**
+ */
+export type AdminView = {
+  user: SessionUser;
+  real: SessionUser;
+  viewing: boolean;
 };
 
 /** ตรวจรหัสผ่าน — คืน null ถ้าไม่ผ่าน (ไม่บอกว่าผิดตรงไหน กันเดาชื่อผู้ใช้) */
@@ -31,7 +48,24 @@ export async function verifyPassword(username: string, password: string): Promis
     return null;
   }
 
-  return { id: user.id, username: user.username, name: user.name, role: user.role };
+  return toSessionUser(user);
+}
+
+/** แถวใน DB → ตัวตนที่เอาไปใช้ตัดสินสิทธิ์ */
+function toSessionUser(user: {
+  id: string;
+  username: string;
+  name: string;
+  role: "ADMIN" | "EDITOR";
+  areas: string[];
+}): SessionUser {
+  return {
+    id: user.id,
+    username: user.username,
+    name: user.name,
+    role: user.role,
+    areas: user.areas,
+  };
 }
 
 /** สร้าง session ใหม่แล้วตั้งคุกกี้ */
@@ -50,8 +84,8 @@ export async function createSession(userId: string): Promise<void> {
   });
 }
 
-/** ใครล็อกอินอยู่ — null ถ้ายังไม่ได้ล็อกอินหรือหมดอายุ */
-export async function currentUser(): Promise<SessionUser | null> {
+/** คนที่ล็อกอินอยู่จริง ๆ — ไม่สนใจมุมมองผู้ใช้ */
+async function sessionOwner(): Promise<SessionUser | null> {
   const store = await cookies();
   const sessionId = store.get(COOKIE_NAME)?.value;
   if (!sessionId) return null;
@@ -61,8 +95,53 @@ export async function currentUser(): Promise<SessionUser | null> {
     return null;
   }
 
-  const { user } = session;
-  return { id: user.id, username: user.username, name: user.name, role: user.role };
+  return toSessionUser(session.user);
+}
+
+/**
+ * ตัวตนที่ใช้ตัดสินสิทธิ์ตอนนี้ พร้อมบอกว่ากำลังอยู่ในมุมมองผู้ใช้อื่นหรือเปล่า
+ * null = ยังไม่ได้ล็อกอินหรือ session หมดอายุ
+ *
+ * มุมมองผู้ใช้เปิดได้เฉพาะ ADMIN — คุกกี้ค้างอยู่ในเครื่องของคนที่ไม่ใช่ ADMIN
+ * ก็ไม่มีผล เพราะตรงนี้เช็คสิทธิ์ของ session จริงทุกครั้ง ไม่ได้เชื่อคุกกี้
+ */
+export async function currentView(): Promise<AdminView | null> {
+  const real = await sessionOwner();
+  if (!real) return null;
+
+  const plain = { user: real, real, viewing: false };
+  if (real.role !== "ADMIN") return plain;
+
+  const store = await cookies();
+  const targetId = store.get(VIEW_AS_COOKIE)?.value;
+  if (!targetId || targetId === real.id) return plain;
+
+  const target = await db.user.findUnique({ where: { id: targetId } });
+  if (!target) return plain;
+
+  return { user: toSessionUser(target), real, viewing: true };
+}
+
+/** ใครล็อกอินอยู่ — null ถ้ายังไม่ได้ล็อกอินหรือหมดอายุ (คืนตัวตนตามมุมมองที่เปิดอยู่) */
+export async function currentUser(): Promise<SessionUser | null> {
+  return (await currentView())?.user ?? null;
+}
+
+/** เปิดมุมมองของผู้ใช้คนหนึ่ง — คุกกี้อายุเท่ากับ session ไม่ต้องมาคอยล้างเอง */
+export async function startViewAs(userId: string): Promise<void> {
+  const store = await cookies();
+  store.set(VIEW_AS_COOKIE, userId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+  });
+}
+
+/** ออกจากมุมมองผู้ใช้ กลับมาเป็นตัวเอง */
+export async function stopViewAs(): Promise<void> {
+  const store = await cookies();
+  store.delete(VIEW_AS_COOKIE);
 }
 
 export async function destroySession(): Promise<void> {
@@ -72,6 +151,8 @@ export async function destroySession(): Promise<void> {
     await db.session.deleteMany({ where: { id: sessionId } });
   }
   store.delete(COOKIE_NAME);
+  // ออกจากระบบทั้งที ต้องไม่เหลือมุมมองผู้ใช้ค้างไว้ให้คนที่ล็อกอินคนต่อไป
+  store.delete(VIEW_AS_COOKIE);
 }
 
 export async function hashPassword(password: string): Promise<string> {

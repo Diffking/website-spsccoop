@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 
@@ -12,7 +12,7 @@ export function parseThaiDate(value: string): Date | null {
 
 /** เพิ่มวันหยุดทำการ */
 export async function POST(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite("holidays");
   if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => ({}))) as {

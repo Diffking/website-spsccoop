@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser, toSlug } from "@/lib/apiAuth";
+import { requireUser, requireWrite, toSlug } from "@/lib/apiAuth";
+import { canPage, filterPages } from "@/lib/permissions";
 import { pageFolder } from "@/lib/ftp";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 
@@ -11,9 +12,10 @@ export async function GET() {
 
   const pages = await db.page.findMany({
     orderBy: { slug: "asc" },
-    select: { id: true, slug: true, title: true, published: true, updatedAt: true },
+    select: { id: true, slug: true, title: true, published: true, updatedAt: true, category: true },
   });
-  return NextResponse.json({ pages });
+  // เห็นเฉพาะหมวดที่ตัวเองดูแล
+  return NextResponse.json({ pages: filterPages(auth.user, pages) });
 }
 
 /**
@@ -47,7 +49,7 @@ async function inheritCategory(slug: string): Promise<string | null> {
 
 /** สร้างหน้าใหม่ */
 export async function POST(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite();
   if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => ({}))) as { title?: string; slug?: string };
@@ -70,9 +72,20 @@ export async function POST(request: Request) {
    *
    * หมวดก็รับมาจากหน้าข้างเคียงเลย — สร้าง download/doc-welfare ต่อจาก download/doc-loan
    * ก็ควรอยู่หมวด "ดาวน์โหลดเอกสาร" เหมือนกัน ไม่ใช่ปล่อยไว้ว่างแล้วไปโผล่เป็นกลุ่ม "download"
+   *
+   * พอรู้หมวดแล้วก็เช็คสิทธิ์ตรงนี้เลย — หน้าใหม่ที่ตกไปอยู่หมวดของคนอื่น สร้างเสร็จก็แก้ต่อไม่ได้
+   * ค้างเป็นหน้าเปล่าให้คนอื่นมาตามเก็บ ปฏิเสธตั้งแต่แรกดีกว่า
    */
+  const category = await inheritCategory(slug);
+  if (!canPage(auth.user, { slug, category })) {
+    return NextResponse.json(
+      { error: "สร้างหน้าได้เฉพาะในหมวดที่คุณดูแล ลองตั้งที่อยู่หน้าให้อยู่ใต้หมวดของคุณ" },
+      { status: 403 },
+    );
+  }
+
   const page = await db.page.create({
-    data: { title, slug, assetFolder: pageFolder(slug), category: await inheritCategory(slug) },
+    data: { title, slug, assetFolder: pageFolder(slug), category },
   });
   // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
   purgeEverySite();

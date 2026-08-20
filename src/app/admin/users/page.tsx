@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { currentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { usedCategories } from "@/lib/pageGroups";
 import UsersManager from "@/components/admin/UsersManager";
 
 export default async function AdminUsersPage() {
@@ -10,23 +11,28 @@ export default async function AdminUsersPage() {
   if (!me) redirect("/admin/");
   if (me.role !== "ADMIN") redirect("/admin/");
 
-  const users = await db.user.findMany({
-    orderBy: { username: "asc" },
-    select: {
-      id: true,
-      username: true,
-      name: true,
-      phone: true,
-      role: true,
-      active: true,
-      lastLoginAt: true,
-    },
-  });
+  const [users, pages] = await Promise.all([
+    db.user.findMany({
+      orderBy: { username: "asc" },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        phone: true,
+        role: true,
+        areas: true,
+        active: true,
+        lastLoginAt: true,
+      },
+    }),
+    // หมวดหน้าเนื้อหาไม่ได้ตายตัวในโค้ด มาจากที่เจ้าหน้าที่ตั้งไว้ในฐาน
+    db.page.findMany({ select: { slug: true, category: true } }),
+  ]);
 
   return (
     <>
       <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-3">
+        <div className="mx-auto flex max-w-4xl items-center gap-2 px-4 py-3">
           <Link href="/admin/" className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100">
             <ChevronLeft className="h-5 w-5" />
           </Link>
@@ -34,9 +40,10 @@ export default async function AdminUsersPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-5">
+      <main className="mx-auto max-w-4xl px-4 py-5">
         <UsersManager
           meId={me.id}
+          pageCategories={usedCategories(pages)}
           users={users.map((u) => ({
             ...u,
             lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : null,

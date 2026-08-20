@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
 import { cleanNav, type SiteBrand } from "@/lib/nav";
 import { saveSetting } from "@/lib/settings";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 
 /** บันทึกเมนูนำทาง + ชื่อ/โลโก้ของหัวเว็บ */
 export async function PUT(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite("header");
   if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => ({}))) as {

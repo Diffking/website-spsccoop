@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 
 export async function POST(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite("home.ticker");
   if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => ({}))) as { text?: string };

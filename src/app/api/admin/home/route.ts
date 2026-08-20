@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
+import { canArea, type AreaKey } from "@/lib/permissions";
 import { KINDS } from "@/lib/announcementKinds";
 import { TICKER_MAX_PER_KIND } from "@/lib/content";
 import { COMMITTEE_PHOTO_SCALES } from "@/lib/committee";
@@ -20,9 +21,25 @@ import {
 } from "@/lib/settings";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 
+/**
+ * ค่าตั้งแต่ละก้อนในคำขอนี้อยู่คนละหน้าในหลังบ้าน จึงอยู่ในความรับผิดชอบคนละคน
+ * (route เดียวรับหมดเพราะทุกก้อนลงตาราง Setting เหมือนกัน)
+ */
+const FIELD_AREA: Record<string, AreaKey> = {
+  siteInfo: "footer",
+  officeHours: "footer",
+  interestRates: "home.rates",
+  ticker: "home.ticker",
+  committeeSet: "home.committees",
+  committeePhotoScale: "home.committees",
+  homeSections: "home.layout",
+  homeTones: "home.layout",
+  homeOrder: "home.layout",
+};
+
 /** บันทึกข้อมูลสหกรณ์ + อัตราดอกเบี้ย + ตั้งค่าข่าววิ่ง ของหน้าแรก */
 export async function PUT(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite();
   if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => ({}))) as {
@@ -36,6 +53,13 @@ export async function PUT(request: Request) {
     homeOrder?: unknown;
     officeHours?: Partial<OfficeHours>;
   };
+
+  // ส่งอะไรมาก็ต้องดูแลส่วนนั้นให้ครบทุกก้อน ไม่ใช่มีสิทธิ์ก้อนเดียวแล้วแอบแก้ก้อนอื่นติดมาด้วย
+  for (const [field, area] of Object.entries(FIELD_AREA)) {
+    if (body[field as keyof typeof body] !== undefined && !canArea(auth.user, area)) {
+      return NextResponse.json({ error: "ส่วนนี้ไม่ได้อยู่ในความรับผิดชอบของคุณ" }, { status: 403 });
+    }
+  }
 
   if (body.siteInfo) {
     const s = body.siteInfo;

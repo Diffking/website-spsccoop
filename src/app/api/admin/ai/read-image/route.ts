@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
 import {
   AI_READY,
@@ -37,7 +37,7 @@ const AI_PAGES = 3;
 type Target = (typeof TARGETS)[number];
 
 export async function POST(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite();
   if (auth instanceof NextResponse) return auth;
 
   if (!AI_READY) {

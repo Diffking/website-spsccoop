@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
 import { isEventType } from "@/lib/homeItems";
 import { purgeEverySite } from "@/lib/mirrorPurge";
@@ -14,7 +14,7 @@ export function parseDay(value?: string): Date | null {
 
 /** เพิ่มสไลด์แบนเนอร์หน้าแรก */
 export async function POST(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite("home.slides");
   if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => ({}))) as {
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
  * ถ้าทยอยสลับจะมีจังหวะที่ลำดับกลาง ๆ ผิดอยู่ชั่วขณะ ถ้าขาดกลางคันจะค้างสภาพนั้น
  */
 export async function PUT(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite("home.slides");
   if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => ({}))) as { order?: unknown };

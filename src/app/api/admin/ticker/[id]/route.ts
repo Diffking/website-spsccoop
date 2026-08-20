@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: Params) {
-  const auth = await requireUser();
+  const auth = await requireWrite("home.ticker");
   if (auth instanceof NextResponse) return auth;
 
   const { id } = await params;
@@ -32,7 +32,7 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
-  const auth = await requireUser();
+  const auth = await requireWrite("home.ticker");
   if (auth instanceof NextResponse) return auth;
 
   const { id } = await params;

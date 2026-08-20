@@ -44,7 +44,7 @@ export type Counts = {
 };
 
 const TILES: { key: keyof Counts; label: string; unit: string; href: string; icon: typeof Users }[] = [
-  { key: "announcements", label: "ประกาศสหกรณ์", unit: "เรื่อง", href: "/admin/home", icon: Megaphone },
+  { key: "announcements", label: "ประกาศสหกรณ์", unit: "เรื่อง", href: "/admin/home/announcements", icon: Megaphone },
   { key: "holidays", label: "วันหยุดทำการ", unit: "วัน", href: "/admin/holidays", icon: CalendarOff },
   { key: "pages", label: "หน้าเนื้อหา", unit: "หน้า", href: "/admin/pages", icon: FileStack },
   { key: "users", label: "ผู้ใช้งานระบบ", unit: "คน", href: "/admin/users", icon: Users },
@@ -55,11 +55,14 @@ export default function Dashboard({
   backup,
   visitors,
   popular,
+  tiles,
 }: {
   counts: Counts;
   backup: BackupStatus;
   visitors: YearPoint[];
   popular: PagePoint[];
+  /** การ์ดที่คนนี้เปิดเข้าไปได้ — ที่เหลือไม่ต้องโชว์ กดแล้วก็โดนเด้งกลับมาอยู่ดี */
+  tiles: (keyof Counts)[];
 }) {
   const latestYear = visitors.at(-1);
   const prevYear = visitors.at(-2);
@@ -94,7 +97,7 @@ export default function Dashboard({
 
       {/* การ์ดตัวเลข */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {TILES.map((tile, i) => (
+        {TILES.filter((tile) => tiles.includes(tile.key)).map((tile, i) => (
           <motion.div
             key={tile.key}
             {...rise}

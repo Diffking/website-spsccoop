@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { currentUser } from "@/lib/auth";
+import { ADMIN_HOME, canPage, filterPages } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { AI_READY } from "@/lib/ai";
 import PageEditor from "@/components/admin/PageEditor";
@@ -18,6 +19,8 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
   const aiFormatDefault = (await cookies()).get("spsc_page_ai_format")?.value !== "0";
   const page = await db.page.findUnique({ where: { id } });
   if (!page) notFound();
+  // หน้านี้อยู่หมวดของคนอื่น — เด้งกลับ ไม่ต้องบอกว่ามีหน้านี้อยู่
+  if (!canPage(user, page)) redirect(ADMIN_HOME);
 
   // หมวดที่หน้าอื่นใช้อยู่ — ให้เลือกซ้ำได้ จะได้ไม่มีหมวดชื่อคล้ายกันแต่สะกดต่างกัน
   const others = await db.page
@@ -47,7 +50,7 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
             assetFolder: page.assetFolder ?? pageFolder(page.slug),
             category: page.category ?? "",
           }}
-          categories={usedCategories(others)}
+          categories={usedCategories(filterPages(user, others))}
           aiReady={AI_READY}
           aiFormatDefault={aiFormatDefault}
         />

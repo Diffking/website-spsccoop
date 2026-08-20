@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
 import { isEventType } from "@/lib/homeItems";
 import { parseThaiDate } from "@/app/api/admin/holidays/route";
@@ -8,7 +8,7 @@ import { purgeEverySite } from "@/lib/mirrorPurge";
 type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: Params) {
-  const auth = await requireUser();
+  const auth = await requireWrite("home.calendar");
   if (auth instanceof NextResponse) return auth;
 
   const { id } = await params;
@@ -44,7 +44,7 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
-  const auth = await requireUser();
+  const auth = await requireWrite("home.calendar");
   if (auth instanceof NextResponse) return auth;
 
   const { id } = await params;
