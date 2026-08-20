@@ -22,6 +22,7 @@ export default async function AdminUsersPage() {
         role: true,
         areas: true,
         active: true,
+        ownPassword: true,
         lastLoginAt: true,
       },
     }),

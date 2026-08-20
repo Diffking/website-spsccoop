@@ -14,6 +14,8 @@ export type UserRow = {
   role: "ADMIN" | "EDITOR";
   /** ส่วนของเว็บที่คนนี้ดูแล — ว่าง = ทั้งเว็บ (ดู src/lib/permissions.ts) */
   areas: string[];
+  /** ตั้งรหัสผ่านเองแล้วหรือยัง — ยัง = ยังใช้เลข 4 ตัวท้ายเบอร์โทรอยู่ */
+  ownPassword: boolean;
   active: boolean;
   lastLoginAt: string | null;
 };
@@ -121,6 +123,23 @@ export default function UsersManager({
    * มุมมองนี้แก้อะไรไม่ได้เลย และหน้าผู้ใช้งานก็จะปิดตามไปด้วย (เขาไม่ใช่ ADMIN)
    * ออกจากมุมมองได้ที่แถบสีเหลืองด้านบน
    */
+  /**
+   * ตั้งรหัสใหม่จากเบอร์โทรให้คนที่ลืมรหัส
+   *
+   * ADMIN ตั้งรหัสให้คนอื่นโดยตรงไม่ได้ (จะได้ไม่มีใครรู้รหัสของคนอื่น) — ทำได้แค่
+   * ดีดกลับไปเป็นรหัสตั้งต้น แล้วบอกเจ้าตัวไปตั้งใหม่เองที่เมนู "บัญชีของฉัน"
+   */
+  async function resetPassword(user: UserRow) {
+    if (!confirm(`ตั้งรหัสใหม่ให้ ${user.name} เป็นเลข 4 ตัวท้ายเบอร์โทร?`)) return;
+    setBusy(user.id);
+    const data = await send(`/api/admin/users/${user.id}/`, "PATCH", { resetPassword: true });
+    setBusy("");
+    if (data?.password) {
+      setNotice(`ตั้งรหัสใหม่ให้ ${user.username} แล้ว — รหัสคือ ${data.password} · บอกให้เจ้าตัวไปตั้งรหัสของตัวเองที่เมนู “บัญชีของฉัน”`);
+      router.refresh();
+    }
+  }
+
   async function viewAs(user: UserRow) {
     setBusy(user.id);
     const data = await send("/api/admin/view-as/", "POST", { userId: user.id });
@@ -310,10 +329,23 @@ export default function UsersManager({
                   {user.username} · {user.phone ?? "ยังไม่มีเบอร์"}
                 </span>
                 <span className="block truncate text-xs text-gray-500">{areaSummary(user)}</span>
+                {!user.ownPassword && (
+                  <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] text-amber-800 ring-1 ring-amber-200">
+                    <KeyRound className="h-3 w-3" /> ยังใช้รหัสตั้งต้นจากเบอร์โทร
+                  </span>
+                )}
               </button>
 
               {user.id !== meId && (
                 <>
+                  <button
+                    onClick={() => resetPassword(user)}
+                    disabled={busy === user.id}
+                    title={`ตั้งรหัสใหม่จากเบอร์โทรให้ ${user.name} (ใช้ตอนเขาลืมรหัส)`}
+                    className="shrink-0 rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+                  >
+                    <KeyRound className="h-4 w-4" />
+                  </button>
                   <button
                     onClick={() => viewAs(user)}
                     disabled={busy === user.id}
@@ -351,8 +383,11 @@ export default function UsersManager({
       </p>
 
       <p className="rounded-lg bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-800">
-        รหัสผ่าน = เลข 4 ตัวท้ายของเบอร์โทร · เปลี่ยนเบอร์แล้วรหัสผ่านเปลี่ยนตามทันที ·
-        ระบบเก็บรหัสแบบเข้ารหัสไว้ ไม่มีใครดูรหัสเดิมได้ ถ้าลืมให้แก้เบอร์ใหม่เพื่อออกรหัสอีกครั้ง
+        <KeyRound className="mr-1 inline h-3.5 w-3.5" />
+        <b>รหัสตั้งต้น = เลข 4 ตัวท้ายเบอร์โทร</b> ใช้ตอนเพิ่งสร้างบัญชีเท่านั้น —
+        ทุกคนควรไปตั้งรหัสของตัวเองที่เมนู “บัญชีของฉัน” เพราะเลข 4 หลักเดาได้ง่าย ·
+        คนที่ตั้งรหัสเองแล้ว แก้เบอร์โทรจะไม่ทำให้รหัสหาย ·
+        ระบบเก็บรหัสแบบเข้ารหัสไว้ ไม่มีใครดูรหัสของคนอื่นได้ ลืมรหัสให้กดปุ่มรูปกุญแจเพื่อตั้งรหัสใหม่จากเบอร์
       </p>
     </div>
   );
