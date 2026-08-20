@@ -15,6 +15,7 @@ import {
   Sparkles,
   Users,
   Search,
+  KeyRound,
   Menu,
   X,
   ExternalLink,
@@ -281,6 +282,13 @@ export default function Sidebar({
 
   const footer = (
     <div className="space-y-1 border-t border-white/10 p-3">
+      {/* ตั้งรหัสผ่านของตัวเอง — ทุกคนเข้าได้ ไม่เกี่ยวกับพื้นที่รับผิดชอบ */}
+      <Link
+        href="/admin/account/"
+        className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-brand-50/80 transition hover:bg-white/10 hover:text-white"
+      >
+        <KeyRound className="h-4 w-4" /> บัญชีของฉัน
+      </Link>
       <a
         href={siteUrl}
         target="_blank"
