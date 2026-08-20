@@ -2,24 +2,38 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import UploadProgress from "@/components/admin/UploadProgress";
-import AssetImage from "@/components/admin/AssetImage";
-import ThaiDatePicker from "@/components/admin/ThaiDatePicker";
-import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
-import { motion, AnimatePresence } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import {
-  Plus,
-  Trash2,
+  CalendarDays,
+  ChevronDown,
+  ChevronUp,
   Eye,
   EyeOff,
-  Loader2,
-  ChevronUp,
-  ChevronDown,
   ImagePlus,
+  Link2,
+  Loader2,
+  Settings2,
   Sparkles,
-  Images,
-  GripVertical,
+  Trash2,
 } from "lucide-react";
+import AssetImage from "@/components/admin/AssetImage";
+import RichText from "@/components/admin/RichText";
+import ThaiDatePicker from "@/components/admin/ThaiDatePicker";
+import UploadProgress from "@/components/admin/UploadProgress";
+import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
+
+/**
+ * แบนเนอร์สไลด์ — แก้บนหน้าตาจริงของสไลด์
+ *
+ * ของเดิมเป็นรายการบรรทัดเล็ก ๆ ที่มีช่องวันที่สี่ช่องกางค้างไว้ทุกแถว และ
+ * **แก้หัวข้อกับคำอธิบายของสไลด์ที่มีอยู่แล้วไม่ได้เลย** ต้องลบทิ้งแล้วทำใหม่
+ *
+ * ตอนนี้แต่ละสไลด์วาดเป็นกรอบ 16:10 วางข้อความซ้าย-ภาพขวา แบบเดียวกับที่ขึ้นหน้าแรกจริง
+ * (ดู src/components/home/Hero.tsx) คลิกที่หัวข้อหรือคำอธิบายแล้วพิมพ์ทับได้เลย
+ * ส่วนวันที่/ลิงก์/ปฏิทิน ซ่อนไว้ใต้ปุ่มตั้งค่า เปิดดูเฉพาะตอนต้องใช้
+ *
+ * ใช้คลาส .edit-* ชุดเดียวกับ EditUI ของหน้าเนื้อหา เพื่อให้สองที่นี้ใช้งานเหมือนกัน
+ */
 
 export type SlideRow = {
   id: string;
@@ -56,7 +70,8 @@ const readable = (value: string) => {
   return Number.isNaN(d.getTime()) ? value : thaiDate.format(d);
 };
 
-const thaiToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+const thaiToday = () =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
 
 /** ตอนนี้สไลด์นี้ขึ้นบนหน้าเว็บจริงไหม — เงื่อนไขเดียวกับที่ getSlides() ใช้กรอง */
 function isLive(slide: SlideRow): boolean {
@@ -67,47 +82,36 @@ function isLive(slide: SlideRow): boolean {
   return true;
 }
 
-/** สถานะการเผยแพร่ตามช่วงวันที่ — เทียบกับวันนี้ตามเวลาไทย */
-function scheduleState(slide: SlideRow): { label: string; tone: string } | null {
-  if (!slide.published) return null;
-  const today = thaiToday();
+/** ป้ายบอกสถานะบนมุมสไลด์ — ทำไมถึงยังไม่ขึ้น หรือจะขึ้นถึงเมื่อไหร่ */
+function scheduleState(slide: SlideRow): { label: string; tone: string } {
+  if (!slide.published) return { label: "ซ่อนอยู่", tone: "bg-gray-700/85 text-white" };
 
+  const today = thaiToday();
   if (slide.startsAt && today < slide.startsAt) {
-    return { label: `รอถึง ${readable(slide.startsAt)}`, tone: "bg-amber-50 text-amber-700 ring-amber-200" };
+    return { label: `รอถึง ${readable(slide.startsAt)}`, tone: "bg-amber-500/90 text-white" };
   }
   if (slide.endsAt && today > slide.endsAt) {
-    return { label: `หมดอายุ ${readable(slide.endsAt)}`, tone: "bg-red-50 text-red-600 ring-red-200" };
+    return { label: `หมดอายุ ${readable(slide.endsAt)}`, tone: "bg-red-500/90 text-white" };
   }
   if (slide.endsAt) {
-    return { label: `แสดงถึง ${readable(slide.endsAt)}`, tone: "bg-emerald-50 text-emerald-700 ring-emerald-200" };
+    return { label: `แสดงถึง ${readable(slide.endsAt)}`, tone: "bg-emerald-600/90 text-white" };
   }
-  return { label: "กำลังแสดง", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200" };
+  return { label: "กำลังแสดง", tone: "bg-emerald-600/90 text-white" };
 }
 
-export default function SlidesManager({
-  items,
-  aiReady,
-}: {
-  items: SlideRow[];
-  aiReady: boolean;
-}) {
+export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; aiReady: boolean }) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const [imageUrl, setImageUrl] = useState("");
-  const [imageNote, setImageNote] = useState("");
-  const [title, setTitle] = useState("");
-  const [caption, setCaption] = useState("");
-  const [href, setHref] = useState("");
-  const [startsAt, setStartsAt] = useState("");
-  const [endsAt, setEndsAt] = useState("");
-  const [eventDate, setEventDate] = useState("");
-  const [eventType, setEventType] = useState("project");
-  const [busy, setBusy] = useState<null | "upload" | "ai" | "save" | "row">(null);
-  const [progress, setProgress] = useState<{ phase: UploadPhase | null; percent: number; name: string }>(
-    { phase: null, percent: 0, name: "" },
-  );
+  const [busy, setBusy] = useState<null | "upload" | "ai" | "row">(null);
+  const [progress, setProgress] = useState<{
+    phase: UploadPhase | null;
+    percent: number;
+    fileName: string;
+  }>({ phase: null, percent: 0, fileName: "" });
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  /** สไลด์ที่กางแถบตั้งค่าอยู่ — ทีละอันพอ ไม่งั้นหน้ายาวเป็นหางว่าว */
+  const [openId, setOpenId] = useState<string | null>(null);
 
   /**
    * ลำดับที่กำลังโชว์อยู่ — ลากแล้วสลับในนี้ก่อนเพื่อให้เห็นผลทันที ค่อยส่งไปบันทึก
@@ -121,26 +125,19 @@ export default function SlidesManager({
     setList(items);
   }
 
-  const [dragId, setDragId] = useState<string | null>(null);
-  /** id ของแถวที่กดค้างอยู่ที่จุดจับ — แถวจะลากได้เฉพาะตอนนี้ ไม่งั้นเลือกข้อความในแถวไม่ได้ */
-  const [handleOn, setHandleOn] = useState<string | null>(null);
-
-  /** อัปรูปขึ้นเซิร์ฟเวอร์ และถ้าอยู่โหมด AI ก็ให้ AI อ่านรูปเดียวกันนั้นต่อเลย */
-  async function handleFile(file: File) {
+  /**
+   * อัปรูปแล้วสร้างสไลด์ให้เลย — ไม่ต้องกรอกฟอร์มก่อนถึงจะได้เห็นอะไร
+   * มีคีย์ AI ก็ให้อ่านหัวข้อ/คำอธิบาย/ช่วงวันที่จากภาพมาใส่ให้ก่อน แล้วค่อยแก้ทับบนสไลด์
+   */
+  async function addFromFile(file: File) {
     setStatus(null);
     setBusy("upload");
-    setProgress({ phase: "upload", percent: 0, name: file.name });
+    setProgress({ phase: "upload", percent: 0, fileName: file.name });
 
     const upload = new FormData();
     upload.append("file", file);
     upload.append("folder", "banner_slide");
-    const result = await uploadWithProgress<{
-      url: string;
-      width: number;
-      height: number;
-      originalBytes: number;
-      storedBytes: number;
-    }>("/api/admin/upload/", upload, (percent, phase) =>
+    const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", upload, (percent, phase) =>
       setProgress((p) => ({ ...p, percent, phase })),
     );
 
@@ -149,85 +146,59 @@ export default function SlidesManager({
       setStatus({ kind: "error", text: result.error });
       return;
     }
-    const uploadData = result.data;
-    setImageUrl(uploadData.url);
-    setImageNote(
-      uploadData.width
-        ? `ย่อเหลือ ${uploadData.width}×${uploadData.height} px · ${(uploadData.storedBytes / 1024).toFixed(0)} KB (จาก ${(uploadData.originalBytes / 1024 / 1024).toFixed(1)} MB)`
-        : "",
-    );
 
-    // ไม่มีคีย์ AI ก็จบแค่อัปรูป — ที่เหลือพิมพ์เอง
-    if (!aiReady) {
-      setBusy(null);
-      return;
+    let read: { title?: string; caption?: string; startsAt?: string; endsAt?: string } = {};
+    if (aiReady) {
+      // ให้เซิร์ฟเวอร์ไปหยิบไฟล์ที่เพิ่งอัปเอง จะได้ไม่ต้องส่งซ้ำรอบสอง
+      setBusy("ai");
+      setProgress((p) => ({ ...p, phase: "ai" }));
+      const form = new FormData();
+      form.append("url", result.data.url);
+      form.append("target", "slide");
+      const response = await fetch("/api/admin/ai/read-image/", { method: "POST", body: form });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) read = data.data ?? {};
     }
 
-    // ให้เซิร์ฟเวอร์ไปหยิบไฟล์ที่เพิ่งอัปเอง จะได้ไม่ต้องส่งซ้ำรอบสอง
-    setBusy("ai");
-    setProgress((p) => ({ ...p, phase: "ai" }));
-    const read = new FormData();
-    read.append("url", uploadData.url);
-    read.append("target", "slide");
-    const response = await fetch("/api/admin/ai/read-image/", { method: "POST", body: read });
-    const data = await response.json().catch(() => ({}));
-    setBusy(null);
-    setProgress((p) => ({ ...p, phase: "done" }));
-
-    if (!response.ok) {
-      setStatus({ kind: "error", text: data.error ?? "AI อ่านภาพไม่สำเร็จ" });
-      return;
-    }
-    setTitle(data.data?.title ?? "");
-    setCaption(data.data?.caption ?? "");
-    setStartsAt(data.data?.startsAt ?? "");
-    setEndsAt(data.data?.endsAt ?? "");
-
-    const gotDates = Boolean(data.data?.startsAt || data.data?.endsAt);
-    setStatus({
-      kind: "ok",
-      text: gotDates
-        ? "AI อ่านให้แล้ว รวมถึงช่วงวันที่ — ตรวจให้ครบก่อนกดเพิ่ม"
-        : "AI อ่านให้แล้ว แต่ในภาพไม่ได้ระบุวันหมดเขต ใส่วันสิ้นสุดเองได้",
-    });
-  }
-
-  async function add() {
-    if (!imageUrl || !title.trim()) {
-      setStatus({ kind: "error", text: "ต้องมีรูปและหัวข้อ" });
-      return;
-    }
-    setBusy("save");
-    const response = await fetch("/api/admin/slides/", {
+    const created = await fetch("/api/admin/slides/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageUrl, title, caption, href, startsAt, endsAt, eventDate, eventType }),
+      body: JSON.stringify({
+        imageUrl: result.data.url,
+        // AI อ่านไม่ออกก็ต้องมีหัวข้ออะไรสักอย่าง ไม่งั้น API ปฏิเสธ — แก้ทับบนสไลด์ได้เลย
+        title: read.title?.trim() || file.name.replace(/\.[^.]+$/, ""),
+        caption: read.caption ?? "",
+        startsAt: read.startsAt ?? "",
+        endsAt: read.endsAt ?? "",
+      }),
     });
-    const data = await response.json().catch(() => ({}));
-    setBusy(null);
+    const data = await created.json().catch(() => ({}));
 
-    if (!response.ok) {
-      setStatus({ kind: "error", text: data.error ?? "เพิ่มไม่สำเร็จ" });
+    setBusy(null);
+    setProgress({ phase: "done", percent: 100, fileName: file.name });
+
+    if (!created.ok) {
+      setStatus({ kind: "error", text: data.error ?? "เพิ่มสไลด์ไม่สำเร็จ" });
       return;
     }
-    setImageUrl("");
-    setImageNote("");
-    setProgress({ phase: null, percent: 0, name: "" });
-    setTitle("");
-    setCaption("");
-    setHref("");
-    setStartsAt("");
-    setEndsAt("");
-    setEventDate("");
-    setEventType("project");
-    setStatus({ kind: "ok", text: "เพิ่มสไลด์แล้ว" });
+    setStatus({
+      kind: "ok",
+      text: aiReady
+        ? "เพิ่มสไลด์แล้ว · AI เติมหัวข้อให้ — คลิกที่ข้อความบนสไลด์เพื่อแก้ทับได้เลย"
+        : "เพิ่มสไลด์แล้ว — คลิกที่ข้อความบนสไลด์เพื่อพิมพ์หัวข้อ",
+    });
     router.refresh();
   }
 
   async function row(id: string, init: RequestInit) {
     setBusy("row");
-    await fetch(`/api/admin/slides/${id}/`, init);
+    const response = await fetch(`/api/admin/slides/${id}/`, init);
     setBusy(null);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setStatus({ kind: "error", text: data.error ?? "บันทึกไม่สำเร็จ" });
+      return;
+    }
     router.refresh();
   }
 
@@ -245,410 +216,338 @@ export default function SlidesManager({
   let live = 0;
   const positions = list.map((slide) => (isLive(slide) ? ++live : null));
 
-  /** ย้ายแถวไปอยู่ตำแหน่งใหม่ในรายการที่โชว์อยู่ (ยังไม่บันทึก) */
-  function moveTo(id: string, toIndex: number) {
-    setList((current) => {
-      const from = current.findIndex((s) => s.id === id);
-      if (from === -1 || from === toIndex) return current;
-      const next = [...current];
-      const [moved] = next.splice(from, 1);
-      next.splice(toIndex, 0, moved);
-      return next;
-    });
-  }
+  return (
+    <section className="space-y-3">
+      <input
+        ref={fileInput}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void addFromFile(file);
+          e.target.value = "";
+        }}
+      />
 
-  /** บันทึกลำดับที่ลากไว้ — ล้มเหลวเมื่อไหร่ถอยกลับไปใช้ลำดับจากเซิร์ฟเวอร์ */
-  async function saveOrder(next: SlideRow[]) {
-    setBusy("row");
-    const response = await fetch("/api/admin/slides/", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order: next.map((s) => s.id) }),
-    });
-    const data = await response.json().catch(() => ({}));
-    setBusy(null);
+      {status && (
+        <p
+          className={`rounded-lg px-3 py-2 text-sm ${
+            status.kind === "ok" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
+          }`}
+        >
+          {status.text}
+        </p>
+      )}
 
-    if (!response.ok) {
-      setList(items);
-      setStatus({ kind: "error", text: data.error ?? "จัดลำดับไม่สำเร็จ" });
-      return;
-    }
-    setStatus({ kind: "ok", text: "จัดลำดับใหม่แล้ว" });
-    router.refresh();
-  }
+      {progress.phase && <UploadProgress {...progress} showAi={aiReady} />}
+
+      {list.length === 0 && (
+        <p className="rounded-xl bg-gray-50 py-8 text-center text-sm text-gray-400">
+          ยังไม่มีสไลด์ — หน้าเว็บจะใช้ภาพชุดเดิมที่ติดมากับโค้ดไปก่อน
+        </p>
+      )}
+
+      <AnimatePresence initial={false}>
+        {list.map((slide, i) => (
+          <motion.div
+            key={slide.id}
+            layout
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="edit-block"
+          >
+            <SlideCard
+              slide={slide}
+              position={positions[i]}
+              onChange={(body) => patch(slide.id, body)}
+            />
+
+            {/* ปุ่มจัดการ — โผล่ตอนเอาเมาส์ชี้ที่สไลด์ เหมือน EditUI ของหน้าเนื้อหา */}
+            <div className="edit-tools">
+              <button
+                type="button"
+                title="เลื่อนขึ้น"
+                disabled={busy !== null || i === 0}
+                onClick={() => patch(slide.id, { move: "up" })}
+                className="rounded p-1 transition hover:bg-white/15 disabled:opacity-25"
+              >
+                <ChevronUp className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                title="เลื่อนลง"
+                disabled={busy !== null || i === list.length - 1}
+                onClick={() => patch(slide.id, { move: "down" })}
+                className="rounded p-1 transition hover:bg-white/15 disabled:opacity-25"
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                title={slide.published ? "ซ่อนจากหน้าเว็บ" : "แสดงบนหน้าเว็บ"}
+                disabled={busy !== null}
+                onClick={() => patch(slide.id, { published: !slide.published })}
+                className="rounded p-1 transition hover:bg-white/15"
+              >
+                {slide.published ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+              </button>
+              <button
+                type="button"
+                title="ลิงก์ วันที่ และปฏิทิน"
+                onClick={() => setOpenId(openId === slide.id ? null : slide.id)}
+                className={`rounded p-1 transition hover:bg-white/15 ${
+                  openId === slide.id ? "bg-white/20" : ""
+                }`}
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                title="ลบสไลด์นี้"
+                disabled={busy !== null}
+                onClick={() => {
+                  if (confirm(`ลบสไลด์ “${slide.title}” ถาวร?`))
+                    void row(slide.id, { method: "DELETE" });
+                }}
+                className="rounded p-1 transition hover:bg-red-500 hover:text-white"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {openId === slide.id && (
+              <SlideSettings
+                slide={slide}
+                onChange={(body) => patch(slide.id, body)}
+                onReplaceImage={(url) => patch(slide.id, { imageUrl: url })}
+              />
+            )}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      {/* เพิ่มสไลด์ — อัปรูปแล้วได้สไลด์เลย ไม่ต้องกรอกฟอร์มก่อน */}
+      <button
+        type="button"
+        onClick={() => fileInput.current?.click()}
+        disabled={busy !== null}
+        className="flex w-full flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-gray-300 bg-white py-8 text-gray-500 transition hover:border-brand-400 hover:text-brand-700 disabled:opacity-60"
+      >
+        {busy === "upload" || busy === "ai" ? (
+          <Loader2 className="h-6 w-6 animate-spin" />
+        ) : aiReady ? (
+          <Sparkles className="h-6 w-6" />
+        ) : (
+          <ImagePlus className="h-6 w-6" />
+        )}
+        <span className="text-sm font-medium">
+          {busy === "upload"
+            ? "กำลังอัปโหลด…"
+            : busy === "ai"
+              ? "AI กำลังอ่านภาพ…"
+              : "เพิ่มสไลด์ — เลือกภาพประกาศ"}
+        </span>
+        <span className="text-xs text-gray-400">
+          {aiReady
+            ? "AI จะอ่านหัวข้อกับช่วงวันที่จากภาพมาใส่ให้ แล้วแก้ทับบนสไลด์ได้เลย"
+            : "อัปแล้วคลิกที่ข้อความบนสไลด์เพื่อพิมพ์หัวข้อ"}
+        </span>
+      </button>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * ตัวสไลด์ — วางเหมือนที่ขึ้นหน้าแรกจริง (ข้อความซ้าย · ภาพขวา · 16:10)
+ * ------------------------------------------------------------------ */
+
+function SlideCard({
+  slide,
+  position,
+  onChange,
+}: {
+  slide: SlideRow;
+  position: number | null;
+  onChange: (body: Record<string, unknown>) => void;
+}) {
+  const state = scheduleState(slide);
 
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
-            <Images className="h-5 w-5" />
-          </span>
-          <div>
-            <h2 className="font-semibold text-gray-800">แบนเนอร์สไลด์</h2>
-            <p className="mt-0.5 text-xs text-gray-500">
-              ภาพใหญ่ที่เลื่อนอยู่บนสุดของหน้าแรก ({items.length} รายการ)
-            </p>
-          </div>
+    <div
+      className={`edit-frame relative grid aspect-[16/10] grid-cols-[1.05fr_1fr] items-center gap-3 overflow-hidden rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm sm:gap-5 sm:p-7 ${
+        isLive(slide) ? "" : "opacity-60"
+      }`}
+    >
+      {/* ข้อความด้านซ้าย — คลิกแล้วพิมพ์ทับได้ทั้งสองบรรทัด */}
+      <div className="min-w-0 text-left">
+        <RichText
+          plain
+          singleLine
+          value={slide.title}
+          onChange={(title) => {
+            if (title.trim() && title !== slide.title) onChange({ title });
+          }}
+          placeholder="พิมพ์หัวข้อสไลด์"
+          className="text-lg font-bold leading-snug text-brand-700 sm:text-xl md:text-2xl"
+        />
+        <RichText
+          plain
+          value={slide.caption ?? ""}
+          onChange={(caption) => {
+            if (caption !== (slide.caption ?? "")) onChange({ caption });
+          }}
+          placeholder="คำอธิบายใต้หัวข้อ (เว้นว่างได้)"
+          className="mt-2 text-sm leading-relaxed text-gray-600 sm:mt-3 sm:text-base"
+        />
+      </div>
+
+      {/* ภาพด้านขวา — วางแบบเดียวกับหน้าแรก (object-contain ชิดขวา) */}
+      <div className="relative h-full">
+        <AssetImage
+          src={slide.imageUrl}
+          alt={slide.title}
+          className="h-full w-full object-contain object-right drop-shadow-md"
+        />
+      </div>
+
+      <span
+        title={
+          position ? `ขึ้นเป็นลำดับที่ ${position} บนหน้าเว็บ` : "ยังไม่ขึ้นบนหน้าเว็บ จึงไม่นับลำดับ"
+        }
+        className={`absolute left-3 top-3 grid h-6 w-6 place-items-center rounded-full text-xs font-bold shadow ${
+          position ? "bg-brand-600 text-white" : "bg-gray-300 text-gray-600"
+        }`}
+      >
+        {position ?? "–"}
+      </span>
+
+      <span
+        className={`absolute right-3 top-3 rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow ${state.tone}`}
+      >
+        {state.label}
+      </span>
+
+      {slide.href && (
+        <span className="absolute bottom-2 left-3 inline-flex max-w-[60%] items-center gap-1 truncate rounded-full bg-white/80 px-2 py-0.5 text-[11px] text-gray-500">
+          <Link2 className="h-3 w-3 shrink-0" /> {slide.href}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * แถบตั้งค่าของสไลด์ — ของที่พิมพ์ทับบนภาพไม่ได้
+ * ------------------------------------------------------------------ */
+
+function SlideSettings({
+  slide,
+  onChange,
+  onReplaceImage,
+}: {
+  slide: SlideRow;
+  onChange: (body: Record<string, unknown>) => void;
+  onReplaceImage: (url: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <div className="mt-2 space-y-3 rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200">
+      <label className="block">
+        <span className="text-xs text-gray-500">ลิงก์เมื่อคลิกสไลด์ (เว้นว่าง = ไม่ลิงก์ไปไหน)</span>
+        <input
+          defaultValue={slide.href ?? ""}
+          onBlur={(e) => {
+            if (e.target.value !== (slide.href ?? "")) onChange({ href: e.target.value });
+          }}
+          placeholder="เช่น /downloads/ หรือ https://..."
+          className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+        />
+      </label>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <span className="text-xs text-gray-500">วันเริ่มแสดง</span>
+          <ThaiDatePicker
+            value={slide.startsAt}
+            onChange={(startsAt) => onChange({ startsAt })}
+            placeholder="แสดงทันที"
+            className="mt-1"
+          />
+        </div>
+        <div>
+          <span className="text-xs text-gray-500">วันสิ้นสุด</span>
+          <ThaiDatePicker
+            value={slide.endsAt}
+            onChange={(endsAt) => onChange({ endsAt })}
+            placeholder="ไม่มีกำหนด"
+            className="mt-1"
+          />
         </div>
       </div>
 
-      {/* ฟอร์มเพิ่มสไลด์ */}
-      <div className="mt-4 rounded-xl border border-dashed border-gray-300 p-3">
+      <p className="text-xs text-gray-400">
+        ใส่วันสิ้นสุดไว้ พอเลยวันแล้วสไลด์จะหายจากหน้าเว็บเอง ไม่ต้องมาคอยลบ
+      </p>
+
+      <div className="grid gap-3 border-t border-gray-200 pt-3 sm:grid-cols-2">
+        <div>
+          <span className="flex items-center gap-1 text-xs text-gray-500">
+            <CalendarDays className="h-3.5 w-3.5" /> วันจัดกิจกรรม (ขึ้นปฏิทินหน้าแรก)
+          </span>
+          <ThaiDatePicker
+            value={slide.eventDate}
+            onChange={(eventDate) => onChange({ eventDate })}
+            placeholder="ไม่ขึ้นปฏิทิน"
+            className="mt-1"
+          />
+        </div>
+        <label className="block">
+          <span className="text-xs text-gray-500">ประเภทบนปฏิทิน</span>
+          <select
+            defaultValue={slide.eventType || "project"}
+            disabled={!slide.eventDate}
+            onChange={(e) => onChange({ eventType: e.target.value })}
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400 disabled:bg-gray-100 disabled:text-gray-400"
+          >
+            {EVENT_TYPES.map((t) => (
+              <option key={t.key} value={t.key}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs text-gray-700 ring-1 ring-gray-200 transition hover:bg-gray-100">
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+        เปลี่ยนรูปสไลด์นี้
         <input
-          ref={fileInput}
           type="file"
           accept="image/jpeg,image/png,image/webp,image/gif"
           className="hidden"
-          onChange={(e) => {
+          onChange={async (e) => {
             const file = e.target.files?.[0];
-            if (file) handleFile(file);
             e.target.value = "";
+            if (!file) return;
+
+            setBusy(true);
+            const form = new FormData();
+            form.append("file", file);
+            form.append("folder", "banner_slide");
+            const result = await uploadWithProgress<{ url: string }>(
+              "/api/admin/upload/",
+              form,
+              () => {},
+            );
+            setBusy(false);
+            if (result.ok) onReplaceImage(result.data.url);
           }}
         />
-
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => fileInput.current?.click()}
-            disabled={busy !== null}
-            className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3.5 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100 disabled:opacity-60"
-          >
-            {busy === "upload" || busy === "ai" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : aiReady ? (
-              <Sparkles className="h-4 w-4" />
-            ) : (
-              <ImagePlus className="h-4 w-4" />
-            )}
-            {busy === "upload"
-              ? "กำลังอัปโหลด..."
-              : busy === "ai"
-                ? "AI กำลังอ่านภาพ..."
-                : "เลือกภาพประกาศ"}
-          </button>
-
-          <span className="text-xs text-gray-500">
-            {aiReady
-              ? "อัปแล้ว AI จะอ่านภาพและเติมหัวข้อ คำอธิบาย และช่วงวันที่ให้ — ตรวจก่อนกดเพิ่มเสมอ"
-              : "ยังไม่ได้ตั้งค่าคีย์ AI จึงต้องพิมพ์เอง (ใส่ OPENROUTER_API_KEY ใน .env แล้วรีสตาร์ต)"}
-          </span>
-        </div>
-
-        <UploadProgress
-          phase={progress.phase}
-          percent={progress.percent}
-          fileName={progress.name}
-          showAi={aiReady}
-          message={progress.phase === "done" ? imageNote : ""}
-        />
-
-        {imageUrl && (
-          <div className="mt-3">
-            <AssetImage
-              src={imageUrl}
-              alt=""
-              className="h-32 w-auto rounded-lg bg-gray-50 object-contain ring-1 ring-gray-200"
-            />
-            {imageNote && <p className="mt-1 text-[11px] text-gray-400">{imageNote}</p>}
-          </div>
-        )}
-
-        <div className="mt-3 space-y-2.5">
-          <label className="block">
-            <span className="text-xs text-gray-500">หัวข้อ</span>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="เช่น สวัสดิการใหม่สำหรับสมาชิก"
-              className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
-            />
-          </label>
-          <label className="block">
-            <span className="text-xs text-gray-500">คำอธิบาย (เว้นว่างได้)</span>
-            <input
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
-            />
-          </label>
-          <label className="block">
-            <span className="text-xs text-gray-500">ลิงก์เมื่อคลิก (เว้นว่างได้)</span>
-            <input
-              value={href}
-              onChange={(e) => setHref(e.target.value)}
-              placeholder="/downloads"
-              className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
-            />
-          </label>
-
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            <label className="block">
-              <span className="text-xs text-gray-500">วันเริ่มแสดง (เว้นว่าง = แสดงทันที)</span>
-              <input
-                type="date"
-                value={startsAt}
-                onChange={(e) => setStartsAt(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs text-gray-500">วันสิ้นสุด (เว้นว่าง = แสดงตลอด)</span>
-              <input
-                type="date"
-                value={endsAt}
-                onChange={(e) => setEndsAt(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
-              />
-            </label>
-
-            {/* ใส่วันจัดกิจกรรมไว้ = ไปปักบนปฏิทินหน้าแรกให้เอง ไม่ต้องพิมพ์ซ้ำในเมนูปฏิทิน */}
-            <div className="block">
-              <span className="text-xs text-gray-500">วันจัดกิจกรรม (เว้นว่าง = ไม่ขึ้นปฏิทิน)</span>
-              <ThaiDatePicker value={eventDate} onChange={setEventDate} className="mt-1" />
-            </div>
-            <label className="block">
-              <span className="text-xs text-gray-500">ประเภทบนปฏิทิน</span>
-              <select
-                value={eventType}
-                onChange={(e) => setEventType(e.target.value)}
-                disabled={!eventDate}
-                className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400 disabled:bg-gray-50 disabled:text-gray-400"
-              >
-                {EVENT_TYPES.map((t) => (
-                  <option key={t.key} value={t.key}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <p className="text-xs text-gray-400">
-            ใส่วันสิ้นสุดไว้ พอเลยวันแล้วสไลด์จะหายจากหน้าเว็บเอง ไม่ต้องมาคอยลบ
-          </p>
-        </div>
-
-        <div className="mt-3 flex items-center gap-3">
-          <button
-            onClick={add}
-            disabled={busy !== null}
-            className="inline-flex items-center gap-1.5 rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-brand-700 disabled:opacity-60"
-          >
-            {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            เพิ่มสไลด์
-          </button>
-          {status && (
-            <span className={`text-sm ${status.kind === "ok" ? "text-emerald-600" : "text-red-500"}`}>
-              {status.text}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* รายการสไลด์ */}
-      {list.length === 0 ? (
-        <p className="mt-4 rounded-xl bg-gray-50 py-8 text-center text-sm text-gray-400">
-          ยังไม่มีสไลด์ — หน้าเว็บจะใช้ภาพชุดเดิมที่ติดมากับโค้ดไปก่อน
-        </p>
-      ) : (
-        <>
-          <div className="mt-4 rounded-xl bg-brand-50/60 px-3 py-2 text-xs text-gray-600">
-            <p className="flex items-center gap-1.5">
-              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand-600 text-[11px] font-bold text-white">
-                1
-              </span>
-              เลขคือลำดับที่ขึ้นบนหน้าเว็บ — <strong className="font-semibold">1 คือสไลด์แรกที่คนเห็น</strong>{" "}
-              แล้วไล่ไปเรื่อย ๆ
-            </p>
-            <p className="mt-1.5 flex items-center gap-1.5">
-              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-gray-200 text-[11px] font-bold text-gray-400">
-                –
-              </span>
-              ขีดคือยังไม่ขึ้น (ถูกซ่อน · ยังไม่ถึงวันเริ่ม · หรือหมดอายุแล้ว) จึงไม่นับลำดับ
-            </p>
-            <p className="mt-1.5 flex items-center gap-1.5">
-              <GripVertical className="h-4 w-4 shrink-0 text-gray-400" />
-              ลากที่จุดจับเพื่อสลับลำดับ (บนมือถือใช้ปุ่มลูกศรแทน)
-            </p>
-          </div>
-          <ul className="mt-2 divide-y divide-gray-100">
-          <AnimatePresence initial={false}>
-            {list.map((slide, i) => (
-              <motion.li
-                key={slide.id}
-                layout
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                className="py-3"
-              >
-                {/* ตัวลาก: วางไว้ชั้นในเพราะ motion.li มี prop ชื่อ onDrag* ของตัวเองอยู่แล้ว */}
-                <div
-                  draggable={handleOn === slide.id}
-                  onDragStart={(e) => {
-                    setDragId(slide.id);
-                    // Firefox ไม่เริ่มลากถ้าไม่ได้ตั้ง dataTransfer
-                    e.dataTransfer.setData("text/plain", slide.id);
-                    e.dataTransfer.effectAllowed = "move";
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    if (dragId && dragId !== slide.id) moveTo(dragId, i);
-                  }}
-                  onDragEnd={() => {
-                    setDragId(null);
-                    setHandleOn(null);
-                    // ลากแล้วลำดับไม่เปลี่ยนก็ไม่ต้องยิงไปบันทึก
-                    const changed = list.some((s, idx) => s.id !== items[idx]?.id);
-                    if (changed) void saveOrder(list);
-                  }}
-                  className={`transition ${dragId === slide.id ? "opacity-40" : ""}`}
-                >
-                <div className="flex items-center gap-3">
-                  <span
-                    onMouseDown={() => setHandleOn(slide.id)}
-                    onMouseUp={() => setHandleOn(null)}
-                    onTouchStart={() => setHandleOn(slide.id)}
-                    onTouchEnd={() => setHandleOn(null)}
-                    title="ลากเพื่อสลับลำดับ"
-                    aria-hidden="true"
-                    className="-ml-1 shrink-0 cursor-grab rounded-lg p-1 text-gray-300 transition hover:text-gray-500 active:cursor-grabbing"
-                  >
-                    <GripVertical className="h-4 w-4" />
-                  </span>
-
-                  <span
-                    title={
-                      positions[i]
-                        ? `ขึ้นเป็นลำดับที่ ${positions[i]} บนหน้าเว็บ`
-                        : "ยังไม่ขึ้นบนหน้าเว็บ จึงไม่นับลำดับ"
-                    }
-                    className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${
-                      positions[i]
-                        ? "bg-brand-600 text-white"
-                        : "bg-gray-200 text-gray-400"
-                    }`}
-                  >
-                    {positions[i] ?? "–"}
-                  </span>
-
-                <AssetImage
-                  src={slide.imageUrl}
-                  alt=""
-                  className="h-12 w-16 shrink-0 rounded-lg bg-gray-50 object-cover ring-1 ring-gray-200"
-                />
-                <span className="min-w-0 flex-1">
-                  <span
-                    className={`block truncate text-sm font-medium ${
-                      slide.published ? "text-gray-800" : "text-gray-400 line-through"
-                    }`}
-                  >
-                    {slide.title}
-                  </span>
-                  {slide.caption && (
-                    <span className="mt-0.5 block truncate text-xs text-gray-500">
-                      {slide.caption}
-                    </span>
-                  )}
-                  {(() => {
-                    const state = scheduleState(slide);
-                    return state ? (
-                      <span
-                        className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${state.tone}`}
-                      >
-                        {state.label}
-                      </span>
-                    ) : null;
-                  })()}
-                </span>
-
-                <span className="flex shrink-0 items-center">
-                  <button
-                    onClick={() => patch(slide.id, { move: "up" })}
-                    disabled={busy !== null || i === 0}
-                    title="เลื่อนขึ้น"
-                    className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30"
-                  >
-                    <ChevronUp className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => patch(slide.id, { move: "down" })}
-                    disabled={busy !== null || i === list.length - 1}
-                    title="เลื่อนลง"
-                    className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30"
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => patch(slide.id, { published: !slide.published })}
-                    disabled={busy !== null}
-                    title={slide.published ? "ซ่อนจากหน้าเว็บ" : "แสดงบนหน้าเว็บ"}
-                    className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-brand-600 disabled:opacity-50"
-                  >
-                    {slide.published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                  </button>
-                  <button
-                    onClick={() => row(slide.id, { method: "DELETE" })}
-                    disabled={busy !== null}
-                    title="ลบ"
-                    className="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </span>
-                </div>
-
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  <label className="block">
-                    <span className="text-[11px] text-gray-400">วันเริ่มแสดง</span>
-                    <input
-                      type="date"
-                      defaultValue={slide.startsAt}
-                      onChange={(e) => patch(slide.id, { startsAt: e.target.value })}
-                      className="mt-0.5 w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-brand-400"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="text-[11px] text-gray-400">วันสิ้นสุด</span>
-                    <input
-                      type="date"
-                      defaultValue={slide.endsAt}
-                      onChange={(e) => patch(slide.id, { endsAt: e.target.value })}
-                      className="mt-0.5 w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-brand-400"
-                    />
-                  </label>
-                  <div className="block">
-                    <span className="text-[11px] text-gray-400">วันจัดกิจกรรม (ขึ้นปฏิทิน)</span>
-                    <ThaiDatePicker
-                      value={slide.eventDate}
-                      onChange={(next) => patch(slide.id, { eventDate: next })}
-                      placeholder="ไม่ขึ้นปฏิทิน"
-                      className="mt-0.5"
-                    />
-                  </div>
-                  <label className="block">
-                    <span className="text-[11px] text-gray-400">ประเภทบนปฏิทิน</span>
-                    <select
-                      defaultValue={slide.eventType || "project"}
-                      disabled={!slide.eventDate}
-                      onChange={(e) => patch(slide.id, { eventType: e.target.value })}
-                      className="mt-0.5 w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-brand-400 disabled:bg-gray-50 disabled:text-gray-400"
-                    >
-                      {EVENT_TYPES.map((t) => (
-                        <option key={t.key} value={t.key}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                </div>
-              </motion.li>
-            ))}
-          </AnimatePresence>
-          </ul>
-        </>
-      )}
-    </section>
+      </label>
+    </div>
   );
 }

@@ -38,6 +38,7 @@ export default function RichText({
   placeholder,
   as = "div",
   singleLine = false,
+  plain = false,
   className = "",
 }: {
   value: string;
@@ -47,6 +48,14 @@ export default function RichText({
   as?: TextTag;
   /** true = กด Enter แล้วไม่ขึ้นบรรทัดใหม่ (หัวข้อ ช่องในตาราง ชื่อคน) */
   singleLine?: boolean;
+  /**
+   * true = ข้อความล้วน ไม่มีตัวหนา/ลิงก์ และไม่มีแถบรูปแบบ
+   *
+   * ใช้กับที่ที่ปลายทางเก็บเป็นข้อความจริง ๆ ไม่ใช่ HTML (เช่นหัวข้อสไลด์
+   * ซึ่งหน้าเว็บวาดด้วย {slide.title}) — ถ้าปล่อยให้ใส่แท็กได้ แท็กจะไปโผล่
+   * เป็นตัวหนังสือบนหน้าเว็บตรง ๆ
+   */
+  plain?: boolean;
   className?: string;
 }) {
   const box = useRef<HTMLElement>(null);
@@ -60,15 +69,20 @@ export default function RichText({
   useEffect(() => {
     const el = box.current;
     if (!el || bar) return;
-    if (el.innerHTML !== value) el.innerHTML = value;
+    if (plain) {
+      if (el.textContent !== value) el.textContent = value;
+    } else if (el.innerHTML !== value) {
+      el.innerHTML = value;
+    }
     setEmpty(!(el.textContent ?? "").trim());
-  }, [value, bar]);
+  }, [value, bar, plain]);
 
   const publish = () => {
     const el = box.current;
     if (!el) return;
-    setEmpty(!(el.textContent ?? "").trim());
-    onChange(cleanInline(el.innerHTML));
+    const text = el.textContent ?? "";
+    setEmpty(!text.trim());
+    onChange(plain ? text.replace(/\s+/g, " ").trim() : cleanInline(el.innerHTML));
   };
 
   /** แถบรูปแบบลอยเหนือข้อความที่กำลังพิมพ์ — วัดตำแหน่งจริงเอา ไม่ต้องมี div ครอบ */
@@ -94,6 +108,18 @@ export default function RichText({
   // วาดเป็นแท็กจริงที่ขอมา — h2/p/li/td ฯลฯ ไม่ใช่ div ที่แต่งให้เหมือน
   const Tag = as as React.ElementType;
 
+  /*
+   * ใส่ข้อความตั้งต้นตั้งแต่ตอน render ด้วย ไม่ใช่รอ useEffect เติมทีหลัง —
+   * ไม่งั้นหน้าจอจะขึ้นมาเป็นช่องเปล่าแวบหนึ่งก่อนตัวหนังสือจะโผล่
+   * (เห็นชัดมากในหน้าสไลด์ที่มีหลายอัน)
+   *
+   * จับค่าไว้ครั้งเดียวแล้วไม่เปลี่ยนอีกเลย (useState ที่ไม่มีตัว set) เพราะถ้าปล่อยให้
+   * เปลี่ยนตาม value React จะเขียนทับ DOM ทุกครั้งที่พิมพ์ แล้วเคอร์เซอร์เด้งไปต้นบรรทัด
+   * — ค่าที่เปลี่ยนทีหลังเป็นหน้าที่ของ useEffect ข้างบน
+   */
+  const [first] = useState(value);
+  const [initialHtml] = useState(() => ({ __html: value }));
+
   return (
     <>
       <Tag
@@ -105,7 +131,7 @@ export default function RichText({
         data-empty={empty ? "" : undefined}
         data-placeholder={placeholder}
         onInput={publish}
-        onFocus={placeBar}
+        onFocus={plain ? undefined : placeBar}
         onBlur={() => {
           setBar(null);
           publish();
@@ -122,6 +148,7 @@ export default function RichText({
           document.execCommand("insertText", false, e.clipboardData.getData("text/plain"));
         }}
         className={`edit-text ${className}`}
+        {...(plain ? { children: first } : { dangerouslySetInnerHTML: initialHtml })}
       />
       {bar && (
         <div
