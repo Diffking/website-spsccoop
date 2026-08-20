@@ -53,28 +53,31 @@ const TILES: { key: keyof Counts; label: string; unit: string; href: string; ico
 export default function Dashboard({
   counts,
   backup,
-  visitors,
+  visits,
   popular,
   total,
   carriedOver,
+  people,
   tiles,
 }: {
   counts: Counts;
   backup: BackupStatus;
-  visitors: YearPoint[];
+  visits: YearPoint[];
   popular: PagePoint[];
-  /** ยอดสะสมที่โชว์ท้ายเว็บ = ยอดยกมาจากเว็บเดิม + ที่ระบบนี้นับได้ */
+  /** ยอดสะสมที่โชว์ท้ายเว็บ (ครั้ง) = ยอดยกมาจากเว็บเดิม + ที่ระบบนี้นับได้ */
   total: number;
   /** ยอดยกมาจากเว็บเดิม — แยกให้เห็นว่าในยอดสะสมมีของเก่าเท่าไหร่ */
   carriedOver: number;
+  /** จำนวน "คน" ที่ระบบนี้นับได้ — คนละหน่วยกับตัวนับสะสม แยกไว้ให้ดูเทียบ */
+  people: number;
   /** การ์ดที่คนนี้เปิดเข้าไปได้ — ที่เหลือไม่ต้องโชว์ กดแล้วก็โดนเด้งกลับมาอยู่ดี */
   tiles: (keyof Counts)[];
 }) {
-  const latestYear = visitors.at(-1);
-  const prevYear = visitors.at(-2);
+  const latestYear = visits.at(-1);
+  const prevYear = visits.at(-2);
   const growth =
-    latestYear && prevYear && prevYear.visitors > 0
-      ? Math.round(((latestYear.visitors - prevYear.visitors) / prevYear.visitors) * 100)
+    latestYear && prevYear && prevYear.visits > 0
+      ? Math.round(((latestYear.visits - prevYear.visits) / prevYear.visits) * 100)
       : null;
 
   return (
@@ -85,16 +88,17 @@ export default function Dashboard({
         transition={{ duration: 0.45, ease: "easeOut" }}
         className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-400 p-5 text-white shadow-sm"
       >
-        <p className="text-sm text-brand-50/80">ผู้เข้าชมเว็บไซต์สะสม</p>
+        <p className="text-sm text-brand-50/80">จำนวนครั้งที่เปิดเว็บไซต์ทั้งหมด</p>
         <p className="mt-1 text-5xl font-bold tabular-nums leading-none">
           {total.toLocaleString("th-TH")}
         </p>
         <p className="mt-2 text-sm text-brand-50/90">
-          ครั้ง — ตัวเลขเดียวกับที่โชว์ท้ายเว็บ
+          ครั้ง — ตัวเลขเดียวกับที่โชว์ท้ายเว็บ · คนเดิมเข้าซ้ำก็นับเพิ่ม
           {carriedOver > 0 && (
             <span className="mt-0.5 block text-xs text-brand-50/70">
-              รวมยอดยกมาจากเว็บเดิม {carriedOver.toLocaleString("th-TH")} ครั้ง ·
-              ระบบนี้นับเองได้ {(total - carriedOver).toLocaleString("th-TH")} ครั้ง
+              ยกมาจากเว็บเดิม {carriedOver.toLocaleString("th-TH")} ครั้ง · ระบบนี้นับเองได้{" "}
+              {(total - carriedOver).toLocaleString("th-TH")} ครั้ง จาก{" "}
+              {people.toLocaleString("th-TH")} คน
             </span>
           )}
         </p>
@@ -102,7 +106,7 @@ export default function Dashboard({
         {/* ยอดของปีบัญชีปัจจุบัน — ยอดสะสมอย่างเดียวดูไม่ออกว่าปีนี้คนเข้ามากขึ้นหรือน้อยลง */}
         {latestYear && (
           <p className="mt-3 border-t border-white/20 pt-2.5 text-sm text-brand-50/90">
-            ปีบัญชี {latestYear.year}: {latestYear.visitors.toLocaleString("th-TH")} ครั้ง
+            ปีบัญชี {latestYear.year}: {latestYear.visits.toLocaleString("th-TH")} ครั้ง
             {growth !== null && prevYear && (
               <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium">
                 {growth >= 0 ? "▲" : "▼"} {Math.abs(growth)}% จากปี {prevYear.year}
@@ -143,7 +147,7 @@ export default function Dashboard({
       {/* กราฟ */}
       <div className="grid gap-4 lg:grid-cols-2">
         <motion.div {...rise} transition={{ duration: 0.45, delay: 0.2, ease: "easeOut" }}>
-          <VisitorsChart data={visitors} />
+          <VisitorsChart data={visits} />
         </motion.div>
         <motion.div {...rise} transition={{ duration: 0.45, delay: 0.28, ease: "easeOut" }}>
           <PopularPagesChart data={popular} />

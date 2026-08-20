@@ -89,7 +89,7 @@ export async function record(path: string, ip: string, userAgent: string): Promi
   }
 }
 
-export type YearPoint = { year: number; visitors: number };
+export type YearPoint = { year: number; visits: number };
 export type PagePoint = { page: string; views: number };
 
 /** ชื่อหน้าที่อ่านง่ายสำหรับกราฟ — path ที่ไม่รู้จักใช้ path เดิมไปก่อน */
@@ -99,21 +99,24 @@ const PAGE_LABELS: Record<string, string> = {
   "/about/directory/board": "คณะกรรมการดำเนินการ",
 };
 
-/** จำนวนคนรายปี (พ.ศ.) — ปีที่ยังไม่มีข้อมูลจะไม่ถูกใส่มา */
-export async function visitorsByYear(): Promise<YearPoint[]> {
+/**
+ * จำนวนครั้งที่เปิดเว็บรายปี (พ.ศ.) — ปีที่ยังไม่มีข้อมูลจะไม่ถูกใส่มา
+ * นับหน่วยเดียวกับตัวนับสะสมที่ท้ายเว็บ คือ "ครั้ง" ไม่ใช่ "คน"
+ */
+export async function visitsByYear(): Promise<YearPoint[]> {
   try {
-    const rows = await db.visitorDay.findMany({ select: { day: true } });
+    const rows = await db.pageView.findMany({ select: { day: true, count: true } });
     const byYear = new Map<number, number>();
 
     for (const row of rows) {
       // +543 = พ.ศ. · ใช้ปีตามเวลาไทยให้ตรงกับตอนบันทึก
       const year =
         Number(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric" }).format(row.day)) + 543;
-      byYear.set(year, (byYear.get(year) ?? 0) + 1);
+      byYear.set(year, (byYear.get(year) ?? 0) + row.count);
     }
 
     return [...byYear.entries()]
-      .map(([year, visitors]) => ({ year, visitors }))
+      .map(([year, visits]) => ({ year, visits }))
       .sort((a, b) => a.year - b.year);
   } catch (error) {
     console.error("อ่านสถิติรายปีไม่ได้:", error);
@@ -122,22 +125,34 @@ export async function visitorsByYear(): Promise<YearPoint[]> {
 }
 
 /**
- * ยอดผู้เข้าชมสะสม = ยอดยกมาจากเว็บเดิม + ที่ระบบนี้นับได้เอง
+ * ยอดเข้าชมสะสม (ครั้ง) = ยอดยกมาจากเว็บเดิม + ที่ระบบนี้นับได้เอง
  *
- * เว็บเดิมนับผู้เข้าชมมาหลายปีก่อนจะย้ายมาระบบนี้ ถ้าเริ่มนับใหม่จากศูนย์
- * ตัวเลขบนหน้าเว็บจะร่วงจากสองแสนกว่าเหลือหลักสิบ เหมือนเว็บเพิ่งเปิด
- * จึงยกยอดเดิมมาเป็นจุดตั้งต้นแล้วนับต่อจากตรงนั้น
+ * **นับเป็นครั้ง ไม่ใช่คน** — คนเดิมเปิดเว็บสิบรอบก็นับสิบครั้ง เป็นตัวนับแบบเดียว
+ * กับที่เว็บเดิมใช้มาตลอด เปิดหน้าเว็บกี่หน้าก็เดินหน้าไปเท่านั้นครั้ง
+ * (จำนวน "คน" ยังเก็บอยู่ที่ VisitorDay ใช้ดูแยกได้ในหน้าภาพรวม)
  *
- * ยอดยกมาแก้ได้ที่หลังบ้าน (ส่วนท้ายเว็บ → ยอดผู้เข้าชมยกมาจากเว็บเดิม)
- * ไม่ได้ฝังไว้ในโค้ด เผื่อวันหลังต้องปรับ
+ * เว็บเดิมนับมาหลายปีก่อนจะย้ายมาระบบนี้ ถ้าเริ่มนับใหม่จากศูนย์ ตัวเลขบนหน้าเว็บ
+ * จะร่วงจากสองแสนกว่าเหลือหลักสิบ เหมือนเว็บเพิ่งเปิด จึงยกยอดเดิมมาเป็นจุดตั้งต้น
+ * แล้วนับต่อจากตรงนั้น · ยอดยกมาแก้ได้ที่หลังบ้าน (ส่วนท้ายเว็บ) ไม่ได้ฝังไว้ในโค้ด
  */
-export async function visitorTotal(carriedOver: number): Promise<number> {
+export async function visitTotal(carriedOver: number): Promise<number> {
   try {
-    return carriedOver + (await db.visitorDay.count());
+    const sum = await db.pageView.aggregate({ _sum: { count: true } });
+    return carriedOver + (sum._sum.count ?? 0);
   } catch (error) {
-    console.error("อ่านยอดผู้เข้าชมสะสมไม่ได้:", error);
+    console.error("อ่านยอดเข้าชมสะสมไม่ได้:", error);
     // ฐานล่มก็ยังต้องโชว์ยอดยกมา ดีกว่าโชว์ 0 ให้สมาชิกเห็น
     return carriedOver;
+  }
+}
+
+/** จำนวน "คน" สะสม — นับคนเดิมที่มาคนละวันเป็นคนละครั้ง (ลายนิ้วมือเปลี่ยนทุกวัน) */
+export async function uniqueVisitors(): Promise<number> {
+  try {
+    return await db.visitorDay.count();
+  } catch (error) {
+    console.error("อ่านจำนวนคนไม่ได้:", error);
+    return 0;
   }
 }
 

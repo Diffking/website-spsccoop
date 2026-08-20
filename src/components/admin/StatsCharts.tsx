@@ -52,9 +52,9 @@ function CardShell({
   );
 }
 
-/* ── ผู้เข้าชมรายปี — แท่งตั้ง ── */
+/* ── จำนวนครั้งที่เปิดเว็บรายปี — แท่งตั้ง ── */
 
-export type YearPoint = { year: number; visitors: number };
+export type YearPoint = { year: number; visits: number };
 
 export function VisitorsChart({ data }: { data: YearPoint[] }) {
   const [hover, setHover] = useState<number | null>(null);
@@ -63,8 +63,8 @@ export function VisitorsChart({ data }: { data: YearPoint[] }) {
   if (data.length === 0) {
     return (
       <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
-        <h2 className="font-semibold text-gray-800">ผู้เข้าชมเว็บไซต์</h2>
-        <p className="mt-0.5 text-xs text-gray-500">จำนวนผู้เข้าชมรายปี (ปีบัญชี พ.ศ.)</p>
+        <h2 className="font-semibold text-gray-800">การเข้าชมเว็บไซต์</h2>
+        <p className="mt-0.5 text-xs text-gray-500">จำนวนครั้งที่เปิดเว็บรายปี (ปีบัญชี พ.ศ.)</p>
         <p className="mt-6 grid place-items-center rounded-xl bg-gray-50 py-10 text-center text-sm text-gray-400">
           ยังไม่มีข้อมูล — ระบบเริ่มนับตั้งแต่วันนี้เป็นต้นไป
         </p>
@@ -72,7 +72,7 @@ export function VisitorsChart({ data }: { data: YearPoint[] }) {
     );
   }
 
-  const peak = Math.max(...data.map((d) => d.visitors));
+  const peak = Math.max(...data.map((d) => d.visits));
   // ปัดเพดานขึ้นเป็นเลขกลมๆ เพื่อให้เส้นกริดอ่านง่าย
   const step = 10 ** Math.floor(Math.log10(peak)) / 2;
   const top = Math.ceil(peak / step) * step;
@@ -81,21 +81,21 @@ export function VisitorsChart({ data }: { data: YearPoint[] }) {
 
   return (
     <CardShell
-      title="ผู้เข้าชมเว็บไซต์"
-      subtitle="จำนวนผู้เข้าชมรายปี (ปีบัญชี พ.ศ.)"
+      title="การเข้าชมเว็บไซต์"
+      subtitle="จำนวนครั้งที่เปิดเว็บรายปี (ปีบัญชี พ.ศ.)"
       table={
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 text-left text-xs text-gray-500">
               <th className="pb-2 font-medium">ปี</th>
-              <th className="pb-2 text-right font-medium">ผู้เข้าชม (คน)</th>
+              <th className="pb-2 text-right font-medium">เข้าชม (ครั้ง)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {data.map((d) => (
               <tr key={d.year}>
                 <td className="py-2 text-gray-700">{d.year}</td>
-                <td className="py-2 text-right tabular-nums text-gray-700">{fmt(d.visitors)}</td>
+                <td className="py-2 text-right tabular-nums text-gray-700">{fmt(d.visits)}</td>
               </tr>
             ))}
           </tbody>
@@ -124,7 +124,7 @@ export function VisitorsChart({ data }: { data: YearPoint[] }) {
 
           <div className="relative flex h-56 items-end gap-2">
             {data.map((d, i) => {
-              const pct = (d.visitors / top) * 100;
+              const pct = (d.visits / top) * 100;
               const on = hover === i;
               return (
                 <div
@@ -139,7 +139,7 @@ export function VisitorsChart({ data }: { data: YearPoint[] }) {
                       className="pointer-events-none absolute z-10 text-xs font-semibold tabular-nums text-gray-700"
                       style={{ bottom: `calc(${pct}% + 8px)` }}
                     >
-                      {fmt(d.visitors)}
+                      {fmt(d.visits)}
                     </span>
                   )}
 
@@ -153,7 +153,7 @@ export function VisitorsChart({ data }: { data: YearPoint[] }) {
 
                   {on && (
                     <div className="pointer-events-none absolute bottom-full z-20 mb-1 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-[11px] text-white shadow-lg">
-                      <span className="font-semibold tabular-nums">{fmt(d.visitors)}</span> คน · ปี{" "}
+                      <span className="font-semibold tabular-nums">{fmt(d.visits)}</span> ครั้ง · ปี{" "}
                       {d.year}
                     </div>
                   )}
