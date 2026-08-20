@@ -7,18 +7,6 @@ import { countedHost, record } from "@/lib/analytics";
  * ที่ไม่นับฝั่งเซิร์ฟเวอร์ตอน render เพราะบอทกับตัวไต่เว็บของ Google จะถูกนับไปด้วย
  * ทำให้ตัวเลขสูงเกินจริง — วิธีนี้นับเฉพาะเบราว์เซอร์ที่รัน JavaScript จริง
  */
-/**
- * ชั่วคราว — ลบทิ้งได้เมื่ออัป index.php ตัวใหม่ขึ้นโฮสต์แล้ว
- *
- * index.php ตัวเก่าส่งต่อคำขอนับสถิติโดยไม่บอกอะไรเลยสักหัว ไม่มีแม้แต่ user-agent
- * (เบราว์เซอร์จริงมี user-agent เสมอ) ถ้าไม่ยกเว้นให้ ยอดจะหยุดนับสนิทตั้งแต่วินาทีที่
- * deploy จนถึงวันที่ไฟล์บนโฮสต์ถูกอัป — ระหว่างนั้นยังนับ "จำนวนครั้งที่เปิดหน้า" ได้ตามเดิม
- * ส่วน "จำนวนคน" ยังค้างที่ 1 คนต่อวันเหมือนก่อนแก้ เพราะตัวเก่าไม่ได้ส่งไอพีคนอ่านมา
- */
-function fromOldMirror(request: Request): boolean {
-  return !request.headers.get("x-public-host") && !request.headers.get("user-agent");
-}
-
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as { path?: string };
   const path = String(body.path ?? "");
@@ -32,7 +20,7 @@ export async function POST(request: Request) {
    * ตอบ 200 เหมือนเดิม หน้าเว็บจะได้ไม่เห็น error ในคอนโซล
    */
   const host = request.headers.get("x-public-host") ?? request.headers.get("host");
-  if (!countedHost(host) && !fromOldMirror(request)) {
+  if (!countedHost(host)) {
     return NextResponse.json({ ok: true, counted: false });
   }
 
