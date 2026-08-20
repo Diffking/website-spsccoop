@@ -118,6 +118,37 @@ services:
       - -c
       - apk add --no-cache curl >/dev/null 2>&1; while true; do if [ -n "$$MIRROR_PURGE_TOKEN" ]; then echo "อุ่นแคช $$(date '+%F %H:%M')"; curl -s -m 900 "$${MIRROR_WARM_URL:-https://www.spsccoop.com/warm.php}?token=$$MIRROR_PURGE_TOKEN&by=auto" | tail -2; fi; sleep 3600; done
 
+  # ดึงวันหยุดจากระบบสำนักงานในวงแลนอัตโนมัติ ทุก 6 ชม.
+  # เช็คก่อนเสมอ — เหมือนเดิมก็ไม่เขียนฐาน ไม่ล้างแคช และไม่ขึ้น log อะไรเลย
+  # (ดู src/lib/holidaySync.ts) · ไม่ตั้ง HOLIDAY_SYNC_TOKEN = เส้นทางปิดตาย ตัวนี้ก็ไม่ทำงาน
+  #
+  # เขียนเป็นบล็อก (|) ไม่ใช่บรรทัดเดียวเหมือน mirror-warm เพราะคำสั่งมี ": " อยู่
+  # ซึ่ง YAML จะอ่านเป็น key: value แล้วพังทั้งไฟล์
+  holiday-sync:
+    image: alpine:3.20
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - web
+    entrypoint:
+      - sh
+      - -c
+      - |
+        apk add --no-cache curl >/dev/null 2>&1
+        # รอ web ตั้งตัวก่อน ไม่งั้นรอบแรกยิงไปตอนยังไม่พร้อมแล้วได้ error เปล่า ๆ
+        sleep 30
+        while true; do
+          if [ -n "$$HOLIDAY_SYNC_TOKEN" ]; then
+            out=$$(curl -s -m 60 -X POST -H "x-sync-token: $$HOLIDAY_SYNC_TOKEN" http://web:3000/api/holidays/sync/)
+            # เหมือนเดิม = เงียบ · เปลี่ยนหรือพลาดเมื่อไหร่ค่อยขึ้น log
+            case "$$out" in
+              *'"added":0,"renamed":0'*) ;;
+              *) echo "วันหยุด $$(date '+%F %H:%M') $$out" ;;
+            esac
+          fi
+          sleep 21600
+        done
+
   # Cloudflare Tunnel — ชี้โดเมนเข้า web:3000 (ตั้ง ingress ฝั่ง Cloudflare)
   # TUNNEL_TOKEN อยู่ในไฟล์ .env ข้างไฟล์นี้ (ไม่ commit)
   cloudflared:
