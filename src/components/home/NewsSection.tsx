@@ -133,7 +133,12 @@ function CommitteeCard({
 
   return (
     <div className="flex h-full flex-col rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-black/5">
-      <p className="text-sm font-semibold text-brand-700">คณะกรรมการชุดที่ {set}</p>
+      {/*
+        ต้องเป็น "คณะกรรมการดำเนินการ" เต็ม ๆ ไม่ใช่ "คณะกรรมการ" ลอย ๆ
+        สหกรณ์มีคณะกรรมการหลายชุด (ดำเนินการ · สรรหา · ผู้ตรวจสอบกิจการ)
+        เรียกสั้นแล้วสมาชิกแยกไม่ออกว่าการ์ดนี้เป็นชุดไหน
+      */}
+      <p className="text-sm font-semibold text-brand-700">คณะกรรมการดำเนินการชุดที่ {set}</p>
       {/*
         object-contain ไม่ใช่ object-cover — รูปกรรมการเป็นภาพคนถ่ายติดหัวไหล่
         ถ้าครอบให้เต็มกรอบจะโดนตัดหัวตัดตา ยอมมีขอบว่างข้างรูปดีกว่าเห็นหน้าไม่ครบ
