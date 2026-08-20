@@ -31,7 +31,14 @@ export type SiteInfo = {
   email: string;
   /** เลิกใช้แล้ว — เวลาทำการย้ายไปตั้งเป็นวัน/เวลาจริงที่ Setting["officeHours"] (ดู src/lib/officeHours.ts) */
   officeHours: string;
-  memberCount: string;
+  /**
+   * ยอดผู้เข้าชมที่ยกมาจากเว็บเดิม — ตัวนับที่ท้ายเว็บเริ่มนับต่อจากตัวเลขนี้
+   *
+   * เดิมช่องนี้ชื่อ memberCount ("จำนวนสมาชิก") แต่ถูกเอาไปโชว์เป็นสถิติผู้เข้าชม
+   * ที่ท้ายเว็บมาตลอด และเป็นเลขที่พิมพ์เอง ไม่ได้นับจริง — ตอนนี้เปลี่ยนเป็น
+   * "จุดตั้งต้น" ให้ระบบนับต่อจากตรงนี้ ชื่อช่องจึงเปลี่ยนตามความหมายที่ใช้จริง
+   */
+  visitorCarriedOver: string;
   /** ลิงก์เพจเฟซบุ๊ก — เว้นว่าง = ไม่แสดงปุ่มที่ท้ายเว็บ */
   facebook?: string;
   /** ลิงก์ช่องยูทูบ — เว้นว่าง = ไม่แสดงปุ่มที่ท้ายเว็บ */
@@ -102,7 +109,7 @@ export const DEFAULT_SITE_INFO: SiteInfo = {
   fax: "074-311-759",
   email: "spsccoop229@gmail.com",
   officeHours: "จันทร์ – ศุกร์ 08:30 – 16:30 น.",
-  memberCount: "220,031",
+  visitorCarriedOver: "228,000",
   facebook: "",
   youtube: "",
   line: "",

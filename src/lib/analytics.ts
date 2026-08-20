@@ -20,15 +20,26 @@ export function shouldTrack(path: string): boolean {
   return !/^\/(admin|api|_next|uploads|robots\.txt|sitemap\.xml)/.test(path);
 }
 
+/** อ่านรายชื่อโดเมนจาก .env — คั่นด้วยจุลภาค เว้นวรรคได้ ตัวพิมพ์ใหญ่เล็กไม่สำคัญ */
+function hostList(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 /**
- * นับเฉพาะคนที่เปิดโดเมนสาธารณะจริง (www.spsccoop.com)
+ * นับคนที่เปิดหน้าเว็บ **ทุกโดเมนสาธารณะ** — เข้าทาง spsccoop.com หรือ coopsmile.org
+ * ก็คือคนที่มาอ่านเว็บของสหกรณ์เหมือนกัน ยอดจึงต้องรวมกัน
  *
- * เว็บเดียวกันเปิดได้หลายทาง: สมาชิกเข้า www.spsccoop.com · เจ้าหน้าที่กับตัวมิเรอร์
- * เข้า coopsmile.org ตรง ๆ ถ้านับหมดทุกทาง ยอดจะบวกงานของเจ้าหน้าที่กับการทดสอบเข้าไปด้วย
- * ตัวเลขในหน้าภาพรวมจึงไม่ใช่ยอดผู้เข้าชมจริง
+ * (เดิมนับเฉพาะ spsccoop.com เพราะกลัวยอดปนงานของเจ้าหน้าที่ แต่หน้าหลังบ้านไม่เคยถูกนับ
+ * อยู่แล้ว — shouldTrack ตัด /admin ทิ้ง และตัวแจ้งนับก็ติดอยู่แต่บนหน้าเว็บสาธารณะ)
+ *
+ * โดเมนของหลังบ้านไม่นับเสมอ ถึงจะเป็นโดเมนย่อยของโดเมนที่นับก็ตาม —
+ * admin.coopsmile.org ลงท้ายด้วย .coopsmile.org ถ้าไม่กันไว้จะถูกนับไปด้วย
  *
  * ตัวมิเรอร์บนโฮสต์บอกโดเมนที่คนเปิดจริงมาทางหัว x-public-host (ดู php-frontend/index.php)
- * เปลี่ยนโดเมนที่นับได้ที่ ANALYTICS_HOST ใน .env
+ * เปลี่ยนรายชื่อโดเมนได้ที่ ANALYTICS_HOST ใน .env (คั่นด้วยจุลภาค)
  */
 export function countedHost(raw: string | null | undefined): boolean {
   const host = (raw ?? "").split(":")[0].trim().toLowerCase();
@@ -39,8 +50,10 @@ export function countedHost(raw: string | null | undefined): boolean {
     return true;
   }
 
-  const counted = (process.env.ANALYTICS_HOST ?? "spsccoop.com").trim().toLowerCase();
-  return host === counted || host.endsWith(`.${counted}`);
+  if (hostList(process.env.ADMIN_HOST).includes(host)) return false;
+
+  const counted = hostList(process.env.ANALYTICS_HOST ?? "spsccoop.com,coopsmile.org");
+  return counted.some((c) => host === c || host.endsWith(`.${c}`));
 }
 
 function fingerprint(ip: string, userAgent: string, day: Date): string {
@@ -106,6 +119,32 @@ export async function visitorsByYear(): Promise<YearPoint[]> {
     console.error("อ่านสถิติรายปีไม่ได้:", error);
     return [];
   }
+}
+
+/**
+ * ยอดผู้เข้าชมสะสม = ยอดยกมาจากเว็บเดิม + ที่ระบบนี้นับได้เอง
+ *
+ * เว็บเดิมนับผู้เข้าชมมาหลายปีก่อนจะย้ายมาระบบนี้ ถ้าเริ่มนับใหม่จากศูนย์
+ * ตัวเลขบนหน้าเว็บจะร่วงจากสองแสนกว่าเหลือหลักสิบ เหมือนเว็บเพิ่งเปิด
+ * จึงยกยอดเดิมมาเป็นจุดตั้งต้นแล้วนับต่อจากตรงนั้น
+ *
+ * ยอดยกมาแก้ได้ที่หลังบ้าน (ส่วนท้ายเว็บ → ยอดผู้เข้าชมยกมาจากเว็บเดิม)
+ * ไม่ได้ฝังไว้ในโค้ด เผื่อวันหลังต้องปรับ
+ */
+export async function visitorTotal(carriedOver: number): Promise<number> {
+  try {
+    return carriedOver + (await db.visitorDay.count());
+  } catch (error) {
+    console.error("อ่านยอดผู้เข้าชมสะสมไม่ได้:", error);
+    // ฐานล่มก็ยังต้องโชว์ยอดยกมา ดีกว่าโชว์ 0 ให้สมาชิกเห็น
+    return carriedOver;
+  }
+}
+
+/** อ่านตัวเลขที่พิมพ์มาพร้อมคอมมา ("228,000") เป็นจำนวน — อ่านไม่ออกคืน 0 */
+export function parseCount(raw: string | undefined | null): number {
+  const digits = (raw ?? "").replace(/[^\d]/g, "");
+  return digits ? Number(digits) : 0;
 }
 
 /** หน้าที่เปิดดูมากที่สุดย้อนหลัง 12 เดือน */

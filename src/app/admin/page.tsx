@@ -3,7 +3,8 @@ import { currentUser } from "@/lib/auth";
 import { canAnyPage, canArea, hasFullAccess } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { getBackupStatus } from "@/lib/backups";
-import { popularPages, visitorsByYear } from "@/lib/analytics";
+import { parseCount, popularPages, visitorTotal, visitorsByYear } from "@/lib/analytics";
+import { getSiteInfo } from "@/lib/settings";
 import Dashboard from "@/components/admin/Dashboard";
 import MirrorPanel from "@/components/admin/MirrorPanel";
 import { mirrorStatus } from "@/lib/mirror";
@@ -13,7 +14,7 @@ export default async function AdminPage() {
   // หน้าเข้าสู่ระบบมีที่อยู่ของตัวเองแล้ว — /admin ไว้สำหรับคนที่เข้าระบบแล้วเท่านั้น
   if (!user) redirect("/login/");
 
-  const [announcements, tickers, holidays, pages, users, backup, visitors, popular] =
+  const [announcements, tickers, holidays, pages, users, backup, visitors, popular, info] =
     await Promise.all([
       db.announcement.count(),
       db.newsTicker.count(),
@@ -23,7 +24,12 @@ export default async function AdminPage() {
       getBackupStatus(),
       visitorsByYear(),
       popularPages(),
+      getSiteInfo(),
     ]);
+
+  // ยอดเดียวกับที่สมาชิกเห็นท้ายเว็บ — เจ้าหน้าที่จะได้ไม่งงว่าทำไมสองที่ไม่ตรงกัน
+  const carriedOver = parseCount(info.visitorCarriedOver);
+  const total = await visitorTotal(carriedOver);
 
   // ถามโฮสต์แยกต่างหาก — โฮสต์ล่มก็ไม่ควรทำให้หน้าภาพรวมทั้งหน้าเปิดไม่ได้
   const mirror = await mirrorStatus();
@@ -46,6 +52,8 @@ export default async function AdminPage() {
         backup={backup}
         visitors={visitors}
         popular={popular}
+        total={total}
+        carriedOver={carriedOver}
         tiles={tiles}
       />
       {/* สั่งล้างสำเนาบนโฮสต์กระทบทั้งเว็บ ไม่ใช่ส่วนใดส่วนหนึ่ง — เฉพาะคนที่ดูแลทั้งเว็บ */}

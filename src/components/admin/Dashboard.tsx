@@ -55,12 +55,18 @@ export default function Dashboard({
   backup,
   visitors,
   popular,
+  total,
+  carriedOver,
   tiles,
 }: {
   counts: Counts;
   backup: BackupStatus;
   visitors: YearPoint[];
   popular: PagePoint[];
+  /** ยอดสะสมที่โชว์ท้ายเว็บ = ยอดยกมาจากเว็บเดิม + ที่ระบบนี้นับได้ */
+  total: number;
+  /** ยอดยกมาจากเว็บเดิม — แยกให้เห็นว่าในยอดสะสมมีของเก่าเท่าไหร่ */
+  carriedOver: number;
   /** การ์ดที่คนนี้เปิดเข้าไปได้ — ที่เหลือไม่ต้องโชว์ กดแล้วก็โดนเด้งกลับมาอยู่ดี */
   tiles: (keyof Counts)[];
 }) {
@@ -79,20 +85,31 @@ export default function Dashboard({
         transition={{ duration: 0.45, ease: "easeOut" }}
         className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-400 p-5 text-white shadow-sm"
       >
-        <p className="text-sm text-brand-50/80">
-          ผู้เข้าชมเว็บไซต์{latestYear ? `ปีบัญชี ${latestYear.year}` : ""}
-        </p>
+        <p className="text-sm text-brand-50/80">ผู้เข้าชมเว็บไซต์สะสม</p>
         <p className="mt-1 text-5xl font-bold tabular-nums leading-none">
-          {(latestYear?.visitors ?? 0).toLocaleString("th-TH")}
+          {total.toLocaleString("th-TH")}
         </p>
         <p className="mt-2 text-sm text-brand-50/90">
-          คน
-          {growth !== null && prevYear && (
-            <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium">
-              {growth >= 0 ? "▲" : "▼"} {Math.abs(growth)}% จากปี {prevYear.year}
+          ครั้ง — ตัวเลขเดียวกับที่โชว์ท้ายเว็บ
+          {carriedOver > 0 && (
+            <span className="mt-0.5 block text-xs text-brand-50/70">
+              รวมยอดยกมาจากเว็บเดิม {carriedOver.toLocaleString("th-TH")} ครั้ง ·
+              ระบบนี้นับเองได้ {(total - carriedOver).toLocaleString("th-TH")} ครั้ง
             </span>
           )}
         </p>
+
+        {/* ยอดของปีบัญชีปัจจุบัน — ยอดสะสมอย่างเดียวดูไม่ออกว่าปีนี้คนเข้ามากขึ้นหรือน้อยลง */}
+        {latestYear && (
+          <p className="mt-3 border-t border-white/20 pt-2.5 text-sm text-brand-50/90">
+            ปีบัญชี {latestYear.year}: {latestYear.visitors.toLocaleString("th-TH")} ครั้ง
+            {growth !== null && prevYear && (
+              <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium">
+                {growth >= 0 ? "▲" : "▼"} {Math.abs(growth)}% จากปี {prevYear.year}
+              </span>
+            )}
+          </p>
+        )}
       </motion.section>
 
       {/* การ์ดตัวเลข */}
