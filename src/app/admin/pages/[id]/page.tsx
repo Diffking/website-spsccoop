@@ -18,8 +18,8 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
   // ค่าที่ผู้ใช้เลือกไว้ครั้งก่อน — สวิตช์ AI ไม่เคยเลือก ถือว่าเปิด · โหมดแก้ไขเริ่มที่ EditUI
   const jar = await cookies();
   const aiFormatDefault = jar.get("spsc_page_ai_format")?.value !== "0";
-  const savedMode = jar.get("spsc_page_edit_mode")?.value;
-  const modeDefault = savedMode === "code" || savedMode === "preview" ? savedMode : "ui";
+  // เคยมีแท็บ "ดูตัวอย่าง" ที่เอาออกแล้ว — คนที่เลือกค้างไว้ให้กลับมาที่ EditUI
+  const modeDefault = jar.get("spsc_page_edit_mode")?.value === "code" ? "code" : "ui";
   const page = await db.page.findUnique({ where: { id } });
   if (!page) notFound();
   // หน้านี้อยู่หมวดของคนอื่น — เด้งกลับ ไม่ต้องบอกว่ามีหน้านี้อยู่

@@ -5,43 +5,64 @@ import { Bold, Italic, Link2, Unlink } from "lucide-react";
 import { cleanInline } from "@/lib/pageBlocks";
 
 /**
- * ช่องพิมพ์ข้อความหนึ่งบรรทัด/หนึ่งย่อหน้าของ EditUI — พิมพ์ได้เลย ไม่ต้องเห็นแท็ก
+ * ข้อความที่พิมพ์ทับได้ตรงที่มันอยู่บนหน้าเว็บ
  *
- * ตัวหนา/ตัวเอียง/ลิงก์ กดจากปุ่มที่โผล่ตอนคลิกเข้าไปในช่อง ผลที่ได้เป็น
- * <strong> <em> <a> เหมือนที่แถบเครื่องมือของ EditCode เขียน — สลับโหมดไปมาแล้วตรงกัน
+ * ตัวนี้ไม่ใช่ "ช่องกรอก" — มันคือแท็กจริงของหน้าเว็บ (h2 · p · li · td) ที่พิมพ์ได้
+ * เจ้าหน้าที่จึงเห็นตัวหนังสือขนาดจริง สีจริง ตำแหน่งจริง ระหว่างพิมพ์
+ * ไม่ต้องนึกภาพเอาเองว่าพิมพ์ไปแล้วจะออกมาหน้าตายังไง
+ *
+ * ตัวหนา/ตัวเอียง/ลิงก์ อยู่บนแถบเล็ก ๆ ที่ลอยขึ้นมาตอนคลิกเข้าไปในข้อความ
+ * ผลที่ได้เป็น <strong> <em> <a> เหมือนที่ EditCode เขียน — สลับโหมดแล้วตรงกัน
  *
  * เป็นช่องแบบ "ปล่อยอิสระ" (uncontrolled) ตั้งใจ: React ไม่เขียน innerHTML ทับ
- * ระหว่างพิมพ์ ไม่งั้นเคอร์เซอร์จะเด้งไปต้นบรรทัดทุกตัวอักษร ค่าที่พิมพ์ถูกส่งออกไป
- * ทาง onChange เท่านั้น แล้วค่อยล้างแท็กขยะให้ตรงกับ DOM ตอนคลิกออกจากช่อง
+ * ระหว่างพิมพ์ ไม่งั้นเคอร์เซอร์จะเด้งไปต้นบรรทัดทุกตัวอักษร ค่าที่พิมพ์ถูกส่งออก
+ * ทาง onChange เท่านั้น แล้วค่อยล้างแท็กขยะให้ตรงกับ DOM ตอนคลิกออกจากข้อความ
  */
+
+export type TextTag =
+  | "div"
+  | "h2"
+  | "h3"
+  | "h4"
+  | "p"
+  | "li"
+  | "td"
+  | "th"
+  | "span"
+  | "blockquote"
+  | "figcaption";
+
 export default function RichText({
   value,
   onChange,
   placeholder,
+  as = "div",
   singleLine = false,
   className = "",
 }: {
   value: string;
   onChange: (next: string) => void;
   placeholder?: string;
-  /** true = กด Enter แล้วไม่ขึ้นบรรทัดใหม่ (ใช้กับหัวข้อและช่องในตาราง) */
+  /** แท็กจริงที่จะวาด — ใช้ให้ตรงกับที่จะออกไปอยู่บนหน้าเว็บ */
+  as?: TextTag;
+  /** true = กด Enter แล้วไม่ขึ้นบรรทัดใหม่ (หัวข้อ ช่องในตาราง ชื่อคน) */
   singleLine?: boolean;
   className?: string;
 }) {
-  const box = useRef<HTMLDivElement>(null);
-  const [focused, setFocused] = useState(false);
+  const box = useRef<HTMLElement>(null);
+  const [bar, setBar] = useState<{ top: number; left: number } | null>(null);
   const [empty, setEmpty] = useState(!value.trim());
 
   /*
-   * เขียนเนื้อหาลง DOM เฉพาะตอนที่ช่องนี้ไม่ได้ถูกพิมพ์อยู่ — ครอบคลุมทั้งตอนสร้างช่อง
+   * เขียนเนื้อหาลง DOM เฉพาะตอนที่ไม่ได้ถูกพิมพ์อยู่ — ครอบคลุมทั้งตอนสร้าง
    * และตอนที่ข้างนอกเปลี่ยนค่าให้ (เช่นสลับกลับมาจาก EditCode) โดยไม่กวนคนที่กำลังพิมพ์
    */
   useEffect(() => {
     const el = box.current;
-    if (!el || focused) return;
+    if (!el || bar) return;
     if (el.innerHTML !== value) el.innerHTML = value;
     setEmpty(!(el.textContent ?? "").trim());
-  }, [value, focused]);
+  }, [value, bar]);
 
   const publish = () => {
     const el = box.current;
@@ -50,7 +71,13 @@ export default function RichText({
     onChange(cleanInline(el.innerHTML));
   };
 
-  /** ครอบข้อความที่เลือกไว้ด้วยรูปแบบที่กด — ต้องให้ช่องมีโฟกัสก่อน คำสั่งถึงจะรู้ว่าทำกับที่ไหน */
+  /** แถบรูปแบบลอยเหนือข้อความที่กำลังพิมพ์ — วัดตำแหน่งจริงเอา ไม่ต้องมี div ครอบ */
+  const placeBar = () => {
+    const rect = box.current?.getBoundingClientRect();
+    if (rect) setBar({ top: rect.top - 38, left: rect.left });
+  };
+
+  /** ครอบข้อความที่เลือกไว้ด้วยรูปแบบที่กด — ต้องมีโฟกัสก่อน คำสั่งถึงจะรู้ว่าทำกับที่ไหน */
   const run = (command: string, arg?: string) => {
     box.current?.focus();
     document.execCommand(command, false, arg);
@@ -61,60 +88,57 @@ export default function RichText({
     const url = prompt("ลิงก์ปลายทาง — วางที่อยู่เว็บ หรือที่อยู่ในเว็บนี้ เช่น /downloads/");
     if (url === null) return;
     const clean = url.trim();
-    if (!clean) return;
-    run("createLink", clean);
+    if (clean) run("createLink", clean);
   };
 
-  return (
-    <div className={`relative ${className}`}>
-      {focused && (
-        <div className="absolute -top-8 left-0 z-10 flex items-center gap-0.5 rounded-lg bg-gray-800 px-1 py-1 shadow-lg">
-          <ToolButton icon={Bold} title="ตัวหนา" onClick={() => run("bold")} />
-          <ToolButton icon={Italic} title="ตัวเอียง" onClick={() => run("italic")} />
-          <ToolButton icon={Link2} title="ใส่ลิงก์" onClick={addLink} />
-          <ToolButton icon={Unlink} title="เอาลิงก์ออก" onClick={() => run("unlink")} />
-        </div>
-      )}
+  // วาดเป็นแท็กจริงที่ขอมา — h2/p/li/td ฯลฯ ไม่ใช่ div ที่แต่งให้เหมือน
+  const Tag = as as React.ElementType;
 
-      <div
+  return (
+    <>
+      <Tag
         ref={box}
         contentEditable
         suppressContentEditableWarning
         role="textbox"
         aria-multiline={!singleLine}
+        data-empty={empty ? "" : undefined}
+        data-placeholder={placeholder}
         onInput={publish}
-        onFocus={() => setFocused(true)}
+        onFocus={placeBar}
         onBlur={() => {
-          setFocused(false);
+          setBar(null);
           publish();
         }}
-        onKeyDown={(e) => {
+        onKeyDown={(e: React.KeyboardEvent) => {
           if (singleLine && e.key === "Enter") e.preventDefault();
         }}
         /*
          * วางข้อความจาก Word/เว็บอื่นให้เหลือแต่ตัวอักษร — ของที่ก๊อปมามักพ่วง
          * <span style="font-family:TH SarabunPSK"> มาเป็นพรวน ซึ่งไปทับสไตล์ของเว็บ
          */
-        onPaste={(e) => {
+        onPaste={(e: React.ClipboardEvent) => {
           e.preventDefault();
-          const text = e.clipboardData.getData("text/plain");
-          document.execCommand("insertText", false, text);
+          document.execCommand("insertText", false, e.clipboardData.getData("text/plain"));
         }}
-        className={`w-full rounded-lg border border-gray-300 px-3 py-2 text-base leading-relaxed outline-none transition focus:border-brand-500 ${
-          singleLine ? "" : "min-h-[2.75rem]"
-        }`}
+        className={`edit-text ${className}`}
       />
-
-      {empty && placeholder && (
-        <span className="pointer-events-none absolute left-3 top-2 text-base text-gray-400">
-          {placeholder}
-        </span>
+      {bar && (
+        <div
+          style={{ top: bar.top, left: bar.left }}
+          className="fixed z-50 flex items-center gap-0.5 rounded-lg bg-gray-800 px-1 py-1 shadow-lg"
+        >
+          <ToolButton icon={Bold} title="ตัวหนา" onClick={() => run("bold")} />
+          <ToolButton icon={Italic} title="ตัวเอียง" onClick={() => run("italic")} />
+          <ToolButton icon={Link2} title="ใส่ลิงก์" onClick={addLink} />
+          <ToolButton icon={Unlink} title="เอาลิงก์ออก" onClick={() => run("unlink")} />
+        </div>
       )}
-    </div>
+    </>
   );
 }
 
-/** ปุ่มบนแถบรูปแบบที่ลอยอยู่เหนือช่องพิมพ์ */
+/** ปุ่มบนแถบรูปแบบที่ลอยอยู่เหนือข้อความ */
 function ToolButton({
   icon: Icon,
   title,
@@ -128,7 +152,7 @@ function ToolButton({
     <button
       type="button"
       title={title}
-      // กดปุ่มแล้วช่องต้องไม่เสียโฟกัส ไม่งั้นจะไม่รู้ว่าเลือกข้อความไหนไว้
+      // กดปุ่มแล้วข้อความต้องไม่เสียโฟกัส ไม่งั้นจะไม่รู้ว่าเลือกตัวไหนไว้
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       className="rounded p-1.5 text-gray-300 transition hover:bg-white/15 hover:text-white"

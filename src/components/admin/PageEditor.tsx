@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Code2,
-  Eye,
   FolderTree,
   Loader2,
   MousePointerClick,
@@ -16,8 +15,6 @@ import {
 } from "lucide-react";
 import ContentToolbar from "@/components/admin/ContentToolbar";
 import VisualEditor from "@/components/admin/VisualEditor";
-import PageContent from "@/components/site/PageContent";
-import { localAssetsInHtml } from "@/lib/assetFallback";
 import { repairStructure, structureProblems } from "@/lib/htmlStructure";
 import { prettyHtml } from "@/lib/prettyHtml";
 import Toggle from "@/components/ui/Toggle";
@@ -36,7 +33,7 @@ function remember(key: string, value: string) {
   document.cookie = `${key}=${value}; path=/; max-age=31536000; samesite=lax`;
 }
 
-type Mode = "ui" | "code" | "preview";
+type Mode = "ui" | "code";
 
 type Props = {
   page: {
@@ -297,14 +294,13 @@ export default function PageEditor({
         bare
         icon={MousePointerClick}
         title="เนื้อหาในหน้า"
-        desc="EditUI = กรอกทีละช่อง ไม่ต้องรู้โค้ด · EditCode = พิมพ์ HTML เอง"
+        desc="EditUI = แก้บนหน้าเว็บจริงได้เลย · EditCode = พิมพ์ HTML เอง"
       >
         <div className="flex border-b border-gray-100">
           {(
             [
-              ["ui", "EditUI", MousePointerClick, "แก้แบบกรอกช่อง ไม่ต้องอ่านโค้ด"],
+              ["ui", "EditUI", MousePointerClick, "แก้บนหน้าเว็บจริง คลิกที่ข้อความแล้วพิมพ์ทับได้เลย"],
               ["code", "EditCode", Code2, "แก้ HTML ตรง ๆ สำหรับคนที่อ่านโค้ดออก"],
-              ["preview", "ดูตัวอย่าง", Eye, "หน้าตาเดียวกับที่สมาชิกเห็น"],
             ] as const
           ).map(([key, label, Icon, hint]) => (
             <button
@@ -344,17 +340,6 @@ export default function PageEditor({
               className="min-h-[60vh] w-full resize-y p-4 font-mono text-sm leading-relaxed outline-none"
             />
           </>
-        )}
-
-        {mode === "preview" && (
-          /*
-           * ใช้คอมโพเนนต์ตัวเดียวกับหน้าเว็บจริง — เดิมพรีวิววาด HTML ดิบ ๆ
-           * แท็ปเมนูจึงไม่ขึ้นเป็นแท็บให้กด เห็นเป็นก้อนเรียงกันเฉย ๆ ไม่ตรงกับของจริง
-           */
-          <PageContent
-            html={localAssetsInHtml(repairStructure(content))}
-            className="min-h-[60vh] p-4"
-          />
         )}
 
         {/*
