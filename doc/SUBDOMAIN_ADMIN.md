@@ -29,7 +29,10 @@
 5. **Save hostname**
 
 Cloudflare สร้าง DNS ให้เองอัตโนมัติ ไม่ต้องไปเพิ่ม record เอง
-รอ 1-2 นาทีแล้วเปิด <https://admin.coopsmile.org/admin> ได้เลย
+รอ 1-2 นาทีแล้วเปิด <https://admin.coopsmile.org> ได้เลย
+
+**ไม่ต้องพิมพ์ `/admin` ต่อท้าย** — เปิดหน้าแรกของซับโดเมนนี้แล้วระบบพาไปหน้าล็อกอินให้เอง
+(ตั้งไว้ที่ `ADMIN_ROOT_HOST` ใน `.env`)
 
 > ค่า URL ต้องเป็น `web:3000` (ชื่อ service ใน docker-compose) เหมือนกับซับโดเมนเดิมที่ตั้งไว้แล้ว
 > ไม่ใช่ `localhost:8030` — ตัว `cloudflared` อยู่ในเน็ตเวิร์กเดียวกับ `web` มองเห็นกันด้วยชื่อ service
