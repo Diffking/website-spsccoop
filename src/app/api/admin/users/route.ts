@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/apiAuth";
 import { hashPassword, passwordFromPhone } from "@/lib/auth";
+import { cleanAreas } from "@/lib/permissions";
 
 /** เฉพาะ ADMIN เท่านั้นที่จัดการผู้ใช้ได้ */
 async function requireAdmin() {
@@ -25,6 +26,7 @@ export async function GET() {
       name: true,
       phone: true,
       role: true,
+      areas: true,
       active: true,
       lastLoginAt: true,
     },
@@ -42,6 +44,7 @@ export async function POST(request: Request) {
     name?: string;
     phone?: string;
     role?: "ADMIN" | "EDITOR";
+    areas?: unknown;
   };
 
   const username = body.username?.trim() ?? "";
@@ -68,8 +71,10 @@ export async function POST(request: Request) {
       phone,
       passwordHash: await hashPassword(password),
       role: body.role === "ADMIN" ? "ADMIN" : "EDITOR",
+      // ADMIN ดูแลทั้งเว็บอยู่แล้ว เก็บพื้นที่ไว้ก็ไม่มีผล ล้างทิ้งกันสับสนตอนอ่านฐาน
+      areas: body.role === "ADMIN" ? [] : cleanAreas(body.areas),
     },
-    select: { id: true, username: true, name: true, phone: true, role: true, active: true },
+    select: { id: true, username: true, name: true, phone: true, role: true, areas: true, active: true },
   });
 
   return NextResponse.json({ user, password }, { status: 201 });

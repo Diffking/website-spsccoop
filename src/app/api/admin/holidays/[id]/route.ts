@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
 import { parseThaiDate } from "../route";
 import { purgeEverySite } from "@/lib/mirrorPurge";
@@ -8,7 +8,7 @@ type Params = { params: Promise<{ id: string }> };
 
 /** แก้วันหยุด — ส่งมาเฉพาะช่องที่จะเปลี่ยนก็ได้ */
 export async function PATCH(request: Request, { params }: Params) {
-  const auth = await requireUser();
+  const auth = await requireWrite("holidays");
   if (auth instanceof NextResponse) return auth;
 
   const { id } = await params;
@@ -47,7 +47,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
 /** ลบวันหยุด */
 export async function DELETE(_request: Request, { params }: Params) {
-  const auth = await requireUser();
+  const auth = await requireWrite("holidays");
   if (auth instanceof NextResponse) return auth;
 
   const { id } = await params;

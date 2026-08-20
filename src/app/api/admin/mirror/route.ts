@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/apiAuth";
+import { requireUser, requireWrite } from "@/lib/apiAuth";
 import { mirrorStatus, runWarm } from "@/lib/mirror";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export async function GET() {
 
 /** สั่งอุ่นสำเนาเดี๋ยวนี้ — ส่ง { force: true } เพื่อดึงใหม่ทุกไฟล์แม้ยังไม่หมดอายุ */
 export async function POST(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite();
   if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => ({}))) as { force?: boolean };

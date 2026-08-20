@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
 import { saveSetting } from "@/lib/settings";
 import type { SeoPage, SeoSettings } from "@/lib/seo";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 
 /** บันทึกการตั้งค่า SEO ทั้งก้อน */
 export async function PUT(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite("seo");
   if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => null)) as SeoSettings | null;

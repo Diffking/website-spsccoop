@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { currentUser } from "@/lib/auth";
+import { ADMIN_HOME, canAnyPage, filterPages, hasFullAccess } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import PagesManager from "@/components/admin/PagesManager";
 import { designedPageOf } from "@/lib/designedPages";
@@ -9,8 +10,10 @@ import { designedPageOf } from "@/lib/designedPages";
 export default async function AdminPagesPage() {
   const user = await currentUser();
   if (!user) redirect("/admin/");
+  // ไม่ได้ดูแลหน้าเนื้อหาสักหมวดก็ไม่ต้องเห็น — เมนูซ่อนให้แล้ว ตรงนี้กันคนพิมพ์ที่อยู่เข้ามาเอง
+  if (!canAnyPage(user)) redirect(ADMIN_HOME);
 
-  const pages = await db.page.findMany({
+  const all = await db.page.findMany({
     orderBy: { slug: "asc" },
     select: {
       id: true,
@@ -27,6 +30,8 @@ export default async function AdminPagesPage() {
    * กดเข้าไปจะเจอช่อง HTML ว่าง ๆ ทั้งที่หน้าเว็บมีของเต็มไปหมด — แยกไปอยู่เมนูของมันเอง
    * แต่ยังกดเข้าไปพิมพ์ข้อความเพิ่มได้จากเมนูนั้น
    */
+  // เห็นเฉพาะหมวดที่ตัวเองดูแล — คนดูแลหมวดเดียวจะได้ไม่ต้องเลื่อนผ่านหน้าของคนอื่น
+  const pages = filterPages(user, all);
   const designed = pages.filter((p) => designedPageOf(p.slug));
   const normal = pages.filter((p) => !designedPageOf(p.slug));
 
@@ -44,6 +49,7 @@ export default async function AdminPagesPage() {
       <main className="mx-auto max-w-6xl space-y-4 px-4 py-5">
         <PagesManager
           pages={normal.map((p) => ({ ...p, updatedAt: p.updatedAt.toISOString() }))}
+          canRenameCategory={hasFullAccess(user) || user.areas.includes("pages")}
         />
 
         {designed.length > 0 && (

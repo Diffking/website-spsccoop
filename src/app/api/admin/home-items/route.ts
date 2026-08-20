@@ -1,31 +1,25 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
+import { SECTION_AREA } from "@/lib/homeSectionAreas";
 import { db } from "@/lib/db";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 
-const SECTIONS = [
-  "services",
-  "recommends",
-  "memberFeatures",
-  "memberLinks",
-  "committees",
-  "officers",
-  "footerLinks",
-];
+const SECTIONS = Object.keys(SECTION_AREA);
 
 /**
  * จัดลำดับใหม่ทั้งส่วน — รับ id เรียงตามลำดับที่ต้องการให้แสดง
  * เขียน sortOrder ใหม่ทั้งชุดในธุรกรรมเดียว เหมือนที่ทำกับสไลด์และประกาศ
  */
 export async function PUT(request: Request) {
-  const auth = await requireUser();
-  if (auth instanceof NextResponse) return auth;
-
   const body = (await request.json().catch(() => ({}))) as { section?: unknown; order?: unknown };
   const section = typeof body.section === "string" ? body.section : "";
   if (!SECTIONS.includes(section)) {
     return NextResponse.json({ error: "ไม่รู้จักส่วนที่จะจัดลำดับ" }, { status: 400 });
   }
+
+  // แต่ละส่วนของหน้าแรกมีเจ้าของคนละคน เช็คสิทธิ์หลังรู้แล้วว่ากำลังแก้ส่วนไหน
+  const auth = await requireWrite(SECTION_AREA[section]);
+  if (auth instanceof NextResponse) return auth;
 
   const order = Array.isArray(body.order)
     ? body.order.filter((v): v is string => typeof v === "string")
@@ -57,9 +51,6 @@ export async function PUT(request: Request) {
 
 /** เพิ่มรายการในส่วนใดส่วนหนึ่งของหน้าแรก */
 export async function POST(request: Request) {
-  const auth = await requireUser();
-  if (auth instanceof NextResponse) return auth;
-
   const body = (await request.json().catch(() => ({}))) as Record<string, string | undefined>;
   const section = String(body.section ?? "");
   const title = String(body.title ?? "").trim();
@@ -67,6 +58,9 @@ export async function POST(request: Request) {
   if (!SECTIONS.includes(section)) {
     return NextResponse.json({ error: "ไม่รู้จักส่วนนี้" }, { status: 400 });
   }
+
+  const auth = await requireWrite(SECTION_AREA[section]);
+  if (auth instanceof NextResponse) return auth;
   if (!title) {
     return NextResponse.json({ error: "ชื่อรายการห้ามว่าง" }, { status: 400 });
   }

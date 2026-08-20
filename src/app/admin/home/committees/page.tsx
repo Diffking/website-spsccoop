@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
+import { ADMIN_HOME, canArea } from "@/lib/permissions";
 import { getItemsForAdmin } from "@/lib/homeItems";
 import { getCommitteePhotoScale, getCommitteeSet } from "@/lib/settings";
 import { committeeFolder, storageTarget } from "@/lib/ftp";
@@ -9,6 +10,8 @@ import CommitteeSetForm from "@/components/admin/CommitteeSetForm";
 export default async function Page() {
   const user = await currentUser();
   if (!user) redirect("/admin/");
+  // ไม่ได้ดูแลส่วนนี้ก็ไม่ต้องเห็น — เมนูซ่อนให้แล้ว ตรงนี้กันคนพิมพ์ที่อยู่เข้ามาเอง
+  if (!canArea(user, "home.committees")) redirect(ADMIN_HOME);
 
   const [items, set, scale] = await Promise.all([
     getItemsForAdmin("committees"),

@@ -20,6 +20,12 @@ import {
   ExternalLink,
 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
+import {
+  canAnyPage,
+  canArea,
+  type Actor,
+  type AreaKey,
+} from "@/lib/permissions";
 
 export type MenuKey =
   | "dashboard"
@@ -39,8 +45,10 @@ const ITEMS: {
   icon: typeof LayoutDashboard;
   label: string;
   desc: string;
+  /** พื้นที่ที่ต้องดูแลถึงจะเห็นเมนูนี้ — ไม่ระบุ = ทุกคนเห็น (ภาพรวม) */
+  area?: AreaKey;
   /** ส่วนย่อยของหน้านั้น — โผล่ใต้เมนูแม่เมื่อกำลังอยู่ในหมวดนี้ */
-  children?: { href: string; label: string }[];
+  children?: { href: string; label: string; area: AreaKey }[];
 }[] = [
   {
     key: "dashboard",
@@ -55,21 +63,23 @@ const ITEMS: {
     icon: Megaphone,
     label: "หน้าแรก",
     desc: "ดูหน้าแรกและแก้ทีละส่วน",
+    area: "home.layout",
     // เรียงตามลำดับที่ปรากฏจริงบนหน้าแรก เลื่อนหน้าเว็บลงไปเจออะไรก่อน เมนูก็อยู่ก่อน
     children: [
-      { href: "/admin/home/slides", label: "สไลด์" },
-      { href: "/admin/home/rates", label: "อัตราดอกเบี้ย" },
-      { href: "/admin/home/ticker", label: "ข่าววิ่ง" },
-      { href: "/admin/home/announcements", label: "ประกาศ / จดหมายข่าว" },
-      { href: "/admin/home/committees", label: "คณะกรรมการดำเนินการ" },
-      { href: "/admin/home/services", label: "บริการ" },
-      { href: "/admin/home/member", label: "สำหรับสมาชิก" },
-      { href: "/admin/home/calendar", label: "ปฏิทินสหกรณ์" },
-      { href: "/admin/home/officers", label: "สำนักงานบริการสมาชิก" },
+      { href: "/admin/home/slides", label: "สไลด์", area: "home.slides" },
+      { href: "/admin/home/rates", label: "อัตราดอกเบี้ย", area: "home.rates" },
+      { href: "/admin/home/ticker", label: "ข่าววิ่ง", area: "home.ticker" },
+      { href: "/admin/home/announcements", label: "ประกาศ / จดหมายข่าว", area: "home.announcements" },
+      { href: "/admin/home/committees", label: "คณะกรรมการดำเนินการ", area: "home.committees" },
+      { href: "/admin/home/services", label: "บริการ", area: "home.services" },
+      { href: "/admin/home/member", label: "สำหรับสมาชิก", area: "home.member" },
+      { href: "/admin/home/calendar", label: "ปฏิทินสหกรณ์", area: "home.calendar" },
+      { href: "/admin/home/officers", label: "สำนักงานบริการสมาชิก", area: "home.officers" },
     ],
   },
   {
     key: "header",
+    area: "header",
     href: "/admin/header",
     icon: PanelTop,
     label: "ส่วนหัวเว็บ",
@@ -77,6 +87,7 @@ const ITEMS: {
   },
   {
     key: "footer",
+    area: "footer",
     href: "/admin/footer",
     icon: PanelBottom,
     label: "ส่วนท้ายเว็บ",
@@ -84,6 +95,7 @@ const ITEMS: {
   },
   {
     key: "splash",
+    area: "splash",
     href: "/admin/splash",
     icon: Crown,
     label: "วันสำคัญ",
@@ -91,6 +103,7 @@ const ITEMS: {
   },
   {
     key: "holidays",
+    area: "holidays",
     href: "/admin/holidays",
     icon: CalendarOff,
     label: "วันหยุด",
@@ -98,6 +111,7 @@ const ITEMS: {
   },
   {
     key: "pages",
+    area: "pages",
     href: "/admin/pages",
     icon: FileStack,
     label: "หน้าเนื้อหา",
@@ -105,6 +119,7 @@ const ITEMS: {
   },
   {
     key: "designed",
+    area: "designed",
     href: "/admin/designed",
     icon: Sparkles,
     label: "หน้าออกแบบอัตโนมัติ",
@@ -112,6 +127,7 @@ const ITEMS: {
   },
   {
     key: "seo",
+    area: "seo",
     href: "/admin/seo",
     icon: Search,
     label: "SEO",
@@ -126,21 +142,45 @@ const ITEMS: {
   },
 ];
 
-function Nav({ isAdmin, onNavigate }: { isAdmin: boolean; onNavigate?: () => void }) {
+/**
+ * เมนูที่คนนี้เปิดได้ — ตัดทั้งเมนูแม่และเมนูย่อยที่ไม่ได้อยู่ในความรับผิดชอบทิ้ง
+ *
+ * เมนูแม่ "หน้าแรก" ยังโผล่ถ้ามีเมนูย่อยเหลืออยู่ แม้จะแก้การจัดวางหน้าแรกไม่ได้ —
+ * แต่ให้กดแล้วไปหน้าย่อยหน้าแรกแทน จะได้ไม่พาไปหน้าที่เปิดไม่ได้
+ */
+function visibleItems(user: Actor) {
+  return ITEMS.flatMap((item) => {
+    if (item.key === "users") return user.role === "ADMIN" ? [item] : [];
+    if (item.key === "pages") return canAnyPage(user) ? [item] : [];
+
+    const children = item.children?.filter((child) => canArea(user, child.area));
+    if (item.children) {
+      if (!children?.length && !canArea(user, item.area!)) return [];
+      const href = canArea(user, item.area!) ? item.href : children![0].href;
+      return [{ ...item, href, children }];
+    }
+
+    return !item.area || canArea(user, item.area) ? [item] : [];
+  });
+}
+
+function Nav({ user, onNavigate }: { user: Actor; onNavigate?: () => void }) {
   const pathname = usePathname();
-  const items = isAdmin ? ITEMS : ITEMS.filter((i) => i.key !== "users");
+  const items = visibleItems(user);
 
   return (
     <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
       {items.map((item) => {
+        // เทียบจากที่อยู่ของหมวด ไม่ใช่ item.href เพราะเมนูแม่อาจถูกชี้ไปหน้าย่อยแทน
+        const root = ITEMS.find((i) => i.key === item.key)!.href;
         // /admin ต้องเทียบแบบเป๊ะ ไม่งั้นจะค้างสว่างตลอดเพราะทุกหน้าขึ้นต้นด้วย /admin
         const inSection =
-          item.href === "/admin"
+          root === "/admin"
             ? pathname === "/admin" || pathname === "/admin/"
-            : pathname.startsWith(item.href);
+            : pathname.startsWith(root);
         // เมนูแม่ที่มีลูกจะสว่างเฉพาะตอนอยู่ที่หน้าตัวเอง ไม่ใช่ตอนอยู่หน้าลูก
         const active = item.children
-          ? pathname === item.href || pathname === `${item.href}/`
+          ? pathname === root || pathname === `${root}/`
           : inSection;
 
         return (
@@ -209,14 +249,17 @@ function Nav({ isAdmin, onNavigate }: { isAdmin: boolean; onNavigate?: () => voi
 }
 
 export default function Sidebar({
-  isAdmin,
+  role,
+  areas,
   userName,
   userCode,
 }: {
-  isAdmin: boolean;
+  role: "ADMIN" | "EDITOR";
+  areas: string[];
   userName: string;
   userCode: string;
 }) {
+  const user: Actor = { role, areas };
   const [open, setOpen] = useState(false);
 
   const brand = (
@@ -264,7 +307,7 @@ export default function Sidebar({
       {/* เมนูค้างซ้ายบนจอใหญ่ */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-brand-800 md:flex">
         {brand}
-        <Nav isAdmin={isAdmin} />
+        <Nav user={user} />
         {footer}
       </aside>
 
@@ -296,7 +339,7 @@ export default function Sidebar({
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <Nav isAdmin={isAdmin} onNavigate={() => setOpen(false)} />
+              <Nav user={user} onNavigate={() => setOpen(false)} />
               {footer}
             </motion.aside>
           </>

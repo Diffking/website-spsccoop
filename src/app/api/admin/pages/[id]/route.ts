@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser, toSlug } from "@/lib/apiAuth";
+import { requireWritePage, toSlug } from "@/lib/apiAuth";
+import { canPage } from "@/lib/permissions";
 import { cleanPageFolder, pageFolder } from "@/lib/ftp";
 import { repairStructure } from "@/lib/htmlStructure";
 import { limitInlineStyles } from "@/lib/pageHtml";
@@ -10,14 +11,15 @@ type Params = { params: Promise<{ id: string }> };
 
 /** แก้หน้าเนื้อหา — ส่งมาเฉพาะช่องที่เปลี่ยนก็ได้ */
 export async function PATCH(request: Request, { params }: Params) {
-  const auth = await requireUser();
-  if (auth instanceof NextResponse) return auth;
-
   const { id } = await params;
   const existing = await db.page.findUnique({ where: { id } });
   if (!existing) {
     return NextResponse.json({ error: "ไม่พบหน้านี้" }, { status: 404 });
   }
+
+  // สิทธิ์ของหน้าเนื้อหาขึ้นกับหมวดที่หน้านั้นอยู่ ต้องอ่านของเดิมมาก่อนถึงจะเช็คได้
+  const auth = await requireWritePage(existing);
+  if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => ({}))) as {
     title?: string;
@@ -66,13 +68,28 @@ export async function PATCH(request: Request, { params }: Params) {
   }
   if (typeof body.published === "boolean") data.published = body.published;
 
+  // หมวดไว้จัดกลุ่มในหลังบ้านเท่านั้น เว้นว่าง = ให้ระบบจัดกลุ่มตามที่อยู่หน้าเอง
+  if (typeof body.category === "string") data.category = body.category.trim() || null;
+
+  /*
+   * ย้ายหมวด/ย้ายที่อยู่ = ย้ายหน้าออกจากมือตัวเอง ต้องดูแลหมวดปลายทางด้วย
+   * ไม่งั้นคนที่ดูแลหมวดเดียวจะโยกหน้าไปไว้หมวดของคนอื่นได้
+   */
+  const moved = {
+    slug: data.slug ?? existing.slug,
+    category: data.category !== undefined ? data.category : existing.category,
+  };
+  if (!canPage(auth.user, moved)) {
+    return NextResponse.json(
+      { error: "ย้ายหน้าไปหมวดที่คุณไม่ได้ดูแลไม่ได้" },
+      { status: 403 },
+    );
+  }
+
   /*
    * โฟลเดอร์เก็บไฟล์ของหน้านี้ — พิมพ์ผิดรูปแบบก็ไม่ปฏิเสธ แต่ใช้ชื่อที่คำนวณจาก slug แทน
    * (ไฟล์ต้องมีที่อยู่เสมอ ปล่อยว่างแล้วไฟล์จะไปกองผิดที่)
    */
-  // หมวดไว้จัดกลุ่มในหลังบ้านเท่านั้น เว้นว่าง = ให้ระบบจัดกลุ่มตามที่อยู่หน้าเอง
-  if (typeof body.category === "string") data.category = body.category.trim() || null;
-
   if (typeof body.assetFolder === "string") {
     data.assetFolder = cleanPageFolder(body.assetFolder, data.slug ?? existing.slug);
   } else if (data.slug && !existing.assetFolder) {
@@ -87,10 +104,13 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
-  const auth = await requireUser();
+  const { id } = await params;
+  const existing = await db.page.findUnique({ where: { id } });
+  if (!existing) return NextResponse.json({ ok: true });
+
+  const auth = await requireWritePage(existing);
   if (auth instanceof NextResponse) return auth;
 
-  const { id } = await params;
   await db.page.deleteMany({ where: { id } });
   // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
   purgeEverySite();

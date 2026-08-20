@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft, Check, ExternalLink, Sparkles, Wrench } from "lucide-react";
 import { currentUser } from "@/lib/auth";
+import { ADMIN_HOME, canArea } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { DESIGNED_PAGES } from "@/lib/designedPages";
 import DesignedExtraContent from "@/components/admin/DesignedExtraContent";
@@ -19,6 +20,8 @@ export const dynamic = "force-dynamic";
 export default async function DesignedPagesAdmin() {
   const user = await currentUser();
   if (!user) redirect("/admin/");
+  // ไม่ได้ดูแลส่วนนี้ก็ไม่ต้องเห็น — เมนูซ่อนให้แล้ว ตรงนี้กันคนพิมพ์ที่อยู่เข้ามาเอง
+  if (!canArea(user, "designed")) redirect(ADMIN_HOME);
 
   // หน้าเนื้อหาที่ slug ตรงกัน = ที่เก็บ "เนื้อหาเพิ่มเติม" ของหน้านั้น
   const rows = await db.page

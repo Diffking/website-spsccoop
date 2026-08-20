@@ -1,11 +1,14 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
+import { ADMIN_HOME, canArea } from "@/lib/permissions";
 import { getSeo } from "@/lib/seo";
 import SeoManager from "@/components/admin/SeoManager";
 
 export default async function AdminSeoPage() {
   const user = await currentUser();
   if (!user) redirect("/admin/");
+  // ไม่ได้ดูแลส่วนนี้ก็ไม่ต้องเห็น — เมนูซ่อนให้แล้ว ตรงนี้กันคนพิมพ์ที่อยู่เข้ามาเอง
+  if (!canArea(user, "seo")) redirect(ADMIN_HOME);
 
   const seo = await getSeo();
 

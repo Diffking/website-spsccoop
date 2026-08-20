@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
 import { formatPageHtml } from "@/lib/ai";
 import { cleanPageHtml, missingStructures } from "@/lib/pageHtml";
 
@@ -10,7 +10,7 @@ import { cleanPageHtml, missingStructures } from "@/lib/pageHtml";
  * ถูกเอาไปใส่หน้าเว็บจริงด้วย dangerouslySetInnerHTML ถ้ามี <script> ปนมาคือจบ
  */
 export async function POST(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite();
   if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => ({}))) as { html?: string; title?: string };

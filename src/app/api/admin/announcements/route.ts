@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
 import { isKind } from "@/lib/announcementKinds";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 
 export async function POST(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite("home.announcements");
   if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => ({}))) as {
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
  * เขียน sortOrder ใหม่ทั้งชุดในธุรกรรมเดียว เหมือนที่ทำกับแบนเนอร์สไลด์
  */
 export async function PUT(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite("home.announcements");
   if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => ({}))) as { kind?: unknown; order?: unknown };

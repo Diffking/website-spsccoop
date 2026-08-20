@@ -463,3 +463,26 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .ebook-flip-next, .ebook-flip-prev { animation: none; opacity: 0; }
 }
+
+/* ---- มุมมองผู้ใช้ (ADMIN สวมมุมมองเจ้าหน้าที่คนอื่น) ----
+   ปิดทุกอย่างที่ "ทำอะไรบางอย่าง" ไว้ — ปุ่ม ช่องกรอก ตัวเลือก การลากจัดลำดับ
+   แต่ลิงก์ยังกดได้ จะได้เดินดูได้ทั่วว่าคนนั้นเห็นหน้าไหนบ้าง
+
+   นี่เป็นแค่การบอกด้วยสายตาว่าแตะไม่ได้ ตัวกันจริงอยู่ที่ requireWrite() ฝั่ง API
+   ซึ่งปฏิเสธทุกคำขอที่ส่งมาระหว่างเปิดมุมมองอยู่ */
+.view-only button,
+.view-only input,
+.view-only textarea,
+.view-only select,
+.view-only label,
+.view-only [contenteditable],
+.view-only [draggable="true"] {
+  pointer-events: none;
+}
+.view-only button,
+.view-only input,
+.view-only textarea,
+.view-only select {
+  opacity: .65;
+  cursor: not-allowed;
+}

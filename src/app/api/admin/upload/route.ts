@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
 import { isFolder, uploadToFtp } from "@/lib/ftp";
 import { MAX_EDGE, shrink } from "@/lib/image";
@@ -35,7 +35,7 @@ const EXTENSIONS: Record<string, string> = {
 };
 
 export async function POST(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite();
   if (auth instanceof NextResponse) return auth;
 
   const form = await request.formData().catch(() => null);

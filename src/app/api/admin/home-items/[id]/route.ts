@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
+import { SECTION_AREA } from "@/lib/homeSectionAreas";
 import { db } from "@/lib/db";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 
@@ -7,12 +8,13 @@ type Params = { params: Promise<{ id: string }> };
 
 /** แก้รายการ — ส่งเฉพาะช่องที่เปลี่ยน · move = สลับลำดับกับตัวข้างเคียงในส่วนเดียวกัน */
 export async function PATCH(request: Request, { params }: Params) {
-  const auth = await requireUser();
-  if (auth instanceof NextResponse) return auth;
-
   const { id } = await params;
   const existing = await db.homeItem.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "ไม่พบรายการนี้" }, { status: 404 });
+
+  // สิทธิ์ขึ้นกับว่ารายการนี้อยู่ส่วนไหนของหน้าแรก จึงต้องอ่านของเดิมมาก่อน
+  const auth = await requireWrite(SECTION_AREA[existing.section]);
+  if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
 
@@ -64,10 +66,13 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
-  const auth = await requireUser();
+  const { id } = await params;
+  const existing = await db.homeItem.findUnique({ where: { id } });
+  if (!existing) return NextResponse.json({ ok: true });
+
+  const auth = await requireWrite(SECTION_AREA[existing.section]);
   if (auth instanceof NextResponse) return auth;
 
-  const { id } = await params;
   await db.homeItem.deleteMany({ where: { id } });
   // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
   purgeEverySite();

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/apiAuth";
 import { hashPassword, passwordFromPhone } from "@/lib/auth";
+import { cleanAreas } from "@/lib/permissions";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -30,6 +31,7 @@ export async function PATCH(request: Request, { params }: Params) {
     name?: string;
     phone?: string;
     role?: "ADMIN" | "EDITOR";
+    areas?: unknown;
     active?: boolean;
   };
 
@@ -38,6 +40,7 @@ export async function PATCH(request: Request, { params }: Params) {
     phone?: string;
     passwordHash?: string;
     role?: "ADMIN" | "EDITOR";
+    areas?: string[];
     active?: boolean;
   } = {};
   let newPassword: string | null = null;
@@ -57,8 +60,8 @@ export async function PATCH(request: Request, { params }: Params) {
     data.passwordHash = await hashPassword(newPassword);
   }
 
-  // เปลี่ยนสิทธิ์/ปิดใช้งาน ทำได้เฉพาะ ADMIN และห้ามทำกับตัวเอง (กันล็อกตัวเองออกจากระบบ)
-  if (typeof body.role === "string" || typeof body.active === "boolean") {
+  // เปลี่ยนสิทธิ์/พื้นที่รับผิดชอบ/ปิดใช้งาน ทำได้เฉพาะ ADMIN และห้ามทำกับตัวเอง (กันล็อกตัวเองออกจากระบบ)
+  if (typeof body.role === "string" || typeof body.active === "boolean" || body.areas !== undefined) {
     if (!isAdmin) {
       return NextResponse.json({ error: "ต้องเป็นผู้ดูแลระบบเท่านั้น" }, { status: 403 });
     }
@@ -67,12 +70,15 @@ export async function PATCH(request: Request, { params }: Params) {
     }
     if (typeof body.role === "string") data.role = body.role === "ADMIN" ? "ADMIN" : "EDITOR";
     if (typeof body.active === "boolean") data.active = body.active;
+    if (body.areas !== undefined) data.areas = cleanAreas(body.areas);
+    // ยกขึ้นเป็น ADMIN = ดูแลทั้งเว็บ พื้นที่เดิมไม่มีความหมายแล้ว
+    if (data.role === "ADMIN") data.areas = [];
   }
 
   const user = await db.user.update({
     where: { id },
     data,
-    select: { id: true, username: true, name: true, phone: true, role: true, active: true },
+    select: { id: true, username: true, name: true, phone: true, role: true, areas: true, active: true },
   });
 
   // ปิดใช้งานแล้วต้องเตะออกจากระบบทันที ไม่ให้ session เดิมใช้ต่อได้

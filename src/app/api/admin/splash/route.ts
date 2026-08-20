@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
 import { saveSetting } from "@/lib/settings";
 import type { SplashContent, SplashOccasion, SplashRepeat, SplashTiming } from "@/content/splash";
 import { DEFAULT_SPLASH_BG, isSplashBackground } from "@/lib/splashTheme";
@@ -9,7 +9,7 @@ const DATE_PATTERN = /^(?:\d{4}-)?\d{2}-\d{2}$/;
 
 /** บันทึกหน้า splash วันสำคัญทั้งก้อน (สวิตช์ใหญ่ + ข้อความปุ่ม + รายการวันสำคัญ) */
 export async function PUT(request: Request) {
-  const auth = await requireUser();
+  const auth = await requireWrite("splash");
   if (auth instanceof NextResponse) return auth;
 
   const body = (await request.json().catch(() => null)) as SplashContent | null;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/apiAuth";
+import { requireWrite } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
 import { isEventType } from "@/lib/homeItems";
 import { parseDay } from "../route";
@@ -9,7 +9,7 @@ type Params = { params: Promise<{ id: string }> };
 
 /** แก้สไลด์ — ส่งมาเฉพาะช่องที่เปลี่ยนก็ได้ · move = สลับลำดับกับตัวข้างเคียง */
 export async function PATCH(request: Request, { params }: Params) {
-  const auth = await requireUser();
+  const auth = await requireWrite("home.slides");
   if (auth instanceof NextResponse) return auth;
 
   const { id } = await params;
@@ -90,7 +90,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
 /** ลบสไลด์ */
 export async function DELETE(_request: Request, { params }: Params) {
-  const auth = await requireUser();
+  const auth = await requireWrite("home.slides");
   if (auth instanceof NextResponse) return auth;
 
   const { id } = await params;

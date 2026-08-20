@@ -25,7 +25,14 @@ export type PageRow = {
   category?: string | null;
 };
 
-export default function PagesManager({ pages }: { pages: PageRow[] }) {
+export default function PagesManager({
+  pages,
+  canRenameCategory,
+}: {
+  pages: PageRow[];
+  /** เปลี่ยนชื่อหมวดกระทบทุกหน้าในกลุ่มและกระทบสิทธิ์ของคนอื่น — เฉพาะคนที่ดูแลหน้าเนื้อหาทุกหมวด */
+  canRenameCategory: boolean;
+}) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -232,17 +239,19 @@ export default function PagesManager({ pages }: { pages: PageRow[] }) {
                 <FolderOpen className="h-3.5 w-3.5 text-gray-400" />
                 {group.key}
                 <span className="font-normal text-gray-400">({group.pages.length})</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRenaming(group.key);
-                    setNewName(group.key);
-                  }}
-                  title="เปลี่ยนชื่อหมวดนี้ — มีผลกับทุกหน้าในกลุ่ม"
-                  className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-brand-600"
-                >
-                  <Pencil className="h-3 w-3" />
-                </button>
+                {canRenameCategory && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRenaming(group.key);
+                      setNewName(group.key);
+                    }}
+                    title="เปลี่ยนชื่อหมวดนี้ — มีผลกับทุกหน้าในกลุ่ม"
+                    className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-brand-600"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
               </p>
             )}
 
