@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  AlertCircle,
   Code2,
   FolderTree,
   Loader2,
@@ -112,6 +113,15 @@ export default function PageEditor({
   const [assetFolder, setAssetFolder] = useState(page.assetFolder);
   const [category, setCategory] = useState(page.category);
   const [content, setContent] = useState(page.body);
+  /**
+   * เนื้อหาที่บันทึกลงฐานไปแล้วล่าสุด — เอาไว้เทียบว่ายังมีอะไรค้างไม่ได้บันทึกไหม
+   *
+   * เรื่องนี้สำคัญกว่าที่คิด: หน้าสไลด์บันทึกให้เองทันทีที่พิมพ์เสร็จ แต่หน้าเนื้อหา
+   * ต้องกดบันทึกเอง (เพราะตอนบันทึกมีทั้ง AI จัดรูปแบบและการซ่อมโครงสร้าง
+   * ซึ่งทำทุกครั้งที่พิมพ์ไม่ได้) — สองหน้าทำงานคนละแบบ ถ้าไม่บอกให้ชัด
+   * คนจะพิมพ์แล้วปิดหน้าไปเพราะคิดว่าบันทึกแล้วเหมือนหน้าสไลด์
+   */
+  const [saved, setSaved] = useState(page.body);
   const [published, setPublished] = useState(page.published);
   const [mode, setMode] = useState<Mode>(modeDefault);
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
@@ -151,12 +161,15 @@ export default function PageEditor({
    * กันปิดแท็บ/กดย้อนกลับระหว่างกำลังบันทึก — งานที่ให้ AI จัดใช้เวลาถึงเกือบนาที
    * ปิดหน้าไปตอนนั้นคือเสียทั้งรูปที่เพิ่งแทรกและที่พิมพ์ค้างไว้
    */
+  const dirty = content !== saved;
+
   useEffect(() => {
-    if (!busy) return;
+    // กันทั้งตอนกำลังบันทึก และตอนที่พิมพ์ไว้แล้วยังไม่ได้กดบันทึก
+    if (!busy && !dirty) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [busy]);
+  }, [busy, dirty]);
 
   /**
    * ให้ AI จัดโครงเนื้อหา — คืน HTML ที่จัดแล้ว หรือ null ถ้าทำไม่สำเร็จ
@@ -222,6 +235,7 @@ export default function PageEditor({
 
     if (response.ok) {
       setStatus({ kind: "ok", text: `บันทึกแล้ว${note}` });
+      setSaved(body);
       setSlug(data.page.slug);
       setAssetFolder(data.page.assetFolder ?? assetFolder);
       router.refresh();
@@ -243,6 +257,7 @@ export default function PageEditor({
       body: JSON.stringify({ title, slug, content: beforeAi, published, assetFolder, category }),
     });
     setBeforeAi(null);
+    if (response.ok) setSaved(beforeAi);
     setBusy(false);
     setStatus(
       response.ok
@@ -294,15 +309,20 @@ export default function PageEditor({
         bare
         icon={MousePointerClick}
         title="เนื้อหาในหน้า"
-        desc="EditUI = แก้บนหน้าเว็บจริงได้เลย · EditCode = พิมพ์ HTML เอง"
+        desc="พิมพ์ทับบนหน้าเว็บได้เลย ไม่ต้องรู้เรื่องโค้ด"
       >
+        {/*
+          ชื่อแท็บเป็นภาษาไทยก่อน ป้าย EditUI/EditCode เป็นตัวเล็กห้อยไว้ —
+          เจ้าหน้าที่ที่ไม่ได้เรียนคอมพิวเตอร์อ่าน "EditUI" แล้วไม่รู้ว่าคืออะไร
+          แต่ชื่อเดิมยังต้องอยู่ เพราะเป็นชื่อที่ใช้เรียกกันในทีมแล้ว
+        */}
         <div className="flex border-b border-gray-100">
           {(
             [
-              ["ui", "EditUI", MousePointerClick, "แก้บนหน้าเว็บจริง คลิกที่ข้อความแล้วพิมพ์ทับได้เลย"],
-              ["code", "EditCode", Code2, "แก้ HTML ตรง ๆ สำหรับคนที่อ่านโค้ดออก"],
+              ["ui", "แก้บนหน้าเว็บ", "EditUI", MousePointerClick, "คลิกที่ข้อความบนหน้าเว็บแล้วพิมพ์ทับได้เลย"],
+              ["code", "แก้เป็นโค้ด", "EditCode", Code2, "พิมพ์ HTML เอง สำหรับคนที่อ่านโค้ดออก"],
             ] as const
-          ).map(([key, label, Icon, hint]) => (
+          ).map(([key, label, tag, Icon, hint]) => (
             <button
               key={key}
               onClick={() => changeMode(key)}
@@ -313,10 +333,22 @@ export default function PageEditor({
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              <Icon className="h-4 w-4" /> {label}
+              <Icon className="h-4 w-4" />
+              {label}
+              <span className="text-[10px] font-normal text-gray-400">{tag}</span>
             </button>
           ))}
         </div>
+
+        {/* บอกวิธีใช้ตั้งแต่บรรทัดแรก ไม่ต้องให้เดาเอาเองว่าคลิกตรงไหนได้บ้าง */}
+        {mode === "ui" && (
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-gray-100 bg-brand-50/60 px-4 py-2 text-xs text-brand-900">
+            <span>คลิกที่ตัวหนังสือแล้วพิมพ์ทับได้เลย</span>
+            <span>ชี้ที่เนื้อหาจะมีปุ่มย้าย/ลบขึ้นมาด้านบน</span>
+            <span>เพิ่มของใหม่ที่ปุ่ม “เพิ่มเนื้อหา” ล่างสุด</span>
+            <span className="font-semibold">แก้เสร็จต้องกดบันทึกด้วย</span>
+          </p>
+        )}
 
         {mode === "ui" && (
           <VisualEditor value={content} onChange={setContent} folder={assetFolder} />
@@ -472,7 +504,7 @@ export default function PageEditor({
         step={aiReady ? 5 : 4}
         icon={Save}
         title="เผยแพร่และบันทึก"
-        desc="แก้เสร็จแล้วต้องกดบันทึก ถึงจะขึ้นบนหน้าเว็บจริง"
+        desc="หน้านี้ไม่ได้บันทึกให้เอง — แก้เสร็จต้องกดบันทึกทุกครั้ง"
       >
         <label className="flex items-center gap-2.5 text-sm text-gray-700">
           <input
@@ -522,6 +554,28 @@ export default function PageEditor({
           </button>
         </div>
       </Section>
+
+      {/*
+        แถบติดล่างจอ — โผล่เมื่อมีที่แก้ไว้แล้วยังไม่ได้บันทึก
+        พิมพ์อยู่กลางหน้าที่ยาว ๆ แล้วปุ่มบันทึกอยู่ล่างสุดจนมองไม่เห็น คือทางที่งานหาย
+        (หน้าสไลด์บันทึกให้เอง หน้านี้ไม่ — ความต่างตรงนี้ต้องเห็นชัด ไม่ใช่ให้จำเอา)
+      */}
+      {dirty && (
+        <div className="sticky bottom-3 z-30 flex flex-wrap items-center gap-3 rounded-xl bg-gray-900/95 px-4 py-3 text-sm text-white shadow-lg">
+          <AlertCircle className="h-4 w-4 shrink-0 text-amber-300" />
+          <span className="min-w-0 flex-1">
+            แก้ไว้แล้วแต่ <b>ยังไม่ได้บันทึก</b> — ปิดหน้านี้ตอนนี้สิ่งที่แก้จะหาย
+          </span>
+          <button
+            onClick={save}
+            disabled={busy}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-2 font-medium text-white transition hover:bg-brand-400 disabled:opacity-60"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            บันทึกเลย
+          </button>
+        </div>
+      )}
     </div>
   );
 }

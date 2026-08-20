@@ -7,15 +7,26 @@ import {
   Code2,
   Copy,
   FileText,
+  FileType2,
+  Heading,
   ImagePlus,
+  Images,
+  LayoutGrid,
   Loader2,
+  Minus,
+  PanelsTopLeft,
+  Pilcrow,
   Plus,
+  Quote,
+  Table2,
   Trash2,
+  UserSquare2,
 } from "lucide-react";
 import RichText from "@/components/admin/RichText";
 import { uploadWithProgress } from "@/lib/uploadClient";
 import {
   ADDABLE,
+  BLOCK_HINT,
   BLOCK_LABEL,
   type Block,
   type BlockKind,
@@ -41,6 +52,24 @@ import {
  * แก้เนื้อหาก้อนเดียวกับ EditCode สลับไปมาได้ตลอด · ก้อนที่ระบบอ่านไม่ออกยังเก็บไว้ครบ
  * (ดู src/lib/pageBlocks.ts และตัวตรวจ npm run check:blocks)
  */
+
+/** ไอคอนประจำเนื้อหาแต่ละชนิด — คนอ่านช้าจะได้กวาดตาหาเจอโดยไม่ต้องอ่านทุกบรรทัด */
+const BLOCK_ICON: Record<BlockKind, typeof Plus> = {
+  heading: Heading,
+  paragraph: Pilcrow,
+  list: FileText,
+  quote: Quote,
+  divider: Minus,
+  image: ImagePlus,
+  imageRow: Images,
+  table: Table2,
+  pdfCard: FileType2,
+  pdfIcon: FileType2,
+  cards: LayoutGrid,
+  people: UserSquare2,
+  tabs: PanelsTopLeft,
+  html: Code2,
+};
 
 type Props = {
   value: string;
@@ -141,7 +170,10 @@ function BlockList({
       <InsertLine onPick={(kind) => insertAt(0, kind)} first />
 
       {blocks.length === 0 && (
-        <p className="edit-hint">หน้านี้ยังว่างอยู่ — กดเครื่องหมาย ＋ ด้านบนเพื่อเริ่มใส่เนื้อหา</p>
+        <p className="edit-hint">
+          หน้านี้ยังไม่มีเนื้อหา
+          <span>กดปุ่ม “เพิ่มเนื้อหา” ด้านล่างเพื่อเริ่ม</span>
+        </p>
       )}
 
       {blocks.map((block, i) => (
@@ -159,23 +191,33 @@ function BlockList({
             />
           </div>
 
-          {/* ปุ่มจัดการก้อน — โผล่ตอนเอาเมาส์ชี้ ไม่งั้นบังหน้าเว็บ */}
-          <div className="edit-tools">
-            <span className="edit-kind">{BLOCK_LABEL[block.kind]}</span>
-            <Tool icon={ChevronUp} title="เลื่อนขึ้น" disabled={i === 0} onClick={() => move(i, -1)} />
+          {/*
+            แถบเครื่องมือของเนื้อหาชิ้นนี้ — โผล่ตอนเอาเมาส์ชี้ "หรือตอนคลิกเลือก"
+            เพราะคนที่ไม่ชินคอมพิวเตอร์จะไม่รู้ว่าต้องเอาเมาส์ไปชี้ถึงจะมีปุ่ม
+            พอคลิกที่เนื้อหาแล้วปุ่มค้างไว้ ก็หาเจอแน่นอน
+          */}
+          <div className={`edit-tools ${picked === block.id ? "is-open" : ""}`}>
+            <span className="edit-kind">
+              {(() => {
+                const Icon = BLOCK_ICON[block.kind];
+                return <Icon className="h-3 w-3" />;
+              })()}
+              {BLOCK_LABEL[block.kind]}
+            </span>
+            <Tool icon={ChevronUp} title="ย้ายขึ้นข้างบน" disabled={i === 0} onClick={() => move(i, -1)} />
             <Tool
               icon={ChevronDown}
-              title="เลื่อนลง"
+              title="ย้ายลงข้างล่าง"
               disabled={i === blocks.length - 1}
               onClick={() => move(i, 1)}
             />
-            <Tool icon={Copy} title="ทำสำเนา" onClick={() => duplicate(i)} />
+            <Tool icon={Copy} title="คัดลอกอีกชุด" onClick={() => duplicate(i)} />
             <Tool
               icon={Trash2}
-              title="ลบก้อนนี้"
+              title="ลบทิ้ง"
               danger
               onClick={() => {
-                if (confirm(`ลบ “${BLOCK_LABEL[block.kind]}” นี้ออกจากหน้า?`))
+                if (confirm(`ลบ “${BLOCK_LABEL[block.kind]}” นี้ออกจากหน้าเว็บ?`))
                   onChange(blocks.filter((_, n) => n !== i));
               }}
             />
@@ -184,6 +226,14 @@ function BlockList({
           <InsertLine onPick={(kind) => insertAt(i + 1, kind)} />
         </div>
       ))}
+
+      {/*
+        ปุ่มก้อนใหญ่ที่เห็นตลอดเวลา — เส้น ＋ ระหว่างเนื้อหาโผล่เฉพาะตอนเอาเมาส์ชี้
+        ซึ่งคนที่ไม่ชินคอมพิวเตอร์จะหาไม่เจอ ต้องมีทางที่มองเห็นได้เสมออย่างน้อยหนึ่งทาง
+      */}
+      <div className="edit-add-end">
+        <InsertLine onPick={(kind) => insertAt(blocks.length, kind)} big />
+      </div>
     </div>
   );
 }
@@ -221,36 +271,53 @@ function Tool({
  * เส้นแทรกก้อนใหม่ — เส้นบาง ๆ ระหว่างก้อน กดแล้วเลือกว่าจะใส่อะไร
  * ------------------------------------------------------------------ */
 
-function InsertLine({ onPick, first = false }: { onPick: (kind: BlockKind) => void; first?: boolean }) {
+function InsertLine({
+  onPick,
+  first = false,
+  big = false,
+}: {
+  onPick: (kind: BlockKind) => void;
+  first?: boolean;
+  /** true = ปุ่มก้อนใหญ่ที่เห็นตลอด (ท้ายหน้า) · false = เส้นบาง ๆ ที่โผล่ตอนชี้ (ระหว่างเนื้อหา) */
+  big?: boolean;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className={`edit-insert ${first ? "is-first" : ""}`}>
+    <div className={`edit-insert ${first ? "is-first" : ""} ${big ? "is-big" : ""}`}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        title="แทรกเนื้อหาตรงนี้"
         className="edit-insert-button"
       >
-        <Plus className="h-3.5 w-3.5" />
+        <Plus className={big ? "h-4 w-4" : "h-3.5 w-3.5"} />
+        <span>{big ? "เพิ่มเนื้อหา" : "เพิ่มเนื้อหาตรงนี้"}</span>
       </button>
 
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div className="edit-insert-menu">
-            {ADDABLE.map((kind) => (
-              <button
-                key={kind}
-                type="button"
-                onClick={() => {
-                  onPick(kind);
-                  setOpen(false);
-                }}
-              >
-                {BLOCK_LABEL[kind]}
-              </button>
-            ))}
+            <p className="edit-menu-head">เลือกสิ่งที่จะใส่ตรงนี้</p>
+            {ADDABLE.map((kind) => {
+              const Icon = BLOCK_ICON[kind];
+              return (
+                <button
+                  key={kind}
+                  type="button"
+                  onClick={() => {
+                    onPick(kind);
+                    setOpen(false);
+                  }}
+                >
+                  <Icon className="edit-menu-icon" />
+                  <span>
+                    <b>{BLOCK_LABEL[kind]}</b>
+                    <i>{BLOCK_HINT[kind]}</i>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </>
       )}
@@ -410,7 +477,7 @@ function BlockView({
           />
           {picked && (
             <Options>
-              <span>ขนาด</span>
+              <span>ขนาดตัวหนังสือ</span>
               {([2, 3, 4] as const).map((level) => (
                 <Choice
                   key={level}
@@ -485,7 +552,7 @@ function BlockView({
                   })
                 }
               />
-              <span>การวาง</span>
+              <span>ขนาดและตำแหน่งรูป</span>
               {IMAGE_LAYOUTS.map((l) => (
                 <Choice
                   key={l.key}
@@ -495,7 +562,7 @@ function BlockView({
                 />
               ))}
               <label className="edit-field">
-                คำอธิบายรูปสำหรับคนตาบอด
+                คำอธิบายรูป (สำหรับคนตาบอดที่ใช้โปรแกรมอ่านหน้าจอ)
                 <input
                   value={block.alt}
                   onChange={(e) => onChange({ ...block, alt: e.target.value })}
@@ -527,7 +594,7 @@ function BlockView({
               </figure>
             ))}
             {block.images.length === 0 && (
-              <span className="edit-placeholder">ยังไม่มีรูปในแถวนี้</span>
+              <span className="edit-placeholder">ยังไม่มีรูปในแถวนี้ — กด “เพิ่มรูปในแถว” ด้านล่าง</span>
             )}
           </div>
           {picked && (
@@ -560,7 +627,7 @@ function BlockView({
       return (
         <>
           <div className="ebook">
-            <span className="ebook-name">{block.name || "ยังไม่ได้เลือกไฟล์"}</span>
+            <span className="ebook-name">{block.name || "ยังไม่ได้เลือกไฟล์ PDF"}</span>
             {block.readHref && <a href={block.readHref}>เปิดอ่านแบบ E-Book</a>}
             {block.fileHref && <a href={block.fileHref}>ดาวน์โหลด PDF</a>}
           </div>
@@ -581,7 +648,7 @@ function BlockView({
                 }
               />
               <label className="edit-field">
-                ชื่อที่แสดงบนการ์ด
+                ชื่อไฟล์ที่คนอ่านจะเห็น
                 <input
                   value={block.name}
                   onChange={(e) => onChange({ ...block, name: e.target.value })}
@@ -604,7 +671,7 @@ function BlockView({
           />
           {picked && (
             <Options>
-              <span>กดแล้ว</span>
+              <span>กดไอคอนแล้ว</span>
               <Choice
                 label="เปิดอ่านในเว็บ"
                 active={block.read}
@@ -615,7 +682,7 @@ function BlockView({
                 active={!block.read}
                 onClick={() => onChange({ ...block, read: false })}
               />
-              <span>สี</span>
+              <span>สีไอคอน</span>
               {ICON_COLORS.map((c) => (
                 <Choice
                   key={c.key}
@@ -625,7 +692,7 @@ function BlockView({
                 />
               ))}
               <label className="edit-field">
-                ขนาด (px)
+                ขนาดไอคอน (จุด)
                 <input
                   type="number"
                   min={20}
@@ -684,7 +751,7 @@ function ListView({
       </Tag>
       {picked && (
         <Options>
-          <span>แบบ</span>
+          <span>ขึ้นต้นแต่ละข้อด้วย</span>
           <Choice
             label="จุดนำหน้า"
             active={!block.ordered}
@@ -696,11 +763,11 @@ function ListView({
             onClick={() => onChange({ ...block, ordered: true })}
           />
           <button type="button" onClick={() => onChange({ ...block, items: [...block.items, ""] })}>
-            ＋ เพิ่มข้อ
+            ＋ เพิ่มอีกข้อ
           </button>
           {block.items.length > 1 && (
             <button type="button" onClick={() => onChange({ ...block, items: block.items.slice(0, -1) })}>
-              ลบข้อสุดท้าย
+              ลบข้อล่างสุด
             </button>
           )}
         </Options>
@@ -743,7 +810,7 @@ function TableView({
                         head: pad(block.head).map((v, i) => (i === c ? html : v)),
                       })
                     }
-                    placeholder={`หัวข้อ ${c + 1}`}
+                    placeholder={`ชื่อคอลัมน์ ${c + 1}`}
                   />
                 ))}
               </tr>
@@ -780,23 +847,23 @@ function TableView({
             type="button"
             onClick={() => onChange({ ...block, rows: [...block.rows, Array(cols).fill("")] })}
           >
-            ＋ เพิ่มแถว
+            ＋ เพิ่มแถว (บรรทัดล่าง)
           </button>
           <button
             type="button"
             onClick={() =>
               onChange({
                 ...block,
-                head: [...pad(block.head), `หัวข้อ ${cols + 1}`],
+                head: [...pad(block.head), `ชื่อคอลัมน์ ${cols + 1}`],
                 rows: block.rows.map((r) => [...pad(r), ""]),
               })
             }
           >
-            ＋ เพิ่มคอลัมน์
+            ＋ เพิ่มคอลัมน์ (ช่องขวา)
           </button>
           {block.rows.length > 1 && (
             <button type="button" onClick={() => onChange({ ...block, rows: block.rows.slice(0, -1) })}>
-              ลบแถวสุดท้าย
+              ลบแถวล่างสุด
             </button>
           )}
           {cols > 1 && (
@@ -810,7 +877,7 @@ function TableView({
                 })
               }
             >
-              ลบคอลัมน์สุดท้าย
+              ลบคอลัมน์ขวาสุด
             </button>
           )}
         </Options>
@@ -845,7 +912,7 @@ function CardsView({
               className="card-badge"
               value={card.badge}
               onChange={(badge) => set(i, { badge })}
-              placeholder="ป้าย"
+              placeholder="อักษรย่อ"
             />
             <span className="card-text">
               <RichText
@@ -867,7 +934,7 @@ function CardsView({
             </span>
             <button
               type="button"
-              title="ลบการ์ดนี้"
+              title="ลบการ์ดใบนี้"
               onClick={() => onChange({ ...block, cards: block.cards.filter((_, n) => n !== i) })}
             >
               <Trash2 className="h-3 w-3" />
@@ -875,10 +942,10 @@ function CardsView({
             <button
               type="button"
               className="edit-card-link"
-              title="ตั้งลิงก์และสีของการ์ดนี้"
+              title="ตั้งว่ากดแล้วไปหน้าไหน และเลือกสี"
               onClick={() => setOpenCard(openCard === i ? null : i)}
             >
-              {card.href || "ยังไม่มีลิงก์"}
+              {card.href || "ยังไม่ได้ตั้งว่ากดแล้วไปไหน"}
             </button>
           </span>
         ))}
@@ -887,14 +954,14 @@ function CardsView({
       {openCard !== null && block.cards[openCard] && (
         <Options>
           <label className="edit-field">
-            ลิงก์ปลายทางของการ์ดที่ {openCard + 1}
+            กดการ์ดใบที่ {openCard + 1} แล้วไปที่
             <input
               value={block.cards[openCard].href}
               onChange={(e) => set(openCard, { href: e.target.value })}
               placeholder="เช่น /downloads/doc-loan"
             />
           </label>
-          <span>สี</span>
+          <span>สีของการ์ด</span>
           {CARD_COLORS.map((c) => (
             <Choice
               key={c}
@@ -908,7 +975,7 @@ function CardsView({
 
       {picked && (
         <Options>
-          <span>การ์ดต่อแถว</span>
+          <span>จำนวนการ์ดต่อแถว</span>
           {[2, 3, 4].map((n) => (
             <Choice
               key={n}
@@ -980,14 +1047,14 @@ function PeopleView({
             </figcaption>
             <button
               type="button"
-              title="เอาคนนี้ออก"
+              title="เอาคนนี้ออกจากทำเนียบ"
               onClick={() => onChange({ ...block, people: block.people.filter((_, n) => n !== i) })}
             >
               <Trash2 className="h-3 w-3" />
             </button>
           </figure>
         ))}
-        {block.people.length === 0 && <span className="edit-placeholder">ยังไม่มีรายชื่อ</span>}
+        {block.people.length === 0 && <span className="edit-placeholder">ยังไม่มีรายชื่อ — กด “เพิ่มรูปบุคคล” ด้านล่าง</span>}
       </div>
 
       {picked && (
@@ -1012,7 +1079,7 @@ function PeopleView({
               })
             }
           />
-          <span>คนต่อแถว</span>
+          <span>จำนวนคนต่อแถว</span>
           {[2, 3, 4, 5].map((n) => (
             <Choice
               key={n}
@@ -1061,18 +1128,18 @@ function TabsView({
             aria-selected={i === at}
             onClick={() => setActive(i)}
           >
-            {t.title || `หัวข้อที่ ${i + 1}`}
+            {t.title || `หัวเรื่องที่ ${i + 1}`}
           </button>
         ))}
         <button
           type="button"
           className="edit-tab-add"
-          title="เพิ่มแท็บ"
+          title="เพิ่มหัวเรื่องใหม่"
           onClick={() => {
             setTabs([
               ...block.tabs,
               {
-                title: `หัวข้อที่ ${block.tabs.length + 1}`,
+                title: `หัวเรื่องที่ ${block.tabs.length + 1}`,
                 blocks: [{ id: blockId(), kind: "paragraph", html: "" }],
               },
             ]);
@@ -1085,7 +1152,7 @@ function TabsView({
 
       <Options>
         <label className="edit-field">
-          ชื่อบนปุ่มแท็บนี้
+          ชื่อบนปุ่มของหัวเรื่องนี้
           <input
             value={tab.title}
             onChange={(e) =>
@@ -1101,7 +1168,7 @@ function TabsView({
               setActive(0);
             }}
           >
-            ลบแท็บนี้
+            ลบหัวเรื่องนี้ทั้งชุด
           </button>
         )}
       </Options>
@@ -1153,7 +1220,7 @@ function HtmlView({
 
       {picked && (
         <Options>
-          <span>ก้อนนี้ระบบแปลงเป็นช่องกรอกให้ไม่ได้</span>
+          <span>ส่วนนี้ระบบแปลงเป็นช่องกรอกให้ไม่ได้ — ไม่แน่ใจอย่าแก้</span>
           <button type="button" onClick={() => setAsCode((v) => !v)}>
             <Code2 className="mr-1 inline h-3.5 w-3.5" />
             {asCode ? "ดูผลลัพธ์" : "แก้เป็นโค้ด"}

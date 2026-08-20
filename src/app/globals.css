@@ -522,8 +522,13 @@ body {
   opacity: 0; transition: opacity .12s; pointer-events: none;
 }
 .edit-block:hover > .edit-tools,
-.edit-block:focus-within > .edit-tools { opacity: 1; pointer-events: auto; }
-.edit-kind { padding: 0 .35rem; font-size: .7rem; color: #9ca3af; }
+.edit-block:focus-within > .edit-tools,
+.edit-tools.is-open { opacity: 1; pointer-events: auto; }
+.edit-kind {
+  display: inline-flex; align-items: center; gap: .25rem;
+  padding: 0 .4rem 0 .2rem; font-size: .7rem; color: #d1d5db;
+  font-family: system-ui, sans-serif;
+}
 
 /* เส้นแทรกก้อนใหม่ระหว่างก้อน — ปกติมองไม่เห็น โผล่เมื่อเอาเมาส์เข้าใกล้ */
 .edit-insert {
@@ -537,22 +542,50 @@ body {
 }
 .edit-insert:hover::before { opacity: .45; }
 .edit-insert-button {
-  position: relative; display: grid; place-items: center;
-  height: 1.35rem; width: 1.35rem; border-radius: 999px;
+  position: relative; display: inline-flex; align-items: center; gap: .3rem;
+  height: 1.5rem; padding: 0 .6rem; border-radius: 999px;
   background: #1c7fca; color: #fff; opacity: 0; transition: opacity .12s;
+  font-family: system-ui, sans-serif; font-size: .72rem; white-space: nowrap;
 }
-.edit-insert:hover .edit-insert-button { opacity: 1; }
+.edit-insert:hover .edit-insert-button,
+.edit-insert-button:focus-visible { opacity: 1; }
+
+/* ปุ่มก้อนใหญ่ท้ายหน้า — เห็นตลอดเวลา ไม่ต้องเอาเมาส์ไปชี้ถึงจะรู้ว่ามี */
+.edit-add-end { margin-top: 1rem; }
+.edit-insert.is-big { height: auto; }
+.edit-insert.is-big::before { display: none; }
+.edit-insert.is-big .edit-insert-button {
+  opacity: 1; height: 2.5rem; width: 100%; justify-content: center;
+  gap: .45rem; border-radius: .75rem; font-size: .9rem; font-weight: 600;
+  border: 2px dashed #93c5ea; background: #f5fafe; color: #0f5390;
+}
+.edit-insert.is-big .edit-insert-button:hover { background: #eaf4fc; border-color: #1c7fca; }
+.edit-insert.is-big .edit-insert-menu { top: 2.9rem; }
 .edit-insert-menu {
-  position: absolute; top: 1.6rem; left: 50%; transform: translateX(-50%); z-index: 40;
-  display: grid; grid-template-columns: 1fr 1fr; gap: .1rem; width: 17rem;
+  position: absolute; top: 1.9rem; left: 50%; transform: translateX(-50%); z-index: 40;
+  display: block; width: 21rem; max-height: 24rem; overflow-y: auto;
   border-radius: .75rem; background: #fff; padding: .35rem;
   box-shadow: 0 10px 30px rgb(0 0 0 / .18);
+  font-family: system-ui, sans-serif; text-align: left;
 }
+.edit-menu-head {
+  padding: .35rem .6rem .3rem; font-size: .72rem; color: #9ca3af;
+}
+/* แต่ละบรรทัด: ไอคอน + ชื่อ + คำอธิบายว่ามันคืออะไร
+   คนที่ไม่รู้ว่า "แท็บสลับหัวเรื่อง" คืออะไร ต้องอ่านบรรทัดล่างแล้วเข้าใจได้ */
 .edit-insert-menu button {
-  border-radius: .5rem; padding: .4rem .6rem; text-align: left;
-  font-size: .82rem; font-family: system-ui, sans-serif; color: #374151;
+  display: flex; align-items: flex-start; gap: .55rem; width: 100%;
+  border-radius: .5rem; padding: .45rem .6rem; text-align: left;
 }
-.edit-insert-menu button:hover { background: #eaf4fc; color: #0f5390; }
+.edit-insert-menu button:hover { background: #eaf4fc; }
+.edit-menu-icon { flex: 0 0 auto; width: 1rem; height: 1rem; margin-top: .15rem; color: #1c7fca; }
+.edit-insert-menu button b {
+  display: block; font-size: .85rem; font-weight: 600; color: #374151; line-height: 1.35;
+}
+.edit-insert-menu button i {
+  display: block; font-size: .74rem; font-style: normal; color: #6b7280; line-height: 1.4;
+}
+.edit-insert-menu button:hover b { color: #0f5390; }
 
 /* แถบตั้งค่าของก้อนที่เลือก — ของที่พิมพ์เป็นข้อความไม่ได้ (ขนาด สี จำนวนคอลัมน์) */
 .edit-options {
@@ -593,8 +626,11 @@ body {
   font-family: system-ui, sans-serif; font-size: .82rem; color: #9ca3af;
 }
 .edit-hint {
-  border-radius: .5rem; background: #f9fafb; padding: 2rem 1rem; text-align: center;
-  font-family: system-ui, sans-serif; font-size: .85rem; color: #9ca3af;
+  border-radius: .75rem; background: #f9fafb; padding: 2.5rem 1rem; text-align: center;
+  font-family: system-ui, sans-serif; font-size: .95rem; color: #6b7280;
+}
+.edit-hint span {
+  display: block; margin-top: .35rem; font-size: .82rem; color: #9ca3af;
 }
 
 /* ปุ่มลบที่มุมของรูป/การ์ด/รายชื่อ — โผล่ตอนชี้ที่ตัวนั้น */
