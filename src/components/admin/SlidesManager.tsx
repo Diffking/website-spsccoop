@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
   CalendarDays,
+  Check,
   ChevronDown,
   ChevronUp,
   Eye,
@@ -229,6 +230,16 @@ export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; a
           e.target.value = "";
         }}
       />
+
+      {/*
+        บอกให้ชัดว่าหน้านี้บันทึกให้เอง — หน้าเนื้อหาต้องกดบันทึกเอง สองหน้าทำงานคนละแบบ
+        ถ้าไม่เขียนไว้ คนจะเผลอนั่งหาปุ่มบันทึกในหน้านี้ หรือไปรอกดบันทึกในหน้าโน้นแล้วลืม
+      */}
+      <p className="flex items-center gap-2 rounded-lg bg-brand-50/70 px-3 py-2 text-xs text-brand-900">
+        <Check className="h-3.5 w-3.5 shrink-0" />
+        หน้านี้ <b>บันทึกให้เองทันที</b> ที่แก้เสร็จ — คลิกที่หัวข้อหรือคำอธิบายบนสไลด์แล้วพิมพ์ทับได้เลย
+        ไม่ต้องหาปุ่มบันทึก
+      </p>
 
       {status && (
         <p

@@ -74,22 +74,47 @@ export type Block =
 
 export type BlockKind = Block["kind"];
 
-/** ชื่อไทยของแต่ละชนิดก้อน — ใช้ทั้งบนหัวก้อนและในเมนู "เพิ่มก้อน" */
+/**
+ * ชื่อของเนื้อหาแต่ละชนิด — ใช้บนแถบเครื่องมือและในเมนู "เพิ่มเนื้อหา"
+ *
+ * ตั้งชื่อด้วยคำที่เจ้าหน้าที่ใช้พูดกันจริง ไม่ใช่ศัพท์ของคนทำเว็บ
+ * ("แท็ปเมนู" "การ์ดลิงก์" "ยกคำพูด" ไม่มีใครนอกวงการเข้าใจ)
+ * และห้ามใช้คำเดียวกันสองความหมายในจอเดียว — "หัวข้อ" สงวนไว้ให้ heading เท่านั้น
+ * หัวตารางเรียก "ชื่อคอลัมน์" ชื่อบนปุ่มแท็บเรียก "ชื่อหัวเรื่อง"
+ */
 export const BLOCK_LABEL: Record<BlockKind, string> = {
   heading: "หัวข้อ",
   paragraph: "ย่อหน้า",
-  list: "รายการ",
-  quote: "ยกคำพูด",
+  list: "รายการข้อ",
+  quote: "ข้อความเน้น",
   divider: "เส้นคั่น",
   image: "รูปภาพ",
-  imageRow: "แถวรูป",
+  imageRow: "รูปเรียงแถว",
   table: "ตาราง",
-  pdfCard: "การ์ดไฟล์ PDF",
-  pdfIcon: "ไอคอน PDF",
-  cards: "การ์ดลิงก์",
-  people: "ทำเนียบบุคลากร",
-  tabs: "แท็ปเมนู",
-  html: "โค้ด HTML",
+  pdfCard: "ไฟล์ PDF แบบการ์ด",
+  pdfIcon: "ไฟล์ PDF แบบไอคอน",
+  cards: "การ์ดกดไปหน้าอื่น",
+  people: "ทำเนียบรายชื่อ",
+  tabs: "แท็บสลับหัวเรื่อง",
+  html: "โค้ดที่ระบบอ่านไม่ออก",
+};
+
+/** อธิบายว่าแต่ละชนิดคืออะไร ด้วยภาษาที่ไม่ต้องรู้เรื่องเว็บก็เข้าใจ */
+export const BLOCK_HINT: Record<BlockKind, string> = {
+  heading: "ตัวหนังสือใหญ่ ไว้ขึ้นหัวเรื่องแต่ละตอน",
+  paragraph: "ข้อความธรรมดาที่พิมพ์ต่อกันเป็นย่อหน้า",
+  list: "รายการที่มีจุดหรือเลขนำหน้าทีละข้อ",
+  quote: "ข้อความสำคัญ ใส่กรอบให้เด่นออกมาจากย่อหน้าอื่น",
+  divider: "เส้นบาง ๆ ขวางหน้า ไว้แบ่งเรื่อง",
+  image: "รูปหนึ่งใบ ใส่คำบรรยายใต้ภาพได้",
+  imageRow: "รูปหลายใบวางเรียงข้างกันในแถวเดียว",
+  table: "ตารางมีช่อง มีเส้น เพิ่มแถวเพิ่มคอลัมน์ได้",
+  pdfCard: "กล่องยาว ๆ มีชื่อไฟล์ กดเปิดอ่านหรือดาวน์โหลดได้",
+  pdfIcon: "ไอคอนเล็ก ๆ อันเดียว เหมาะใส่ในช่องตาราง",
+  cards: "กล่องสี่เหลี่ยมมีสี กดแล้วไปหน้าอื่นในเว็บ",
+  people: "รูปคนพร้อมชื่อและตำแหน่ง เรียงเป็นตาราง",
+  tabs: "ซ่อนเนื้อหาหลายชุดไว้ใต้ปุ่มกดสลับ",
+  html: "ระบบแปลงเป็นช่องกรอกให้ไม่ได้ ต้องแก้เป็นโค้ด",
 };
 
 let seq = 0;
@@ -346,7 +371,7 @@ function elementToBlock(el: Element): Block {
         id: blockId(),
         kind: "tabs",
         tabs: Array.from(el.querySelectorAll(":scope > .tab")).map((tab, i) => ({
-          title: tab.getAttribute("data-title") || `หัวข้อที่ ${i + 1}`,
+          title: tab.getAttribute("data-title") || `หัวเรื่องที่ ${i + 1}`,
           blocks: nodesToBlocks(Array.from(tab.childNodes)),
         })),
       };
@@ -542,7 +567,7 @@ export function emptyBlock(kind: BlockKind): Block {
     case "imageRow":
       return { id, kind, images: [] };
     case "table":
-      return { id, kind, head: ["หัวข้อ 1", "หัวข้อ 2"], rows: [["", ""]] };
+      return { id, kind, head: ["ชื่อคอลัมน์ 1", "ชื่อคอลัมน์ 2"], rows: [["", ""]] };
     case "pdfCard":
       return { id, kind, name: "", readHref: "", fileHref: "" };
     case "pdfIcon":
@@ -562,8 +587,8 @@ export function emptyBlock(kind: BlockKind): Block {
         id,
         kind,
         tabs: [
-          { title: "หัวข้อที่ 1", blocks: [{ id: blockId(), kind: "paragraph", html: "" }] },
-          { title: "หัวข้อที่ 2", blocks: [{ id: blockId(), kind: "paragraph", html: "" }] },
+          { title: "หัวเรื่องที่ 1", blocks: [{ id: blockId(), kind: "paragraph", html: "" }] },
+          { title: "หัวเรื่องที่ 2", blocks: [{ id: blockId(), kind: "paragraph", html: "" }] },
         ],
       };
     case "html":
