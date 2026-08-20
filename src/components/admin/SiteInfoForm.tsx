@@ -11,7 +11,11 @@ const FIELDS: { key: keyof SiteInfo; label: string; hint?: string }[] = [
   { key: "phone", label: "เบอร์โทรศัพท์" },
   { key: "fax", label: "โทรสาร", hint: "เว้นว่างได้" },
   { key: "email", label: "อีเมล" },
-  { key: "memberCount", label: "จำนวนสมาชิก", hint: "ใส่ตัวเลขพร้อมคอมมา เช่น 220,031" },
+  {
+    key: "visitorCarriedOver",
+    label: "ยอดผู้เข้าชมยกมาจากเว็บเดิม",
+    hint: "ตัวนับที่ท้ายเว็บนับต่อจากเลขนี้ — ใส่ตัวเลขพร้อมคอมมาได้ เช่น 228,000",
+  },
   { key: "facebook", label: "ลิงก์เฟซบุ๊ก", hint: "เว้นว่าง = ซ่อนปุ่มเฟซบุ๊กที่ท้ายเว็บ" },
   { key: "youtube", label: "ลิงก์ยูทูบ", hint: "เว้นว่าง = ซ่อนปุ่มยูทูบที่ท้ายเว็บ" },
   { key: "line", label: "ลิงก์เพิ่มเพื่อนไลน์", hint: "เช่น https://lin.ee/xxxx" },
