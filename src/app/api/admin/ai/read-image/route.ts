@@ -1,3 +1,5 @@
+import path from "node:path";
+import { readFile } from "node:fs/promises";
 import { NextResponse } from "next/server";
 import { requireWrite } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
@@ -67,14 +69,37 @@ export async function POST(request: Request) {
     if (!media || !MEDIA_TYPES.includes(media.mimeType as MediaType)) {
       return NextResponse.json({ error: "ไม่รู้จักไฟล์นี้" }, { status: 400 });
     }
-    const fetched = await fetch(url.startsWith("/") ? new URL(url, request.url) : url, {
-      cache: "no-store",
-    }).catch(() => null);
-    if (!fetched?.ok) {
+    /*
+      ⚠️ ไฟล์ใน /uploads/ ต้องอ่านจากดิสก์ตรง ๆ ห้ามวนกลับไปขอตัวเองผ่าน HTTP
+
+      ของเดิมสร้าง URL จากหัว `Host` ของคำขอ (`new URL(url, request.url)`) ซึ่งพังเงียบ ๆ
+      เวลาเปิดหลังบ้านทาง `localhost:8030` — พอร์ตนั้นอยู่บน**เครื่อง** ไม่ได้อยู่ใน
+      คอนเทนเนอร์ คอนเทนเนอร์จึงต่อไม่ได้ ตอบ 502 แล้ว AI ไม่เคยได้อ่านภาพเลย
+      (`localhost:3000` ในคอนเทนเนอร์ก็ต่อไม่ได้ มีแต่ `127.0.0.1:3000` ที่ได้)
+      — เจ้าของเว็บเจออาการ "AI ไม่เขียนอะไรให้เลย" เพราะเรื่องนี้ 21 ส.ค. 2026
+
+      อ่านจากดิสก์ตรง ๆ ไม่ต้องพึ่งว่าคำขอเข้ามาทางโดเมนไหน เร็วกว่า และไม่ต้องวิ่ง
+      ออกไป Cloudflare แล้ววนกลับเข้าอุโมงค์มาหาตัวเอง
+      · `path.basename()` กันชื่อไฟล์ไต่ออกนอกโฟลเดอร์ (ถึงจะกรองด้วยตาราง Media แล้วก็ตาม)
+    */
+    let bytes: Buffer | null = null;
+    if (url.startsWith("/uploads/")) {
+      const name = path.basename(url);
+      bytes = await readFile(path.join(process.cwd(), "public", "uploads", name)).catch(() => null);
+    }
+
+    // ไฟล์ที่เก็บบนโดเมนอื่น (เช่นพื้นที่ FTP) ยังต้องดึงผ่าน HTTP ตามเดิม
+    if (!bytes && !url.startsWith("/")) {
+      const fetched = await fetch(url, { cache: "no-store" }).catch(() => null);
+      if (fetched?.ok) bytes = Buffer.from(await fetched.arrayBuffer());
+    }
+
+    if (!bytes) {
       return NextResponse.json({ error: "ดึงไฟล์ที่อัปไว้ไม่ได้" }, { status: 502 });
     }
+
     return await read(
-      Buffer.from(await fetched.arrayBuffer()),
+      bytes,
       media.mimeType as MediaType,
       target as Target,
       kind,
