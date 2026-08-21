@@ -5,12 +5,15 @@ import Image, { type StaticImageData } from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight, ZoomIn, X } from "lucide-react";
 import { activitySlides } from "@/data/home";
+import SlideProgress from "@/components/ui/SlideProgress";
+import { SLIDE_TIMING, STACKED, fadeSwap } from "@/lib/slideMotion";
 import type { InterestRates } from "@/lib/settings";
 
 /** สไลด์มาจากฐาน (แก้ที่ /admin/home) — ถ้ายังไม่มี ใช้ชุดที่ติดมากับโค้ดแทน */
 export type HeroSlide = { src: string | StaticImageData; title: string; desc: string; href: string };
 
-const SLIDE_MS = 6500; // เลื่อนช้าๆ ไม่เร็วเกินไป
+// จังหวะของทุกสไลด์บนหน้าแรกอยู่รวมกันที่ src/lib/slideMotion.ts
+const SLIDE_MS = SLIDE_TIMING.banner.every;
 
 /**
  * ความสูงหนึ่งแถวของตารางดอกเบี้ย (px) — ต้องพอกับตัวเลข text-lg ที่สูง 28px
@@ -65,10 +68,7 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
         <AnimatePresence>
           <motion.div
             key={i}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.9, ease: "easeInOut" }}
+            {...fadeSwap(SLIDE_TIMING.banner.fade, reduce)}
             onClick={() => setZoom(true)}
             // minmax(0,…) ด้วยเหตุผลเดียวกับกริดชั้นนอก — หัวข้อสไลด์แต่ละใบยาวไม่เท่ากัน
             // ปล่อยเป็น 1.05fr เฉย ๆ คอลัมน์ข้อความจะกว้างตามหัวข้อ แล้วรูปฝั่งขวาขยับทุกครั้งที่สไลด์วน
@@ -171,14 +171,11 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
           หยุดค้างตอนเอาเมาส์ชี้หรือเปิดภาพใหญ่ ให้ตรงกับที่ autoplay หยุดจริง
           (ทำด้วย CSS ล้วนเพื่อให้หยุด/เดินต่อได้โดยไม่ต้องคำนวณเวลาที่เหลือเอง)
         */}
-        <span
-          key={i}
-          aria-hidden
-          style={{
-            animationDuration: `${SLIDE_MS}ms`,
-            animationPlayState: paused || zoom ? "paused" : "running",
-          }}
-          className="hero-progress absolute inset-x-0 bottom-0 z-20 h-1 origin-left bg-gradient-to-r from-brand-600 to-brand-400"
+        <SlideProgress
+          ms={SLIDE_MS}
+          at={i}
+          paused={paused || zoom}
+          className="absolute inset-x-0 bottom-0 z-20"
         />
       </div>
 
@@ -246,7 +243,8 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
 function RateCard({ rates }: { rates: InterestRates }) {
   const reduce = useReducedMotion();
   const perPage = Math.max(1, Math.min(20, rates.perPage ?? 5));
-  const autoSeconds = rates.autoSeconds ?? 5;
+  // เจ้าหน้าที่ตั้งเองได้ในหลังบ้าน · ไม่ได้ตั้งก็ใช้จังหวะกลางที่วางไว้ให้ไม่ตรงกับการ์ดอื่น
+  const autoSeconds = rates.autoSeconds ?? SLIDE_TIMING.rates.every / 1000;
 
   // ตัดเป็นหน้า ๆ เรียงเงินฝากก่อนแล้วต่อด้วยเงินกู้ — ลำดับนี้คือลำดับที่จะเลื่อนไป
   const pages = (["deposit", "loan"] as const).flatMap((group) => {
@@ -317,15 +315,17 @@ function RateCard({ rates }: { rates: InterestRates }) {
         เปลี่ยนหน้าแบบค่อย ๆ จาง ไม่ใช่สลับทันที — เดิมตัวเลขกระพริบเปลี่ยนวูบเดียวจนสะดุดตา
         (เครื่องที่ตั้งค่าลดการเคลื่อนไหวไว้จะสลับทันทีเหมือนเดิม)
       */}
-      <div className="relative mt-2 flex-1">
-        <AnimatePresence mode="wait" initial={false}>
+      {/*
+        กรอบนอกเป็น `grid` แล้ววางหน้าเก่ากับหน้าใหม่ไว้ในช่องเดียวกัน (STACKED)
+        ทั้งคู่จึงซ้อนทับกันตอนจางสลับได้ โดยความสูงยังเท่าเดิมและไม่มีวูบว่างตรงกลาง
+        — ห้ามใส่ mode="wait" เพราะจะกลับไปเป็นจางหายจนหมดก่อนค่อยขึ้นใหม่
+      */}
+      <div className="relative mt-2 grid flex-1">
+        <AnimatePresence initial={false}>
           <motion.ul
             key={index}
-            initial={{ opacity: 0, y: reduce ? 0 : 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: reduce ? 0 : -6 }}
-            transition={{ duration: reduce ? 0 : 0.45, ease: "easeOut" }}
-            style={{ gridTemplateRows: `repeat(${perPage}, ${ROW_H}px)` }}
+            {...fadeSwap(SLIDE_TIMING.rates.fade, reduce)}
+            style={{ ...STACKED, gridTemplateRows: `repeat(${perPage}, ${ROW_H}px)` }}
             className="grid grid-cols-1 divide-y divide-gray-100"
           >
             {current.rows.map((r, i) => (
@@ -345,20 +345,26 @@ function RateCard({ rates }: { rates: InterestRates }) {
       </div>
 
       {pages.length > 1 && (
-        <div className="mt-2 flex items-center justify-center gap-1.5">
-          {pages.map((page, i) => (
-            <button
-              key={i}
-              onClick={() => setIndex(i)}
-              aria-label={`ไปหน้าที่ ${i + 1}`}
-              className={`h-1.5 rounded-full transition-all ${
-                i === index
-                  ? `w-5 ${page.group === "deposit" ? "bg-emerald-500" : "bg-orange-500"}`
-                  : "w-1.5 bg-gray-300"
-              }`}
-            />
-          ))}
-        </div>
+        <>
+          {/* หลอดนับถอยหลัง — เต็มหลอดเมื่อไหร่ก็เปลี่ยนหน้าพอดี หยุดเดินตอนเอาเมาส์ชี้ */}
+          <div className="mt-3 h-1 overflow-hidden rounded-full bg-gray-100">
+            <SlideProgress ms={autoSeconds * 1000} at={index} paused={paused} className="block rounded-full" />
+          </div>
+          <div className="mt-2 flex items-center justify-center gap-1.5">
+            {pages.map((page, i) => (
+              <button
+                key={i}
+                onClick={() => setIndex(i)}
+                aria-label={`ไปหน้าที่ ${i + 1}`}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === index
+                    ? `w-5 ${page.group === "deposit" ? "bg-emerald-500" : "bg-orange-500"}`
+                    : "w-1.5 bg-gray-300"
+                }`}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       <p className="mt-2 text-[11px] text-gray-400">* อัตราอาจเปลี่ยนแปลงตามประกาศสหกรณ์</p>

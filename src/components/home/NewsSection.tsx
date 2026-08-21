@@ -8,6 +8,8 @@ import Reveal from "@/components/ui/Reveal";
 import SectionHeading from "@/components/ui/SectionHeading";
 import MaybeLink from "@/components/ui/MaybeLink";
 import TabBar from "@/components/ui/TabBar";
+import SlideProgress from "@/components/ui/SlideProgress";
+import { SLIDE_TIMING, STACKED, fadeSwap } from "@/lib/slideMotion";
 import { COMMITTEE_PHOTO_BASE } from "@/lib/committee";
 import type { AnnouncementItem } from "@/lib/content";
 import type { Item } from "@/lib/homeItems";
@@ -23,19 +25,14 @@ import {
 
 const PER_PAGE = 5;
 
-/*
- * จังหวะเลื่อนเอง — ตั้งคนละค่ากันตั้งใจ
- * ประกาศต้องกวาดตาอ่าน 5 บรรทัด ให้เวลานานกว่า · กรรมการมีชื่อเดียว อ่านจบไว
- * (แบนเนอร์สไลด์ใช้ 6500ms ดู SLIDE_MS ใน Hero.tsx)
- */
-const LIST_AUTO_MS = 8000;
-const COMMITTEE_AUTO_MS = 4500;
-
 /**
  * เลื่อนเองวนไปเรื่อย ๆ — หยุดเมื่อเอาเมาส์ชี้ค้างไว้ จะได้อ่านทันและกดลิงก์ได้
  *
  * ผูก effect ไว้กับ `at` ด้วย การกดปุ่มเองจึงรีเซ็ตนาฬิกาใหม่ —
  * ไม่งั้นกดเปลี่ยนหน้าปุ๊บอาจโดนตัวเลื่อนอัตโนมัติแย่งเปลี่ยนต่อในเสี้ยววินาที
+ *
+ * คืน `paused` ออกไปด้วยเพราะหลอดนับถอยหลังต้องหยุดค้างพร้อมกัน
+ * ไม่งั้นหลอดวิ่งจนเต็มแล้วค้างอยู่อย่างนั้นทั้งที่เนื้อหาไม่เปลี่ยน
  */
 function useAutoRotate(count: number, at: number, step: () => void, ms: number) {
   const [paused, setPaused] = useState(false);
@@ -45,7 +42,10 @@ function useAutoRotate(count: number, at: number, step: () => void, ms: number) 
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paused, count, at, ms]);
-  return { onMouseEnter: () => setPaused(true), onMouseLeave: () => setPaused(false) };
+  return {
+    paused,
+    hover: { onMouseEnter: () => setPaused(true), onMouseLeave: () => setPaused(false) },
+  };
 }
 
 function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Kind }) {
@@ -55,12 +55,17 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
   // กันหน้าค้างเกินขอบเวลาประกาศถูกลบจนเหลือน้อยลง
   const current = Math.min(page, pageCount - 1);
   const shown = items.slice(current * PER_PAGE, current * PER_PAGE + PER_PAGE);
-  const hover = useAutoRotate(pageCount, current, () => setPage((p) => (p + 1) % pageCount), LIST_AUTO_MS);
+  const auto = useAutoRotate(
+    pageCount,
+    current,
+    () => setPage((p) => (p + 1) % pageCount),
+    SLIDE_TIMING.announcements.every,
+  );
 
   return (
     // overflow-hidden = ด่านสุดท้าย ไม่ว่าอะไรจะพลาด ข้อความต้องไม่ทะลุขอบการ์ดออกไป
     <div
-      {...hover}
+      {...auto.hover}
       className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5"
     >
       <p className="mb-3 border-b border-gray-100 pb-2 text-sm font-semibold text-brand-700">
@@ -92,16 +97,13 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
           ที่ไม่มี <ul> อยู่เลย ถ้าที่ว่างไม่ถูกค้ำไว้ ปุ่มเปลี่ยนหน้ากับปุ่ม "ดูทั้งหมด"
           ข้างล่างจะกระพริบขึ้นลงทุกครั้งที่วน
         */
-        <div className="relative flex-1">
-        <AnimatePresence mode="wait" initial={false}>
+        <div className="relative grid flex-1">
+        <AnimatePresence initial={false}>
         <motion.ul
           key={current}
-          initial={{ opacity: 0, y: reduce ? 0 : 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: reduce ? 0 : -6 }}
-          transition={{ duration: reduce ? 0 : 0.45, ease: "easeOut" }}
-          style={{ gridTemplateRows: `repeat(${PER_PAGE}, minmax(4.25rem, auto))` }}
-          className="grid h-full grid-cols-1 divide-y divide-gray-100"
+          {...fadeSwap(SLIDE_TIMING.announcements.fade, reduce)}
+          style={{ ...STACKED, gridTemplateRows: `repeat(${PER_PAGE}, minmax(4.25rem, auto))` }}
+          className="grid grid-cols-1 divide-y divide-gray-100"
         >
           {shown.map((a) => (
             // min-w-0 ซ้ำอีกชั้น — ช่องกริดยอมแคบแล้ว ตัวรายการก็ต้องยอมแคบตามด้วย
@@ -147,7 +149,17 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
       )}
 
       {pageCount > 1 && (
-        <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-500">
+        <>
+        {/* หลอดนับถอยหลัง — เต็มหลอดเมื่อไหร่ก็เปลี่ยนหน้าพอดี หยุดเดินตอนเอาเมาส์ชี้ */}
+        <div className="mt-3 h-1 overflow-hidden rounded-full bg-gray-100">
+          <SlideProgress
+            ms={SLIDE_TIMING.announcements.every}
+            at={current}
+            paused={auto.paused}
+            className="block rounded-full"
+          />
+        </div>
+        <div className="mt-2 flex items-center justify-center gap-2 text-sm text-gray-500">
           <button
             onClick={() => setPage(current - 1)}
             disabled={current === 0}
@@ -166,6 +178,7 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
+        </>
       )}
 
       <div className="mt-4 text-center">
@@ -194,7 +207,7 @@ function CommitteeCard({
   const [i, setI] = useState(0);
   const n = members.length;
   const c = members[Math.min(i, Math.max(0, n - 1))];
-  const hover = useAutoRotate(n, i, () => setI((v) => (v + 1) % n), COMMITTEE_AUTO_MS);
+  const auto = useAutoRotate(n, i, () => setI((v) => (v + 1) % n), SLIDE_TIMING.committee.every);
 
   if (n === 0) return null;
 
@@ -202,7 +215,7 @@ function CommitteeCard({
     // min-w-0 + overflow-hidden ด้วยเหตุผลเดียวกับการ์ดประกาศ — ชื่อกรรมการยาว ๆ
     // เป็นภาษาไทยติดกันทั้งบรรทัด ต้องยอมให้การ์ดแคบกว่าชื่อได้ line-clamp ถึงจะทำงาน
     <div
-      {...hover}
+      {...auto.hover}
       className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-black/5"
     >
       {/*
@@ -221,15 +234,13 @@ function CommitteeCard({
         กรอบนอกถือ flex-1 ไว้เอง (เหตุผลเดียวกับการ์ดประกาศ — กันปุ่มข้างล่างกระพริบ)
         ส่วนก้อนข้างในยังให้บรรทัดชื่อถือ flex-1 ต่อ ระยะห่างจึงกระจายเหมือนเดิมเป๊ะ
       */}
-      <div className="min-h-0 min-w-0 flex-1">
-      <AnimatePresence mode="wait" initial={false}>
+      <div className="grid min-h-0 min-w-0 flex-1">
+      <AnimatePresence initial={false}>
       <motion.div
         key={i}
-        initial={{ opacity: 0, y: reduce ? 0 : 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: reduce ? 0 : -6 }}
-        transition={{ duration: reduce ? 0 : 0.4, ease: "easeOut" }}
-        className="flex h-full min-w-0 flex-col"
+        {...fadeSwap(SLIDE_TIMING.committee.fade, reduce)}
+        style={STACKED}
+        className="flex min-w-0 flex-col"
       >
       <div
         style={{
@@ -259,7 +270,18 @@ function CommitteeCard({
       </motion.div>
       </AnimatePresence>
       </div>
-      <div className="mt-4 flex items-center justify-center gap-3">
+      {/* หลอดนับถอยหลัง — เต็มหลอดเมื่อไหร่ก็เปลี่ยนคนพอดี หยุดเดินตอนเอาเมาส์ชี้ */}
+      {n > 1 && (
+        <div className="mt-3 h-1 overflow-hidden rounded-full bg-gray-100">
+          <SlideProgress
+            ms={SLIDE_TIMING.committee.every}
+            at={i}
+            paused={auto.paused}
+            className="block rounded-full"
+          />
+        </div>
+      )}
+      <div className="mt-3 flex items-center justify-center gap-3">
         <button onClick={() => setI((v) => (v - 1 + n) % n)} className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 hover:bg-gray-50">
           <ChevronLeft className="h-4 w-4" />
         </button>
