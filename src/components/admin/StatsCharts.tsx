@@ -232,7 +232,7 @@ export function PopularPagesChart({ data }: { data: PagePoint[] }) {
             key={r.page}
             onMouseEnter={() => setHover(i)}
             onMouseLeave={() => setHover(null)}
-            className="grid grid-cols-[9rem_1fr_auto] items-center gap-3"
+            className="grid grid-cols-[9rem_minmax(0,1fr)_auto] items-center gap-3"
           >
             <span
               className={`truncate text-xs transition ${
