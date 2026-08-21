@@ -1,11 +1,11 @@
-# ทางเข้าหลังบ้านที่ admin.coopsmile.org
+# ทางเข้าหลังบ้านที่ admin.spsccoop.org
 
-เดิมเจ้าหน้าที่เข้าหลังบ้านที่ `coopsmile.org/admin` ซึ่งเป็นโดเมนเดียวกับที่ตัวมิเรอร์
+เดิมเจ้าหน้าที่เข้าหลังบ้านที่ `spsccoop.org/admin` ซึ่งเป็นโดเมนเดียวกับที่ตัวมิเรอร์
 ใช้ดึงหน้าเว็บไปให้สมาชิก เอกสารนี้คือวิธีย้ายทางเข้าไปอยู่ที่ซับโดเมนของตัวเอง
 
 ```
-สมาชิก      → www.spsccoop.com ──ดึงหน้าเว็บ──→ coopsmile.org ─┐
-เจ้าหน้าที่ → admin.coopsmile.org ───────────────────────────────┴─→ เครื่องนี้ (web:3000)
+สมาชิก      → www.spsccoop.com ──ดึงหน้าเว็บ──→ spsccoop.org ─┐
+เจ้าหน้าที่ → admin.spsccoop.org ───────────────────────────────┴─→ เครื่องนี้ (web:3000)
 ```
 
 ทั้งสองซับโดเมนวิ่งเข้าเครื่องเดียวกันผ่าน Cloudflare Tunnel ตัวเดิม ไม่ต้องเปิดพอร์ต
@@ -21,7 +21,7 @@
    | ช่อง | ค่า |
    |---|---|
    | Subdomain | `admin` |
-   | Domain | `coopsmile.org` |
+   | Domain | `spsccoop.org` |
    | Path | เว้นว่าง |
    | Type | `HTTP` |
    | URL | `web:3000` |
@@ -29,7 +29,7 @@
 5. **Save hostname**
 
 Cloudflare สร้าง DNS ให้เองอัตโนมัติ ไม่ต้องไปเพิ่ม record เอง
-รอ 1-2 นาทีแล้วเปิด <https://admin.coopsmile.org> ได้เลย
+รอ 1-2 นาทีแล้วเปิด <https://admin.spsccoop.org> ได้เลย
 
 **ไม่ต้องพิมพ์ `/admin` ต่อท้าย** — เปิดหน้าแรกของซับโดเมนนี้แล้วระบบพาไปหน้าล็อกอินให้เอง
 (ตั้งไว้ที่ `ADMIN_ROOT_HOST` ใน `.env`)
@@ -42,20 +42,20 @@ Cloudflare สร้าง DNS ให้เองอัตโนมัติ ไ
 `.env` ตั้งไว้ให้เปิดได้ทั้งสองทางระหว่างเปลี่ยนผ่าน กันเข้าหลังบ้านไม่ได้ทั้งคู่
 
 ```env
-ADMIN_HOST=admin.coopsmile.org,coopsmile.org
+ADMIN_HOST=admin.spsccoop.org,spsccoop.org
 ```
 
 พอทางใหม่เข้าได้จริงแล้ว ให้เหลือทางเดียว
 
 ```env
-ADMIN_HOST=admin.coopsmile.org
+ADMIN_HOST=admin.spsccoop.org
 ```
 
 ```bash
 docker compose up -d web     # แค่รีสตาร์ต ไม่ต้อง build ใหม่
 ```
 
-จากนั้น `coopsmile.org/admin` จะตอบ 404 เหมือนไม่เคยมีหน้านี้อยู่
+จากนั้น `spsccoop.org/admin` จะตอบ 404 เหมือนไม่เคยมีหน้านี้อยู่
 
 ## เรื่องที่ต้องรู้
 

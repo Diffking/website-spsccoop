@@ -13,7 +13,7 @@ if (PHP_SAPI !== 'cli' && realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? ''))
  */
 return [
     // ที่อยู่ของหลังบ้าน (เครื่องที่รันเว็บจริง) — ห้ามใส่ / ปิดท้าย
-    'backend' => 'https://coopsmile.org',
+    'backend' => 'https://spsccoop.org',
 
     /*
      * โดเมนที่สมาชิกเปิดจริง — ส่งไปบอกหลังบ้านทุกครั้งที่ไปขอหน้า

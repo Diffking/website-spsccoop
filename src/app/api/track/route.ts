@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
   /*
    * นับเฉพาะคนที่เปิดโดเมนสาธารณะ — ตัวมิเรอร์บอกมาทาง x-public-host
-   * เปิด coopsmile.org ตรง ๆ (เจ้าหน้าที่ ตัวอุ่นแคช การทดสอบ) ไม่นับ
+   * เปิด spsccoop.org ตรง ๆ (เจ้าหน้าที่ ตัวอุ่นแคช การทดสอบ) ไม่นับ
    * ตอบ 200 เหมือนเดิม หน้าเว็บจะได้ไม่เห็น error ในคอนโซล
    */
   const host = request.headers.get("x-public-host") ?? request.headers.get("host");

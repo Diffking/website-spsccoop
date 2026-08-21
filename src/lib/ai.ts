@@ -84,7 +84,7 @@ async function askJson<T>(
       "Content-Type": "application/json",
       // OpenRouter ใช้สองอันนี้แสดงที่มาของ traffic ในหน้าสถิติของบัญชี
       // ค่าใน header เป็น ASCII เท่านั้น ใส่ภาษาไทยแล้ว fetch จะ throw ByteString ทันที
-      "HTTP-Referer": "https://coopsmile.org",
+      "HTTP-Referer": "https://spsccoop.org",
       "X-Title": "coopsmile admin",
     },
     body: JSON.stringify({

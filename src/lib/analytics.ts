@@ -30,14 +30,14 @@ function hostList(value: string | undefined): string[] {
 }
 
 /**
- * นับคนที่เปิดหน้าเว็บ **ทุกโดเมนสาธารณะ** — เข้าทาง spsccoop.com หรือ coopsmile.org
+ * นับคนที่เปิดหน้าเว็บ **ทุกโดเมนสาธารณะ** — เข้าทาง spsccoop.com หรือ spsccoop.org
  * ก็คือคนที่มาอ่านเว็บของสหกรณ์เหมือนกัน ยอดจึงต้องรวมกัน
  *
  * (เดิมนับเฉพาะ spsccoop.com เพราะกลัวยอดปนงานของเจ้าหน้าที่ แต่หน้าหลังบ้านไม่เคยถูกนับ
  * อยู่แล้ว — shouldTrack ตัด /admin ทิ้ง และตัวแจ้งนับก็ติดอยู่แต่บนหน้าเว็บสาธารณะ)
  *
  * โดเมนของหลังบ้านไม่นับเสมอ ถึงจะเป็นโดเมนย่อยของโดเมนที่นับก็ตาม —
- * admin.coopsmile.org ลงท้ายด้วย .coopsmile.org ถ้าไม่กันไว้จะถูกนับไปด้วย
+ * admin.spsccoop.org ลงท้ายด้วย .spsccoop.org ถ้าไม่กันไว้จะถูกนับไปด้วย
  *
  * ตัวมิเรอร์บนโฮสต์บอกโดเมนที่คนเปิดจริงมาทางหัว x-public-host (ดู php-frontend/index.php)
  * เปลี่ยนรายชื่อโดเมนได้ที่ ANALYTICS_HOST ใน .env (คั่นด้วยจุลภาค)
@@ -53,7 +53,7 @@ export function countedHost(raw: string | null | undefined): boolean {
 
   if (hostList(process.env.ADMIN_HOST).includes(host)) return false;
 
-  const counted = hostList(process.env.ANALYTICS_HOST ?? "spsccoop.com,coopsmile.org");
+  const counted = hostList(process.env.ANALYTICS_HOST ?? "spsccoop.com,spsccoop.org");
   return counted.some((c) => host === c || host.endsWith(`.${c}`));
 }
 
