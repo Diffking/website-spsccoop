@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image, { type StaticImageData } from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight, ZoomIn, X } from "lucide-react";
 import { activitySlides } from "@/data/home";
 import SlideProgress from "@/components/ui/SlideProgress";
+import { useAutoRotate } from "@/lib/useAutoRotate";
 import { SLIDE_TIMING, STACKED, fadeSwap } from "@/lib/slideMotion";
 import type { InterestRates } from "@/lib/settings";
 
@@ -24,18 +25,22 @@ const ROW_H = 48;
 function BannerSlider({ slides }: { slides: HeroSlide[] }) {
   const reduce = useReducedMotion();
   const [i, setI] = useState(0);
-  const [paused, setPaused] = useState(false);
   const [zoom, setZoom] = useState(false);
   const n = slides.length;
   const go = useCallback((d: number) => setI((v) => (v + d + n) % n), [n]);
   const slide = slides[i];
 
-  // autoplay ช้าๆ (หยุดตอนเอาเมาส์ชี้ หรือเปิดภาพใหญ่)
-  useEffect(() => {
-    if (paused || zoom) return;
-    const t = setInterval(() => setI((v) => (v + 1) % n), SLIDE_MS);
-    return () => clearInterval(t);
-  }, [paused, zoom, n]);
+  // เลื่อนเอง — หยุดตอนยังเลื่อนมาไม่ถึง เอาเมาส์ชี้ค้าง หรือเปิดภาพใหญ่ค้างอยู่
+  const frame = useRef<HTMLDivElement>(null);
+  const auto = useAutoRotate({
+    target: frame,
+    count: n,
+    at: i,
+    step: () => setI((v) => (v + 1) % n),
+    ms: SLIDE_MS,
+    alsoPause: zoom,
+  });
+  const paused = auto.paused;
 
   // คีย์ลัดตอนเปิดภาพใหญ่
   useEffect(() => {
@@ -52,9 +57,9 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
   return (
     <>
       <div
+        ref={frame}
         className="group relative aspect-[16/10] overflow-hidden rounded-3xl bg-gradient-to-br from-white via-sky-50 to-brand-50 shadow-[0_22px_55px_-20px_rgb(15_83_144_/_.5)] ring-1 ring-brand-100"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
+        {...auto.hover}
       >
         {/*
           แสงนุ่ม ๆ หลังฝั่งภาพ — ทำให้กรอบมีมิติ ไม่แบนเหมือนพื้นสีเดียว
@@ -257,15 +262,18 @@ function RateCard({ rates }: { rates: InterestRates }) {
   });
 
   const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
   const current = pages[Math.min(index, Math.max(0, pages.length - 1))];
 
-  // เลื่อนเอง — หยุดเมื่อเอาเมาส์ชี้ค้างไว้ จะได้อ่านทัน
-  useEffect(() => {
-    if (paused || autoSeconds <= 0 || pages.length <= 1) return;
-    const timer = setInterval(() => setIndex((i) => (i + 1) % pages.length), autoSeconds * 1000);
-    return () => clearInterval(timer);
-  }, [paused, autoSeconds, pages.length]);
+  // เลื่อนเอง — หยุดตอนยังเลื่อนมาไม่ถึง หรือเอาเมาส์ชี้ค้างไว้ จะได้อ่านทัน
+  const card = useRef<HTMLDivElement>(null);
+  const auto = useAutoRotate({
+    target: card,
+    count: autoSeconds > 0 ? pages.length : 1,
+    at: index,
+    step: () => setIndex((i) => (i + 1) % pages.length),
+    ms: autoSeconds * 1000,
+  });
+  const paused = auto.paused;
 
   if (!current) return null;
 
@@ -279,8 +287,8 @@ function RateCard({ rates }: { rates: InterestRates }) {
 
   return (
     <div
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      ref={card}
+      {...auto.hover}
       className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-lg ring-1 ring-black/5"
     >
       <div className="grid grid-cols-2 gap-1 rounded-full bg-gray-100 p-1 text-sm font-semibold">

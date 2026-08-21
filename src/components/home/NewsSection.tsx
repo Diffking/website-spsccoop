@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { FileText, BookOpen, CalendarDays, ChevronLeft, ChevronRight, UserRound } from "lucide-react";
@@ -9,6 +9,7 @@ import SectionHeading from "@/components/ui/SectionHeading";
 import MaybeLink from "@/components/ui/MaybeLink";
 import TabBar from "@/components/ui/TabBar";
 import SlideProgress from "@/components/ui/SlideProgress";
+import { useAutoRotate } from "@/lib/useAutoRotate";
 import { SLIDE_TIMING, STACKED, fadeSwap } from "@/lib/slideMotion";
 import { COMMITTEE_PHOTO_BASE } from "@/lib/committee";
 import type { AnnouncementItem } from "@/lib/content";
@@ -25,61 +26,6 @@ import {
 
 const PER_PAGE = 5;
 
-/**
- * เลื่อนเองวนไปเรื่อย ๆ — แต่จะเริ่มต่อเมื่อคนเลื่อนหน้าจอลงมาถึงการ์ดนี้จริง ๆ
- *
- * ⚠️ **ต้องรอให้เห็นก่อน ไม่ใช่วิ่งตั้งแต่เปิดหน้า** — การ์ดพวกนี้อยู่กลางหน้า
- * ถ้าปล่อยให้วิ่งตั้งแต่โหลดเสร็จ พอคนเลื่อนลงมาถึงก็ผ่านไปหลายหน้าแล้ว
- * จะเจอเป็นหน้าที่ 3 บ้าง 4 บ้างแบบสุ่ม ไม่ได้เริ่มจากหน้าแรกอย่างที่ควรเป็น
- * (แบนเนอร์กับตารางดอกเบี้ยไม่ต้องมีอันนี้ เพราะอยู่บนสุด เห็นตั้งแต่เปิดหน้าอยู่แล้ว)
- *
- * `threshold: 0.35` = ต้องเห็นการ์ดสักหนึ่งในสามก่อนถึงจะเริ่มนับ ไม่ใช่แค่ขอบโผล่มานิดเดียว
- *
- * หยุดด้วยเมื่อเอาเมาส์ชี้ค้างไว้ จะได้อ่านทันและกดลิงก์ได้
- *
- * ผูก effect ไว้กับ `at` ด้วย การกดปุ่มเองจึงรีเซ็ตนาฬิกาใหม่ —
- * ไม่งั้นกดเปลี่ยนหน้าปุ๊บอาจโดนตัวเลื่อนอัตโนมัติแย่งเปลี่ยนต่อในเสี้ยววินาที
- *
- * คืน `paused` ออกไปด้วยเพราะหลอดนับถอยหลังต้องหยุดค้างพร้อมกัน
- * ไม่งั้นหลอดวิ่งจนเต็มแล้วค้างอยู่อย่างนั้นทั้งที่เนื้อหาไม่เปลี่ยน
- */
-function useAutoRotate(
-  /* รับ ref ของการ์ดเข้ามา ไม่ได้สร้างแล้วคืนออกไป — กฎ react-hooks/refs ห้ามอ่าน ref
-     ระหว่าง render ซึ่งการหยิบ `.ref` ออกจากก้อนที่ hook คืนมาก็นับด้วย */
-  target: React.RefObject<HTMLDivElement | null>,
-  count: number,
-  at: number,
-  step: () => void,
-  ms: number,
-) {
-  const [hovered, setHovered] = useState(false);
-  const [seen, setSeen] = useState(false);
-
-  useEffect(() => {
-    const el = target.current;
-    if (!el) return;
-    const watcher = new IntersectionObserver(([entry]) => setSeen(entry.isIntersecting), {
-      threshold: 0.35,
-    });
-    watcher.observe(el);
-    return () => watcher.disconnect();
-  }, [target]);
-
-  const paused = hovered || !seen;
-
-  useEffect(() => {
-    if (paused || count <= 1) return;
-    const timer = setInterval(step, ms);
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paused, count, at, ms]);
-
-  return {
-    paused,
-    hover: { onMouseEnter: () => setHovered(true), onMouseLeave: () => setHovered(false) },
-  };
-}
-
 function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Kind }) {
   const reduce = useReducedMotion();
   const [page, setPage] = useState(0);
@@ -88,13 +34,13 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
   const current = Math.min(page, pageCount - 1);
   const shown = items.slice(current * PER_PAGE, current * PER_PAGE + PER_PAGE);
   const card = useRef<HTMLDivElement>(null);
-  const auto = useAutoRotate(
-    card,
-    pageCount,
-    current,
-    () => setPage((p) => (p + 1) % pageCount),
-    SLIDE_TIMING.announcements.every,
-  );
+  const auto = useAutoRotate({
+    target: card,
+    count: pageCount,
+    at: current,
+    step: () => setPage((p) => (p + 1) % pageCount),
+    ms: SLIDE_TIMING.announcements.every,
+  });
 
   return (
     // overflow-hidden = ด่านสุดท้าย ไม่ว่าอะไรจะพลาด ข้อความต้องไม่ทะลุขอบการ์ดออกไป
@@ -243,7 +189,13 @@ function CommitteeCard({
   const n = members.length;
   const c = members[Math.min(i, Math.max(0, n - 1))];
   const card = useRef<HTMLDivElement>(null);
-  const auto = useAutoRotate(card, n, i, () => setI((v) => (v + 1) % n), SLIDE_TIMING.committee.every);
+  const auto = useAutoRotate({
+    target: card,
+    count: n,
+    at: i,
+    step: () => setI((v) => (v + 1) % n),
+    ms: SLIDE_TIMING.committee.every,
+  });
 
   if (n === 0) return null;
 
