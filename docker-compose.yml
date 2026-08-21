@@ -109,47 +109,46 @@ services:
       - -c
       - while true; do pg_dump -h db -U coopsmile coopsmile > /backups/coopsmile-$$(date +%F).sql && echo "db backup OK $$(date)"; tar -czf /backups/uploads-$$(date +%F).tar.gz -C /uploads . && echo "uploads backup OK $$(date)"; find /backups -name 'coopsmile-*.sql' -mtime +14 -delete; find /backups -name 'uploads-*.tar.gz' -mtime +14 -delete; sleep 86400; done
 
-  # อุ่นสำเนาหน้าเว็บบนโฮสต์ทุกชั่วโมง
+  # อุ่นสำเนาหน้าเว็บบนโฮสต์ วันละ 2 ครั้ง — 09:30 กับ 15:30 เวลาไทย
   #
   # ทำจากเครื่องนี้ ไม่ใช่ cron ฝั่งโฮสต์ เพราะการอุ่นต้องดึงของจากเครื่องนี้ — เครื่องนี้
   # เท่านั้นที่รู้ว่าตัวเองเปิดอยู่ ตั้ง cron ฝั่งโฮสต์ไว้ พอเครื่องนี้ปิดมันก็ดึงไม่ได้อยู่ดี
   #
-  # ผลคือก่อนปิดเครื่องเย็นวันศุกร์ สำเนาบนโฮสต์จะใหม่เสมอ สมาชิกเปิดเว็บได้ครบทุกหน้า
-  # ตลอดเสาร์อาทิตย์ · ไม่ตั้ง MIRROR_PURGE_TOKEN ใน .env = ไม่ทำอะไร
+  # ของเดิมยิงทุกชั่วโมง = 24 ครั้ง/วัน ซึ่งมากเกินจำเป็นสำหรับไฟร์วอลล์โฮสต์ที่ไวมาก
+  # (21 ส.ค. 2026 โดนแบนทั้งที่แตะไม่ถึงสิบครั้งทั้งวัน) · ตอนนี้ใช้ crond จริง
+  # ตามเวลาที่เจ้าของเว็บกำหนด เปลี่ยนเวลาได้ที่ WARM_CRON ข้างล่าง
+  #
+  # ⚠️ restart แล้ว "ไม่" ยิงทันทีอีกแล้ว — มันรอถึงเวลาในตารางเท่านั้น
+  #    อยากอุ่นเดี๋ยวนั้น (เช่น ก่อนปิดเครื่องเย็นศุกร์) สั่งเอง:
+  #      docker compose exec mirror-warm sh /warm.sh
+  #
+  # ไม่ตั้ง MIRROR_PURGE_TOKEN ใน .env = ไม่ทำอะไร
   mirror-warm:
     image: alpine:3.20
     restart: unless-stopped
     env_file: .env
+    environment:
+      # ไม่ตั้ง = คอนเทนเนอร์เป็น UTC แล้ว 09:30 จะกลายเป็น 16:30 เวลาไทย
+      TZ: Asia/Bangkok
+      # นาที ชั่วโมง วัน เดือน วันในสัปดาห์ (เวลาไทย)
+      WARM_CRON: "30 9,15 * * *"
+    volumes:
+      - ./scripts/warm.sh:/warm.sh:ro
     entrypoint:
       - sh
       - -c
       - |
-        apk add --no-cache curl >/dev/null 2>&1
-        # ยิงไม่สำเร็จแล้วต้องหยุด ห้ามยิงซ้ำ — 21 ส.ค. 2026 ไฟร์วอลล์โฮสต์แบนไอพีเรา
-        # ทั้งที่แตะไม่ถึงสิบครั้ง · พอโดนแบนแล้วยิงต่อก็ไม่ได้อะไร แต่ยังเติมตัวนับ
-        # ให้ CSF/LFD จนเลื่อนเป็นแบนถาวรได้ · ตรงนี้ยิงหาโฮสต์แค่คำขอเดียวต่อรอบ
-        # (warm.php รันบนโฮสต์ แล้วโฮสต์ไล่ดึงของจากเราเอง) แต่ยิงทุกชั่วโมงไม่มีวันหยุด
-        fails=0
-        while true; do
-          if [ -z "$$MIRROR_PURGE_TOKEN" ]; then
-            sleep 3600
-            continue
-          fi
-          echo "อุ่นแคช $$(date '+%F %H:%M')"
-          out=$$(curl -sS -f -m 900 "$${MIRROR_WARM_URL:-https://www.spsccoop.com/warm.php}?token=$$MIRROR_PURGE_TOKEN&by=auto" 2>&1)
-          if [ $$? -eq 0 ]; then
-            echo "$$out" | tail -2
-            fails=0
-            sleep 3600
-          else
-            fails=$$((fails + 1))
-            # พลาดครั้งแรกพัก 1 ชม. · ครั้งที่สอง 6 ชม. · จากนั้นวันละครั้ง
-            if [ $$fails -eq 1 ]; then hold=3600; elif [ $$fails -eq 2 ]; then hold=21600; else hold=86400; fi
-            echo "อุ่นแคชไม่สำเร็จ ครั้งที่ $$fails — หยุดยิงหาโฮสต์ $$((hold / 3600)) ชม. กันโดนไฟร์วอลล์แบน"
-            echo "$$out" | tail -1
-            sleep $$hold
-          fi
-        done
+        apk add --no-cache curl tzdata >/dev/null 2>&1
+        # ตัวนับของตัวตัดวงจรเริ่มใหม่ทุกครั้งที่ restart — ตั้งใจ เพราะ restart
+        # มักแปลว่าคนเพิ่งมาแก้อะไร (เช่นเพิ่งได้ไอพีที่โฮสต์ไม่ได้แบน)
+        rm -f /tmp/warm.fails /tmp/warm.skips
+        # busybox crond ไม่ส่ง env ของคอนเทนเนอร์ต่อให้งานที่มันสั่ง ต้องฝากไว้เป็นไฟล์
+        # เอาเฉพาะตัวที่ /warm.sh ใช้ ไม่เทรหัส FTP/LINE/OpenRouter ลงไฟล์ด้วย
+        export -p | grep -E "^export (MIRROR_PURGE_TOKEN|MIRROR_WARM_URL|TZ)=" > /tmp/warm.env
+        # ให้ผลลัพธ์ของงานไปโผล่ใน docker compose logs (stdout ของ PID 1)
+        echo "$$WARM_CRON sh /warm.sh >> /proc/1/fd/1 2>&1" > /etc/crontabs/root
+        echo "ตั้งตารางอุ่นแคชแล้ว: $$WARM_CRON (เวลาไทย) — สั่งเองได้ที่ sh /warm.sh"
+        exec crond -f -l 8
 
   # ดึงวันหยุดจากระบบสำนักงานในวงแลนอัตโนมัติ ทุก 6 ชม.
   # เช็คก่อนเสมอ — เหมือนเดิมก็ไม่เขียนฐาน ไม่ล้างแคช และไม่ขึ้น log อะไรเลย
