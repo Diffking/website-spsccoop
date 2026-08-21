@@ -149,6 +149,12 @@ export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; a
     }
 
     let read: { title?: string; caption?: string; startsAt?: string; endsAt?: string } = {};
+    /*
+      บอกให้ได้ว่า AI ทำอะไรไปบ้าง — ของเดิมขึ้นว่า "AI เติมหัวข้อให้" ทุกกรณี
+      แม้ตอนที่เรียก AI ไม่สำเร็จเลย เจ้าหน้าที่จึงแยกไม่ออกระหว่าง
+      "AI พัง" กับ "AI อ่านแล้วแต่ในภาพไม่ได้เขียนวันที่ไว้" — สองอย่างนี้แก้คนละทาง
+    */
+    let aiNote = "";
     if (aiReady) {
       // ให้เซิร์ฟเวอร์ไปหยิบไฟล์ที่เพิ่งอัปเอง จะได้ไม่ต้องส่งซ้ำรอบสอง
       setBusy("ai");
@@ -158,7 +164,16 @@ export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; a
       form.append("target", "slide");
       const response = await fetch("/api/admin/ai/read-image/", { method: "POST", body: form });
       const data = await response.json().catch(() => ({}));
-      if (response.ok) read = data.data ?? {};
+      if (response.ok) {
+        read = data.data ?? {};
+        // ในภาพไม่ได้เขียนวันไว้ก็ตอบ "" มา (prompt สั่งห้ามเดา) ไม่ใช่อาการเสีย
+        aiNote =
+          read.startsAt || read.endsAt
+            ? "AI เติมหัวข้อและช่วงเวลาเผยแพร่ให้แล้ว"
+            : "AI เติมหัวข้อให้ · ในภาพไม่ได้ระบุวันที่ ตั้งช่วงเวลาเผยแพร่เองได้ที่ช่องด้านล่าง";
+      } else {
+        aiNote = `AI อ่านภาพไม่สำเร็จ (${data.error ?? "ไม่ทราบสาเหตุ"}) — พิมพ์หัวข้อเองได้`;
+      }
     }
 
     const created = await fetch("/api/admin/slides/", {
@@ -183,9 +198,10 @@ export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; a
       return;
     }
     setStatus({
-      kind: "ok",
-      text: aiReady
-        ? "เพิ่มสไลด์แล้ว · AI เติมหัวข้อให้ — คลิกที่ข้อความบนสไลด์เพื่อแก้ทับได้เลย"
+      // AI พลาดไม่ใช่เรื่องใหญ่ สไลด์ถูกสร้างแล้ว เหลือแค่พิมพ์เอง — แต่ต้องบอกให้รู้
+      kind: aiNote.startsWith("AI อ่านภาพไม่สำเร็จ") ? "error" : "ok",
+      text: aiNote
+        ? `เพิ่มสไลด์แล้ว · ${aiNote}`
         : "เพิ่มสไลด์แล้ว — คลิกที่ข้อความบนสไลด์เพื่อพิมพ์หัวข้อ",
     });
     router.refresh();
