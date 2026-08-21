@@ -70,7 +70,9 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.9, ease: "easeInOut" }}
             onClick={() => setZoom(true)}
-            className="absolute inset-0 grid cursor-zoom-in grid-cols-[1.05fr_1fr] items-center gap-4 p-6 sm:gap-7 sm:p-9"
+            // minmax(0,…) ด้วยเหตุผลเดียวกับกริดชั้นนอก — หัวข้อสไลด์แต่ละใบยาวไม่เท่ากัน
+            // ปล่อยเป็น 1.05fr เฉย ๆ คอลัมน์ข้อความจะกว้างตามหัวข้อ แล้วรูปฝั่งขวาขยับทุกครั้งที่สไลด์วน
+            className="absolute inset-0 grid cursor-zoom-in grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] items-center gap-4 p-6 sm:gap-7 sm:p-9"
           >
             {/* ข้อความด้านซ้าย (ตัวใหญ่) */}
             <div className="min-w-0 text-left">
@@ -281,7 +283,7 @@ function RateCard({ rates }: { rates: InterestRates }) {
     <div
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
-      className="flex h-full flex-col rounded-2xl bg-white p-5 shadow-lg ring-1 ring-black/5"
+      className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-lg ring-1 ring-black/5"
     >
       <div className="grid grid-cols-2 gap-1 rounded-full bg-gray-100 p-1 text-sm font-semibold">
         <button
@@ -324,11 +326,12 @@ function RateCard({ rates }: { rates: InterestRates }) {
             exit={{ opacity: 0, y: reduce ? 0 : -6 }}
             transition={{ duration: reduce ? 0 : 0.45, ease: "easeOut" }}
             style={{ gridTemplateRows: `repeat(${perPage}, ${ROW_H}px)` }}
-            className="grid divide-y divide-gray-100"
+            className="grid grid-cols-1 divide-y divide-gray-100"
           >
             {current.rows.map((r, i) => (
               // ชื่อรายการซ้ำกันได้ (เจ้าหน้าที่พิมพ์เอง) จึงผูก key กับลำดับด้วย
-              <li key={`${r.label}-${i}`} className="flex items-center justify-between gap-3">
+              // min-w-0 = ยอมให้แถวแคบกว่าชื่อรายการ ไม่งั้น truncate ไม่มีอะไรให้ตัด
+              <li key={`${r.label}-${i}`} className="flex min-w-0 items-center justify-between gap-3">
                 <span className="min-w-0 flex-1 truncate text-sm text-gray-600" title={r.label}>
                   {r.label}
                 </span>
@@ -368,7 +371,14 @@ export default function Hero({ rates, slides }: { rates: InterestRates; slides: 
   const shown = slides.length > 0 ? slides : activitySlides;
   return (
     <section className="bg-gradient-to-b from-brand-500 to-brand-300 pb-8 pt-6">
-      <div className="mx-auto grid max-w-6xl gap-5 px-4 md:grid-cols-[1.9fr_1fr]">
+      {/*
+        ต้องเป็น minmax(0,…) ไม่ใช่ 1.9fr_1fr เฉย ๆ — ช่องกริดแบบ `fr` มีความกว้าง
+        ขั้นต่ำเป็น auto (= min-content ของเนื้อหา) ภาษาไทยไม่มีช่องว่างระหว่างคำ
+        ทั้งบรรทัดจึงเป็นคำเดียว min-content ยาวเท่าข้อความ · ผลคือชื่อรายการดอกเบี้ย
+        ที่ยาวที่สุดของ "หน้านั้น" ดันคอลัมน์ขวาให้กว้างขึ้น พอเลื่อนไปหน้าถัดไป
+        ความยาวเปลี่ยน คอลัมน์ก็ขยับ — แบนเนอร์ฝั่งซ้ายเลยกระตุกตามทุกครั้งที่วน
+      */}
+      <div className="mx-auto grid max-w-6xl gap-5 px-4 md:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
         <BannerSlider slides={shown} />
         <RateCard rates={rates} />
       </div>

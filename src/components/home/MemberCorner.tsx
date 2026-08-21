@@ -15,7 +15,7 @@ export default function MemberCorner({ links, bg = "bg-white" }: { links: Item[]
             ปลายขวาใช้เขียวเข้ม (emerald-700) ไม่ใช่เขียวสด — ตัวหนังสือกับปุ่มเป็นสีขาว
             พื้นเขียวสดสว่างเกินไปจนตัวขาวจม อ่านไม่ออก
           */}
-          <div className="grid items-center gap-6 rounded-2xl bg-gradient-to-r from-brand-600 via-teal-600 to-emerald-700 p-7 text-white shadow-lg md:grid-cols-[1fr_auto]">
+          <div className="grid items-center gap-6 rounded-2xl bg-gradient-to-r from-brand-600 via-teal-600 to-emerald-700 p-7 text-white shadow-lg md:grid-cols-[minmax(0,1fr)_auto]">
             <div>
               <h3 className="text-2xl font-bold">แนะนำสมาชิก</h3>
               <p className="mt-1 max-w-md text-sm text-white/85">

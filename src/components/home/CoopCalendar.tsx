@@ -212,7 +212,7 @@ export default function CoopCalendar({
               initial={{ x: dir * 18 }}
               animate={{ x: 0 }}
               transition={{ type: "spring", stiffness: 260, damping: 30, mass: 0.7 }}
-              className="grid grid-cols-[1fr_1.2fr_1fr] items-stretch gap-2 md:gap-4"
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)] items-stretch gap-2 md:gap-4"
             >
               {cols.map((d, i) => (
                 <DayCard key={i} day={d} year={year} month={month} today={today} focus={i === 1} events={allEvents} />
