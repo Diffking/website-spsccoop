@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, ShieldCheck, Unlink } from "lucide-react";
+import LineMark from "@/components/admin/LineMark";
 
 /**
  * ผูก/ยกเลิกการผูกบัญชี LINE ของตัวเอง
@@ -32,14 +33,6 @@ const NOTICE: Record<string, { kind: "ok" | "error"; text: string }> = {
   },
   viewonly: { kind: "error", text: "กำลังอยู่ในมุมมองผู้ใช้อื่น ซึ่งดูได้อย่างเดียว" },
 };
-
-function LineMark({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden className={className} fill="currentColor">
-      <path d="M12 2C6.5 2 2 5.6 2 10.1c0 4 3.6 7.4 8.4 8 .3.07.8.22.9.5.1.26.07.66.03.92l-.14.87c-.05.26-.2 1.02.9.56 1.1-.46 5.9-3.48 8.05-5.96C21.6 13.3 22 11.8 22 10.1 22 5.6 17.5 2 12 2ZM8.2 12.9h-2a.53.53 0 0 1-.53-.53V8.3a.53.53 0 0 1 1.06 0v3.54H8.2a.53.53 0 0 1 0 1.06Zm2.07-.53a.53.53 0 0 1-1.06 0V8.3a.53.53 0 0 1 1.06 0v4.07Zm4.75 0a.53.53 0 0 1-.95.32l-2.08-2.83v2.51a.53.53 0 0 1-1.06 0V8.3a.53.53 0 0 1 .95-.32l2.09 2.84V8.3a.53.53 0 0 1 1.05 0v4.07Zm3.2-2.57a.53.53 0 0 1 0 1.06h-1.48v.95h1.48a.53.53 0 0 1 0 1.06h-2a.53.53 0 0 1-.54-.53V8.3a.53.53 0 0 1 .53-.53h2a.53.53 0 0 1 0 1.06h-1.47v.94h1.47Z" />
-    </svg>
-  );
-}
 
 export default function LineLinkCard({
   userId,
