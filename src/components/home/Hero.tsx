@@ -81,29 +81,39 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
           >
             {/* ข้อความด้านซ้าย (ตัวใหญ่) */}
             <div className="min-w-0 text-left">
-              {/* แถบสีสั้น ๆ นำหัวข้อ — ให้สายตารู้ว่าเริ่มอ่านตรงไหน และได้สีมาคั่นพื้นอ่อน ๆ */}
-              <motion.span
-                initial={{ opacity: 0, scaleX: 0 }}
-                animate={{ opacity: 1, scaleX: 1 }}
-                transition={{ delay: 0.1, duration: 0.45 }}
-                className="block h-1 w-10 origin-left rounded-full bg-gradient-to-r from-brand-600 to-brand-400"
-              />
+              {/*
+                ลำดับ: หัวข้อ → แถบสีคั่น → คำอธิบาย
+
+                เดิมแถบสีอยู่บนสุดนำหัวข้อ · เจ้าของเว็บให้สลับที่กัน 21 ส.ค. 2026
+                หัวข้อขึ้นบนสุดเลย (สายตาเจอใจความก่อน ไม่ต้องข้ามแถบสีไปหนึ่งชั้น)
+                แล้วแถบสีลงมาเป็น **เส้นคั่น** ระหว่างหัวข้อกับคำอธิบายแทน พร้อมขยายจาก
+                w-10 เป็น w-16 เพราะทำหน้าที่คั่นแล้ว สั้นเกินไปจะดูเหมือนเศษขีดค้าง
+
+                ⚠️ SlideCard ใน src/components/admin/SlidesManager.tsx ต้องเรียงเหมือนกันเป๊ะ
+                ไม่งั้นหลังบ้านจะโชว์คนละหน้าตากับของจริง
+              */}
               <motion.h3
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.18, duration: 0.5 }}
+                transition={{ delay: 0.1, duration: 0.5 }}
                 // เข้มขึ้นจาก brand-700 เป็น brand-800 — อ่านง่ายขึ้นบนพื้นไล่สีอ่อน
                 // จำกัดบรรทัด — หัวข้อยาวผิดปกติจะได้ไม่ดันคำอธิบายจนล้นกรอบ
-                className="mt-3 line-clamp-3 text-lg font-bold leading-snug tracking-tight text-brand-800 sm:mt-4 sm:text-xl md:text-2xl"
+                className="line-clamp-3 text-lg font-bold leading-snug tracking-tight text-brand-800 sm:text-xl md:text-2xl"
               >
                 {slide.title}
               </motion.h3>
+              <motion.span
+                initial={{ opacity: 0, scaleX: 0 }}
+                animate={{ opacity: 1, scaleX: 1 }}
+                transition={{ delay: 0.22, duration: 0.45 }}
+                className="mt-3 block h-1 w-16 origin-left rounded-full bg-gradient-to-r from-brand-600 to-brand-400 sm:mt-3.5"
+              />
               {slide.desc && (
                 <motion.p
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3, duration: 0.5 }}
-                  className="mt-2.5 line-clamp-4 text-sm leading-relaxed text-gray-700 sm:mt-3.5 sm:text-base"
+                  transition={{ delay: 0.34, duration: 0.5 }}
+                  className="mt-3 line-clamp-4 text-sm leading-relaxed text-gray-700 sm:mt-3.5 sm:text-base"
                 >
                   {slide.desc}
                 </motion.p>
