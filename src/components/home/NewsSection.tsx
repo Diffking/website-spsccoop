@@ -30,7 +30,8 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
   const shown = items.slice(current * PER_PAGE, current * PER_PAGE + PER_PAGE);
 
   return (
-    <div className="flex h-full flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+    // overflow-hidden = ด่านสุดท้าย ไม่ว่าอะไรจะพลาด ข้อความต้องไม่ทะลุขอบการ์ดออกไป
+    <div className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
       <p className="mb-3 border-b border-gray-100 pb-2 text-sm font-semibold text-brand-700">
         {KIND_HEADING[kind]}
       </p>
@@ -44,12 +45,20 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
           ยังไม่มี{KIND_LABEL[kind]}
         </p>
       ) : (
+        /*
+          grid-cols-1 สำคัญกว่าที่เห็น — Tailwind แปลเป็น `minmax(0, 1fr)` ซึ่งบอกว่า
+          "ช่องนี้แคบกว่าเนื้อหาได้" ถ้าไม่ใส่ ช่องจะกว้างตาม min-content ของหัวข้อประกาศ
+          แล้ว truncate จะไม่มีอะไรให้ตัด (กล่องกว้างเท่าข้อความพอดี) หัวข้อยาวจึงทะลุขอบการ์ด
+          ออกไปโดยไม่มี "…" · ภาษาไทยไม่มีช่องว่างระหว่างคำ ทั้งประโยคจึงนับเป็นคำเดียว
+          min-content เลยยาวเท่าข้อความทั้งบรรทัด — เรื่องนี้เจอเฉพาะภาษาไทย
+        */
         <ul
           style={{ gridTemplateRows: `repeat(${PER_PAGE}, minmax(4.25rem, auto))` }}
-          className="grid flex-1 divide-y divide-gray-100"
+          className="grid flex-1 grid-cols-1 divide-y divide-gray-100"
         >
           {shown.map((a) => (
-            <li key={a.id}>
+            // min-w-0 ซ้ำอีกชั้น — ช่องกริดยอมแคบแล้ว ตัวรายการก็ต้องยอมแคบตามด้วย
+            <li key={a.id} className="min-w-0">
               <MaybeLink
                 href={readerHref(a.kind, a.id, a.href)}
                 className="group flex items-start gap-3 py-3 transition hover:bg-brand-50/60 rounded-lg px-2 -mx-2"
@@ -139,7 +148,9 @@ function CommitteeCard({
   if (n === 0) return null;
 
   return (
-    <div className="flex h-full flex-col rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-black/5">
+    // min-w-0 + overflow-hidden ด้วยเหตุผลเดียวกับการ์ดประกาศ — ชื่อกรรมการยาว ๆ
+    // เป็นภาษาไทยติดกันทั้งบรรทัด ต้องยอมให้การ์ดแคบกว่าชื่อได้ line-clamp ถึงจะทำงาน
+    <div className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-black/5">
       {/*
         ต้องเป็น "คณะกรรมการดำเนินการ" เต็ม ๆ ไม่ใช่ "คณะกรรมการ" ลอย ๆ
         สหกรณ์มีคณะกรรมการหลายชุด (ดำเนินการ · สรรหา · ผู้ตรวจสอบกิจการ)
