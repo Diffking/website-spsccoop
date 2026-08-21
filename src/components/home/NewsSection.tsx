@@ -243,7 +243,7 @@ export default function NewsSection({
           items={KINDS.map((t) => ({ value: t, label: KIND_LABEL[t], count: byKind[t].length }))}
         />
 
-        <div className="grid items-stretch gap-6 lg:grid-cols-[1.7fr_1fr]">
+        <div className="grid items-stretch gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
           {/* min-w-0 = ห้ามช่องกริดกว้างตามเนื้อหา ไม่งั้นประกาศชื่อยาวจะดันการ์ดกว้างไม่เท่ากันทุกแท็บ */}
           <Reveal className="h-full min-w-0">
             {/* key={tab} ให้เริ่มที่หน้า 1 ใหม่ทุกครั้งที่สลับแท็บ */}
