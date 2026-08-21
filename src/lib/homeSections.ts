@@ -20,6 +20,24 @@ export const HOME_SECTIONS = [
 ] as const;
 
 export type HomeSectionKey = (typeof HOME_SECTIONS)[number]["key"];
+
+/**
+ * ชื่อสั้นสำหรับตัวนำทางลอยด้านซ้ายของหน้าแรก (`SectionNav`)
+ *
+ * ใช้ `label` ยาว ๆ ข้างบนไม่ได้เพราะจุดนำทางมีที่แค่ป้ายเล็ก ๆ —
+ * "แบนเนอร์สไลด์ + อัตราดอกเบี้ย" ยาวเกินกรอบไปมาก
+ *
+ * `ticker` ไม่มีในนี้ตั้งใจ — ข่าววิ่งเป็นแถบบาง ๆ สูงไม่ถึงหนึ่งบรรทัด
+ * เลื่อนไปหยุดตรงนั้นแล้วเหมือนหน้าเว็บค้าง ไม่ใช่จุดหมายที่คนอยากกระโดดไป
+ */
+export const SECTION_SHORT: Partial<Record<HomeSectionKey, string>> = {
+  hero: "หน้าแรก",
+  news: "ประกาศ",
+  services: "บริการ",
+  member: "สมาชิก",
+  calendar: "ปฏิทิน",
+  officers: "สำนักงาน",
+};
 export type HomeSections = Record<HomeSectionKey, boolean>;
 
 /** ค่าตั้งต้น = เปิดทุกส่วน (เหมือนที่แสดงอยู่ตอนนี้) */
