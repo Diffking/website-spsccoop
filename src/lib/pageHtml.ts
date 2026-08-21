@@ -34,6 +34,9 @@ export const ALLOWED_CLASSES = new Set([
   "blue", "green", "amber", "pink", "purple", "teal", "gray",
   // ทำเนียบบุคลากร (ดู .people ใน globals.css) — cols-N คือจำนวนคนต่อแถว
   "people", "person", "person-name", "person-role",
+  // หมุดอัตราดอกเบี้ยดึงสด — เนื้อในถูกใส่ให้ตอน render (ดู src/lib/liveRates.ts)
+  // ไม่มีคลาสนี้ใน ALLOWED_CLASSES หมุดจะโดนตัวกรองกินตอนเจ้าหน้าที่กดบันทึก
+  "live-deposit-rates",
   "cols-2", "cols-3", "cols-4", "cols-5",
 ]);
 

@@ -11,6 +11,8 @@ import { db } from "@/lib/db";
 import { pageMetadata } from "@/lib/seo";
 import { localAssetsInHtml } from "@/lib/assetFallback";
 import { repairStructure } from "@/lib/htmlStructure";
+import { LIVE_DEPOSIT_RATES, fillLiveRates } from "@/lib/liveRates";
+import { getRates } from "@/lib/settings";
 
 /**
  * หน้าเนื้อหาทั่วไป — ประวัติความเป็นมา วิสัยทัศน์ ระเบียบ ฯลฯ
@@ -62,6 +64,9 @@ export default async function ContentPage({ params }: Params) {
   const user = page.published ? null : await currentUser();
   if (!page.published && !user) notFound();
 
+  // อ่านเฉพาะตอนหน้านั้นมีหมุดอัตราดอกเบี้ยจริง ๆ หน้าอื่นไม่ต้องเสียเวลาถามฐาน
+  const rates = page.body.includes(LIVE_DEPOSIT_RATES) ? await getRates() : null;
+
   return (
     <>
       <PageTracker />
@@ -91,7 +96,12 @@ export default async function ContentPage({ params }: Params) {
 
         <PageContent
           // ซ่อมโครงสร้างตอนแสดงผลด้วย — เนื้อหาเก่าที่บันทึกไว้ก่อนมีตัวซ่อมจะได้ไม่เพี้ยน
-          html={repairStructure(localAssetsInHtml(page.body))}
+          // fillLiveRates แทนหมุด live-deposit-rates ด้วยอัตราดอกเบี้ยจริงจากหลังบ้าน
+          html={
+            rates
+              ? fillLiveRates(repairStructure(localAssetsInHtml(page.body)), rates)
+              : repairStructure(localAssetsInHtml(page.body))
+          }
           className="mt-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 md:p-8"
         />
       </main>
