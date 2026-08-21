@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { FileText, BookOpen, CalendarDays, ChevronLeft, ChevronRight, UserRound } from "lucide-react";
 import Reveal from "@/components/ui/Reveal";
@@ -22,16 +23,46 @@ import {
 
 const PER_PAGE = 5;
 
+/*
+ * จังหวะเลื่อนเอง — ตั้งคนละค่ากันตั้งใจ
+ * ประกาศต้องกวาดตาอ่าน 5 บรรทัด ให้เวลานานกว่า · กรรมการมีชื่อเดียว อ่านจบไว
+ * (แบนเนอร์สไลด์ใช้ 6500ms ดู SLIDE_MS ใน Hero.tsx)
+ */
+const LIST_AUTO_MS = 8000;
+const COMMITTEE_AUTO_MS = 4500;
+
+/**
+ * เลื่อนเองวนไปเรื่อย ๆ — หยุดเมื่อเอาเมาส์ชี้ค้างไว้ จะได้อ่านทันและกดลิงก์ได้
+ *
+ * ผูก effect ไว้กับ `at` ด้วย การกดปุ่มเองจึงรีเซ็ตนาฬิกาใหม่ —
+ * ไม่งั้นกดเปลี่ยนหน้าปุ๊บอาจโดนตัวเลื่อนอัตโนมัติแย่งเปลี่ยนต่อในเสี้ยววินาที
+ */
+function useAutoRotate(count: number, at: number, step: () => void, ms: number) {
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    if (paused || count <= 1) return;
+    const timer = setInterval(step, ms);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paused, count, at, ms]);
+  return { onMouseEnter: () => setPaused(true), onMouseLeave: () => setPaused(false) };
+}
+
 function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Kind }) {
+  const reduce = useReducedMotion();
   const [page, setPage] = useState(0);
   const pageCount = Math.max(1, Math.ceil(items.length / PER_PAGE));
   // กันหน้าค้างเกินขอบเวลาประกาศถูกลบจนเหลือน้อยลง
   const current = Math.min(page, pageCount - 1);
   const shown = items.slice(current * PER_PAGE, current * PER_PAGE + PER_PAGE);
+  const hover = useAutoRotate(pageCount, current, () => setPage((p) => (p + 1) % pageCount), LIST_AUTO_MS);
 
   return (
     // overflow-hidden = ด่านสุดท้าย ไม่ว่าอะไรจะพลาด ข้อความต้องไม่ทะลุขอบการ์ดออกไป
-    <div className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+    <div
+      {...hover}
+      className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5"
+    >
       <p className="mb-3 border-b border-gray-100 pb-2 text-sm font-semibold text-brand-700">
         {KIND_HEADING[kind]}
       </p>
@@ -52,9 +83,25 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
           ออกไปโดยไม่มี "…" · ภาษาไทยไม่มีช่องว่างระหว่างคำ ทั้งประโยคจึงนับเป็นคำเดียว
           min-content เลยยาวเท่าข้อความทั้งบรรทัด — เรื่องนี้เจอเฉพาะภาษาไทย
         */
-        <ul
+        /*
+          เปลี่ยนหน้าแบบค่อย ๆ จาง ชุดเดียวกับตารางดอกเบี้ยใน Hero.tsx
+          `mode="wait"` = หน้าเก่าจางหายให้จบก่อน หน้าใหม่ค่อยขึ้น ไม่มีสองชุดซ้อนกัน
+
+          ⚠️ กรอบ `relative flex-1` ต้องอยู่ชั้นนอก AnimatePresence เสมอ ห้ามย้าย flex-1
+          ไปไว้ที่ <ul> — ระหว่างที่หน้าเก่าจางหายจบแล้วหน้าใหม่ยังไม่ขึ้น จะมีหนึ่งเฟรม
+          ที่ไม่มี <ul> อยู่เลย ถ้าที่ว่างไม่ถูกค้ำไว้ ปุ่มเปลี่ยนหน้ากับปุ่ม "ดูทั้งหมด"
+          ข้างล่างจะกระพริบขึ้นลงทุกครั้งที่วน
+        */
+        <div className="relative flex-1">
+        <AnimatePresence mode="wait" initial={false}>
+        <motion.ul
+          key={current}
+          initial={{ opacity: 0, y: reduce ? 0 : 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: reduce ? 0 : -6 }}
+          transition={{ duration: reduce ? 0 : 0.45, ease: "easeOut" }}
           style={{ gridTemplateRows: `repeat(${PER_PAGE}, minmax(4.25rem, auto))` }}
-          className="grid flex-1 grid-cols-1 divide-y divide-gray-100"
+          className="grid h-full grid-cols-1 divide-y divide-gray-100"
         >
           {shown.map((a) => (
             // min-w-0 ซ้ำอีกชั้น — ช่องกริดยอมแคบแล้ว ตัวรายการก็ต้องยอมแคบตามด้วย
@@ -94,7 +141,9 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
               </MaybeLink>
             </li>
           ))}
-        </ul>
+        </motion.ul>
+        </AnimatePresence>
+        </div>
       )}
 
       {pageCount > 1 && (
@@ -141,16 +190,21 @@ function CommitteeCard({
   /** % ของกรอบเต็ม 220x300 — เลือกได้ที่ /admin/home/committees */
   photoScale: number;
 }) {
+  const reduce = useReducedMotion();
   const [i, setI] = useState(0);
   const n = members.length;
   const c = members[Math.min(i, Math.max(0, n - 1))];
+  const hover = useAutoRotate(n, i, () => setI((v) => (v + 1) % n), COMMITTEE_AUTO_MS);
 
   if (n === 0) return null;
 
   return (
     // min-w-0 + overflow-hidden ด้วยเหตุผลเดียวกับการ์ดประกาศ — ชื่อกรรมการยาว ๆ
     // เป็นภาษาไทยติดกันทั้งบรรทัด ต้องยอมให้การ์ดแคบกว่าชื่อได้ line-clamp ถึงจะทำงาน
-    <div className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-black/5">
+    <div
+      {...hover}
+      className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-black/5"
+    >
       {/*
         ต้องเป็น "คณะกรรมการดำเนินการ" เต็ม ๆ ไม่ใช่ "คณะกรรมการ" ลอย ๆ
         สหกรณ์มีคณะกรรมการหลายชุด (ดำเนินการ · สรรหา · ผู้ตรวจสอบกิจการ)
@@ -162,6 +216,21 @@ function CommitteeCard({
         ถ้าครอบให้เต็มกรอบจะโดนตัดหัวตัดตา ยอมมีขอบว่างข้างรูปดีกว่าเห็นหน้าไม่ครบ
         กรอบขนาดคงที่ การ์ดจึงไม่ขยับตามสัดส่วนรูปที่แต่ละคนอัปมาไม่เท่ากัน
       */}
+      {/*
+        ห่อรูป+ชื่อ+ตำแหน่งเป็นก้อนเดียวแล้วจางทั้งก้อนตอนเปลี่ยนคน
+        กรอบนอกถือ flex-1 ไว้เอง (เหตุผลเดียวกับการ์ดประกาศ — กันปุ่มข้างล่างกระพริบ)
+        ส่วนก้อนข้างในยังให้บรรทัดชื่อถือ flex-1 ต่อ ระยะห่างจึงกระจายเหมือนเดิมเป๊ะ
+      */}
+      <div className="min-h-0 min-w-0 flex-1">
+      <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={i}
+        initial={{ opacity: 0, y: reduce ? 0 : 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: reduce ? 0 : -6 }}
+        transition={{ duration: reduce ? 0 : 0.4, ease: "easeOut" }}
+        className="flex h-full min-w-0 flex-col"
+      >
       <div
         style={{
           width: (COMMITTEE_PHOTO_BASE.width * photoScale) / 100,
@@ -187,6 +256,9 @@ function CommitteeCard({
       <p className="line-clamp-1 min-h-[1.25rem] text-sm text-gray-400" title={c.subtitle ?? ""}>
         {c.subtitle}
       </p>
+      </motion.div>
+      </AnimatePresence>
+      </div>
       <div className="mt-4 flex items-center justify-center gap-3">
         <button onClick={() => setI((v) => (v - 1 + n) % n)} className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 hover:bg-gray-50">
           <ChevronLeft className="h-4 w-4" />
