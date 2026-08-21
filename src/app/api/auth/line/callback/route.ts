@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSession, currentView, purgeExpiredSessions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { hashToken, identityFromCode, lineConfig, sameToken } from "@/lib/line";
+import { hashToken, identityFromCode, lineConfig, redirectWithin, sameToken } from "@/lib/line";
 import { LINE_FLOW_COOKIE, unpackFlow } from "@/lib/lineFlow";
 
 /**
@@ -48,9 +48,9 @@ function noteFail(ip: string): void {
 }
 
 /** ไล่กลับไปหน้าที่ควรอยู่ พร้อมรหัสเหตุผลให้หน้าจอเอาไปแปลเป็นข้อความไทย */
-function back(request: NextRequest, where: "login" | "account", reason: string) {
+function back(where: "login" | "account", reason: string) {
   const path = where === "login" ? "/login/" : "/admin/account/";
-  const res = NextResponse.redirect(new URL(`${path}?line=${reason}`, request.url), 303);
+  const res = redirectWithin(`${path}?line=${reason}`);
   res.cookies.delete(LINE_FLOW_COOKIE);
   return res;
 }
@@ -63,71 +63,71 @@ export async function GET(request: NextRequest) {
     request.headers.get("cf-connecting-ip") ??
     request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     "unknown";
-  if (tooMany(ip)) return back(request, "login", "toomany");
+  if (tooMany(ip)) return back("login", "toomany");
 
   const flow = unpackFlow(request.cookies.get(LINE_FLOW_COOKIE)?.value);
-  if (!flow) return back(request, "login", "expired");
+  if (!flow) return back("login", "expired");
 
   const where = flow.m === "link" ? "account" : "login";
   const params = request.nextUrl.searchParams;
 
   // เจ้าหน้าที่กดยกเลิกที่หน้า LINE — ไม่ใช่ความผิดพลาด ไม่ต้องนับเป็นการยิงรัว
-  if (params.get("error")) return back(request, where, "denied");
+  if (params.get("error")) return back(where, "denied");
 
   const state = params.get("state") ?? "";
   const code = params.get("code") ?? "";
   if (!state || !code || !sameToken(hashToken(state), flow.s)) {
     noteFail(ip);
-    return back(request, where, "state");
+    return back(where, "state");
   }
 
   const identity = await identityFromCode(cfg, code, flow.n);
   if (!identity) {
     noteFail(ip);
-    return back(request, where, "verify");
+    return back(where, "verify");
   }
 
-  if (flow.m === "link") return linkAccount(request, identity.sub);
-  return loginWithLine(request, identity.sub, ip);
+  if (flow.m === "link") return linkAccount(identity.sub);
+  return loginWithLine(identity.sub, ip);
 }
 
 /** เข้าสู่ระบบ — บัญชี LINE ต้องเคยถูกผูกไว้แล้วเท่านั้น ไม่มีการสร้างผู้ใช้ใหม่ */
-async function loginWithLine(request: NextRequest, sub: string, ip: string) {
+async function loginWithLine(sub: string, ip: string) {
   const user = await db.user.findUnique({ where: { lineUserId: sub } });
   if (!user || !user.active) {
     noteFail(ip);
-    return back(request, "login", "nolink");
+    return back("login", "nolink");
   }
 
   await createSession(user.id);
   await purgeExpiredSessions();
-  const res = NextResponse.redirect(new URL("/admin/", request.url), 303);
+  const res = redirectWithin("/admin/");
   res.cookies.delete(LINE_FLOW_COOKIE);
   return res;
 }
 
 /** ผูกบัญชี LINE เข้ากับผู้ใช้ที่ล็อกอินอยู่ */
-async function linkAccount(request: NextRequest, sub: string) {
+async function linkAccount(sub: string) {
   const view = await currentView();
-  if (!view) return back(request, "login", "expired");
-  if (view.viewing) return back(request, "account", "viewonly");
+  if (!view) return back("login", "expired");
+  if (view.viewing) return back("account", "viewonly");
 
   const me = await db.user.findUnique({ where: { id: view.user.id } });
-  if (!me) return back(request, "login", "expired");
+  if (!me) return back("login", "expired");
 
   // ผูกไว้แล้วต้องยกเลิกก่อน — กันคนที่ยืมเครื่องตอนเจ้าตัวลุกไป
   // แล้วสลับให้เป็น LINE ของตัวเองเงียบ ๆ (เจ้าตัวจะเข้าไม่ได้และไม่รู้ว่าเพราะอะไร)
   if (me.lineUserId && me.lineUserId !== sub) {
-    return back(request, "account", "already");
+    return back("account", "already");
   }
 
   // บัญชี LINE เดียวผูกได้กับเจ้าหน้าที่คนเดียว ไม่งั้นดูไม่ออกว่าใครทำอะไร
   const taken = await db.user.findUnique({ where: { lineUserId: sub } });
-  if (taken && taken.id !== me.id) return back(request, "account", "taken");
+  if (taken && taken.id !== me.id) return back("account", "taken");
 
   await db.user.update({
     where: { id: me.id },
     data: { lineUserId: sub, lineLinkedAt: new Date() },
   });
-  return back(request, "account", "ok");
+  return back("account", "ok");
 }

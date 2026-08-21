@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { createHash, randomBytes, timingSafeEqual } from "crypto";
 
 /**
@@ -15,6 +16,22 @@ import { createHash, randomBytes, timingSafeEqual } from "crypto";
  * **ไม่เคยสร้างผู้ใช้ใหม่จาก LINE** — เข้าได้เฉพาะบัญชี LINE ที่มีเจ้าหน้าที่ผูกไว้แล้ว
  * ใครก็ตามที่กดเข้ามาโดยไม่เคยผูก จะโดนปฏิเสธเสมอ ไม่ใช่ได้บัญชีใหม่
  */
+
+/**
+ * พากลับไปหน้าอื่นในเว็บเดียวกัน — ส่งเป็นที่อยู่แบบสัมพัทธ์ ไม่ใส่ชื่อโดเมน
+ *
+ * ⚠️ **ห้ามใช้ `new URL(path, request.url)` ใน route handler** — บั๊กจริงที่เจอ 21 ส.ค. 2026
+ * `request.url` ในนี้เป็นที่อยู่ที่ตัวเซิร์ฟเวอร์ฟังอยู่ ซึ่งใน Docker คือ `0.0.0.0:3000`
+ * ไม่ใช่โดเมนที่เจ้าหน้าที่เปิด · ผลคือกดปุ่ม LINE แล้วเด้งไป `https://0.0.0.0:3000/login/`
+ * ซึ่งเปิดไม่ขึ้นเลย (ต่างจาก `src/proxy.ts` ที่เป็น middleware — ตรงนั้น `request.url`
+ * เป็นที่อยู่จริงที่คนเปิด ใช้ได้ตามปกติ)
+ *
+ * ที่อยู่สัมพัทธ์ใน `Location` ใช้ได้ตามมาตรฐาน (RFC 7231) เบราว์เซอร์เติมโดเมนปัจจุบันให้เอง
+ * — ไม่ต้องเดาโดเมนจากหัวคำขอ ซึ่งปลอมได้ และไม่ต้องตั้งค่าเพิ่มอีกตัว
+ */
+export function redirectWithin(path: string): NextResponse {
+  return new NextResponse(null, { status: 303, headers: { Location: path } });
+}
 
 const AUTHORIZE_URL = "https://access.line.me/oauth2/v2.1/authorize";
 const TOKEN_URL = "https://api.line.me/oauth2/v2.1/token";
