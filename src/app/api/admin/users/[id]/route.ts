@@ -38,6 +38,8 @@ export async function PATCH(request: Request, { params }: Params) {
     currentPassword?: string;
     /** ADMIN สั่งตั้งรหัสใหม่จากเบอร์โทรให้คนที่ลืมรหัส */
     resetPassword?: boolean;
+    /** ยกเลิกการผูกบัญชี LINE — เจ้าตัวต้องใส่รหัสเดิม · ADMIN ปลดให้คนอื่นได้เลย */
+    unlinkLine?: boolean;
   };
 
   const data: {
@@ -48,6 +50,8 @@ export async function PATCH(request: Request, { params }: Params) {
     role?: "ADMIN" | "EDITOR";
     areas?: string[];
     active?: boolean;
+    lineUserId?: string | null;
+    lineLinkedAt?: Date | null;
   } = {};
   let newPassword: string | null = null;
 
@@ -114,6 +118,27 @@ export async function PATCH(request: Request, { params }: Params) {
     newPassword = fromPhone;
     data.passwordHash = await hashPassword(fromPhone);
     data.ownPassword = false;
+  }
+
+  /*
+   * ยกเลิกการผูกบัญชี LINE
+   *
+   * เจ้าตัวปลดเองต้องใส่รหัสเดิม — บาร์เดียวกับการเปลี่ยนรหัสผ่าน เพราะการปลดแล้วผูกใหม่
+   * คือการเปลี่ยนกุญแจของบัญชี ถ้าปล่อยให้กดได้เลยตอนเจ้าตัวลุกจากโต๊ะ คนที่มายืมเครื่อง
+   * จะปลดแล้วผูก LINE ของตัวเองแทนได้เงียบ ๆ
+   *
+   * ส่วน ADMIN ปลดให้คนอื่นได้โดยไม่ต้องใส่รหัส — นี่คือทางรอดเดียวเวลาเจ้าหน้าที่
+   * เปลี่ยนเบอร์/ทำบัญชี LINE หาย ไม่งั้นจะเข้าระบบไม่ได้ตลอดไป
+   */
+  if (body.unlinkLine === true) {
+    if (!isAdmin && !isSelf) {
+      return NextResponse.json({ error: "ปลดบัญชี LINE ของคนอื่นไม่ได้" }, { status: 403 });
+    }
+    if (isSelf && !(await verifyPassword(target.username, String(body.currentPassword ?? "")))) {
+      return NextResponse.json({ error: "รหัสผ่านเดิมไม่ถูกต้อง" }, { status: 400 });
+    }
+    data.lineUserId = null;
+    data.lineLinkedAt = null;
   }
 
   // เปลี่ยนสิทธิ์/พื้นที่รับผิดชอบ/ปิดใช้งาน ทำได้เฉพาะ ADMIN และห้ามทำกับตัวเอง (กันล็อกตัวเองออกจากระบบ)

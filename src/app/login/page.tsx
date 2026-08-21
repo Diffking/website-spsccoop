@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
+import { lineReady } from "@/lib/line";
 import LoginForm from "@/components/admin/LoginForm";
 
 /**
@@ -17,13 +18,20 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ line?: string }>;
+}) {
   // เข้าระบบอยู่แล้วไม่ต้องมาเห็นหน้านี้ — พาเข้าหลังบ้านเลย
   if (await currentUser()) redirect("/admin/");
 
+  // ?line=... คือรหัสเหตุผลที่ callback ส่งกลับมาตอนเข้าด้วย LINE ไม่สำเร็จ
+  const { line } = await searchParams;
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <LoginForm />
+      <LoginForm lineReady={lineReady()} lineNotice={line} />
     </div>
   );
 }

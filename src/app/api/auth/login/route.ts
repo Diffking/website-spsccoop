@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSession, purgeExpiredSessions, verifyPassword } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { lineReady } from "@/lib/line";
 
 /**
  * เข้าสู่ระบบหลังบ้าน
@@ -88,6 +90,33 @@ export async function POST(request: Request) {
     recordFailure(`ip:${ip}`);
     recordFailure(`user:${username.toLowerCase()}`);
     return NextResponse.json({ error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }, { status: 401 });
+  }
+
+  /*
+   * ผูก LINE แล้ว = เลิกใช้รหัสผ่านบนโดเมนสาธารณะ
+   *
+   * รหัสผ่านของระบบนี้อ่อนโดยธรรมชาติ (ตั้งต้นเป็นเลข 4 ตัวท้ายเบอร์ ซึ่งคนในสำนักงาน
+   * รู้กันหมด) พอผูก LINE แล้วก็ไม่มีเหตุผลจะเปิดทางที่อ่อนกว่าค้างไว้อีก
+   *
+   * **ยกเว้น localhost เสมอ** — เครื่องนี้เท่านั้นที่เปิดได้ ต้องมีทางเข้าที่ไม่พึ่ง LINE
+   * เผื่อวันที่ LINE ล่ม ช่องถูกปิด หรือตั้งค่าผิดจนกดปุ่มแล้วไม่ไปไหน (หลักเดียวกับ
+   * src/proxy.ts ที่เปิด localhost ไว้เสมอ — ตั้งค่าโดเมนพังแล้วต้องไม่ล็อกตัวเองออก)
+   *
+   * ไม่ได้ตั้งค่า LINE ไว้ก็ข้ามด่านนี้ไป ระบบเดิมทำงานเหมือนเดิมทุกอย่าง
+   */
+  const host = request.headers.get("host")?.split(":")[0].toLowerCase() ?? "";
+  const onThisMachine = host === "localhost" || host === "127.0.0.1";
+  if (lineReady() && !onThisMachine) {
+    const row = await db.user.findUnique({
+      where: { id: user.id },
+      select: { lineUserId: true },
+    });
+    if (row?.lineUserId) {
+      return NextResponse.json(
+        { error: "บัญชีนี้ผูกกับ LINE แล้ว กรุณากดปุ่ม “เข้าสู่ระบบด้วย LINE”", useLine: true },
+        { status: 403 },
+      );
+    }
   }
 
   attempts.delete(`ip:${ip}`);

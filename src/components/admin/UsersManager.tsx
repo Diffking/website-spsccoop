@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Loader2, Save, X, ShieldCheck, UserCheck, UserX, KeyRound, Eye } from "lucide-react";
+import { Plus, Trash2, Loader2, Save, X, ShieldCheck, UserCheck, UserX, KeyRound, Eye, Unlink } from "lucide-react";
 import AreaPicker from "@/components/admin/AreaPicker";
 import { AREAS, pageAreaCategory } from "@/lib/permissions";
 
@@ -16,6 +16,8 @@ export type UserRow = {
   areas: string[];
   /** ตั้งรหัสผ่านเองแล้วหรือยัง — ยัง = ยังใช้เลข 4 ตัวท้ายเบอร์โทรอยู่ */
   ownPassword: boolean;
+  /** ผูกบัญชี LINE แล้วหรือยัง — ผูกแล้ว = เข้าระบบด้วย LINE ไม่ใช่รหัสผ่าน */
+  lineLinked: boolean;
   active: boolean;
   lastLoginAt: string | null;
 };
@@ -138,6 +140,22 @@ export default function UsersManager({
       setNotice(`ตั้งรหัสใหม่ให้ ${user.username} แล้ว — รหัสคือ ${data.password} · บอกให้เจ้าตัวไปตั้งรหัสของตัวเองที่เมนู “บัญชีของฉัน”`);
       router.refresh();
     }
+  }
+
+  /*
+   * ADMIN ปลดการผูก LINE ให้คนอื่น — ทางรอดเดียวเวลาเจ้าหน้าที่ทำบัญชี LINE หาย
+   * หรือเปลี่ยนเบอร์จนเข้า LINE เดิมไม่ได้ ไม่งั้นจะเข้าระบบไม่ได้ตลอดไป
+   * ปลดแล้วเขากลับไปเข้าด้วยรหัสผ่านได้ตามเดิม แล้วค่อยผูกใหม่เอง
+   */
+  async function unlinkLine(user: UserRow) {
+    if (!confirm(`ปลดการผูก LINE ของ ${user.name}?
+เขาจะกลับไปเข้าระบบด้วยรหัสผ่าน แล้วผูก LINE ใหม่เองได้`)) return;
+    setBusy(user.id);
+    const data = await send(`/api/admin/users/${user.id}/`, "PATCH", { unlinkLine: true });
+    setBusy("");
+    if (!data) return;
+    setNotice(`ปลดการผูก LINE ของ ${user.username} แล้ว — บอกให้เขาเข้าด้วยรหัสผ่านแล้วไปผูกใหม่ที่เมนู “บัญชีของฉัน”`);
+    router.refresh();
   }
 
   async function viewAs(user: UserRow) {
@@ -329,15 +347,33 @@ export default function UsersManager({
                   {user.username} · {user.phone ?? "ยังไม่มีเบอร์"}
                 </span>
                 <span className="block truncate text-xs text-gray-500">{areaSummary(user)}</span>
-                {!user.ownPassword && (
-                  <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] text-amber-800 ring-1 ring-amber-200">
-                    <KeyRound className="h-3 w-3" /> ยังใช้รหัสตั้งต้นจากเบอร์โทร
-                  </span>
-                )}
+                <span className="mt-0.5 flex flex-wrap gap-1">
+                  {user.lineLinked ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-800 ring-1 ring-emerald-200">
+                      <ShieldCheck className="h-3 w-3" /> เข้าระบบด้วย LINE
+                    </span>
+                  ) : (
+                    !user.ownPassword && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] text-amber-800 ring-1 ring-amber-200">
+                        <KeyRound className="h-3 w-3" /> ยังใช้รหัสตั้งต้นจากเบอร์โทร
+                      </span>
+                    )
+                  )}
+                </span>
               </button>
 
               {user.id !== meId && (
                 <>
+                  {user.lineLinked && (
+                    <button
+                      onClick={() => unlinkLine(user)}
+                      disabled={busy === user.id}
+                      title={`ปลดการผูก LINE ของ ${user.name} (ใช้ตอนเขาทำบัญชี LINE หาย)`}
+                      className="shrink-0 rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+                    >
+                      <Unlink className="h-4 w-4" />
+                    </button>
+                  )}
                   <button
                     onClick={() => resetPassword(user)}
                     disabled={busy === user.id}
