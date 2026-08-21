@@ -79,7 +79,7 @@ services:
       # 8020/8021=coopmeeting · 8080/8081=qgeniuscoop → ระบบนี้ใช้ 8030
       #
       # ผูกกับ 127.0.0.1 เท่านั้น — เครื่องอื่นในวงแลนต่อตรงเข้าแอปไม่ได้ ต้องผ่าน
-      # Cloudflare (admin.coopsmile.org) ซึ่งปลอมหัวคำขอ cf-connecting-ip ไม่ได้
+      # Cloudflare (admin.spsccoop.org) ซึ่งปลอมหัวคำขอ cf-connecting-ip ไม่ได้
       # เดิมผูก 0.0.0.0 ใครอยู่ในวงแลนก็ยิงตรงเข้ามาพร้อมหัวคำขอปลอมได้
       #
       # cloudflared ไม่ได้ใช้พอร์ตนี้ — มันต่อผ่านชื่อ web:3000 ในเน็ตเวิร์กของ Docker
