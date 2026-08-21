@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { requireWrite } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
-import { isFolder, uploadToFtp } from "@/lib/ftp";
+import { isFolder } from "@/lib/assetFolders";
 import { MAX_EDGE, shrink } from "@/lib/image";
 import { compressPdf } from "@/lib/pdf";
 import { sanitizeSvg } from "@/lib/svg";
@@ -133,14 +133,24 @@ export async function POST(request: Request) {
     }
   }
 
-  // เก็บไว้ในเครื่องเสมอ — กันไว้เผื่อโฮสต์ FTP เปลี่ยน/หมดอายุ ภาพยังอยู่ครบในมือเรา
+  /*
+   * เก็บไว้ในเครื่องนี้ที่เดียวเท่านั้น — ไม่มีการส่งไฟล์ตรงขึ้นโฮสต์อีกแล้ว
+   *
+   * ของเดิมส่งขึ้น FTP ให้ไฟล์ไปนั่งอยู่บนโฮสต์ทันที · เจ้าของเว็บสั่งถอดออก 21 ส.ค. 2026
+   * เพราะไฟร์วอลล์โฮสต์ไวมาก แตะ FTP ไม่กี่ครั้งก็แบนไอพีทั้งเครื่อง (เผาไปแล้ว 3 เส้น)
+   *
+   * ไฟล์ไปถึง www.spsccoop.com ทางเดียวคือ **โฮสต์เป็นฝ่ายดึงเอง** ผ่านตัวมิเรอร์ —
+   * ดึงตอนมีคนเปิดดู หรือดึงล่วงหน้าตอนอุ่นแคช 09:30 / 15:30 (ดู scripts/warm.sh)
+   * ผลที่ตามมา: รูปที่เพิ่งอัปจะยังไม่มีบนโฮสต์จนกว่าจะถูกดึง — ตั้งใจให้เป็นแบบนั้น
+   *
+   * ⚠️ อัปของเสร็จแล้วจะปิดเครื่อง ต้องอุ่นแคชก่อน ไม่งั้นไฟล์ใหม่ไม่ขึ้นบนโฮสต์
+   *    docker compose exec mirror-warm sh /warm.sh
+   */
   const directory = path.join(process.cwd(), "public", "uploads");
   await mkdir(directory, { recursive: true });
   await writeFile(path.join(directory, name), bytes);
 
-  // ตั้งค่า FTP ครบ = ใช้ URL จากโดเมนนั้น ถ้าส่งไม่สำเร็จก็ถอยมาใช้ไฟล์ในเครื่อง
-  const remote = await uploadToFtp(bytes, name, folder);
-  const url = remote ?? `/uploads/${name}`;
+  const url = `/uploads/${name}`;
   await db.media.create({
     data: {
       url,
@@ -155,7 +165,6 @@ export async function POST(request: Request) {
   return NextResponse.json(
     {
       url,
-      storedOn: remote ? "ftp" : "local",
       width: size.width,
       height: size.height,
       maxEdge,

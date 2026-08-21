@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
-import { FOLDERS } from "@/lib/ftp";
+import { FOLDERS } from "@/lib/assetFolders";
 
 /**
  * รายชื่อโฟลเดอร์เก็บไฟล์ที่มีอยู่จริง — ใช้ให้เลือกตอนแนบไฟล์
