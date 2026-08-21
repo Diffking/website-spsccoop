@@ -416,7 +416,7 @@ function SlideCard({
 
       {/* ข้อความด้านซ้าย — คลิกแล้วพิมพ์ทับได้ทั้งสองบรรทัด */}
       <div className="relative min-w-0 text-left">
-        <span className="block h-1 w-10 rounded-full bg-gradient-to-r from-brand-600 to-brand-400" />
+        {/* ⚠️ ลำดับต้องตรงกับ Hero.tsx เป๊ะ: หัวข้อ → แถบสีคั่น → คำอธิบาย */}
         <RichText
           plain
           singleLine
@@ -425,8 +425,9 @@ function SlideCard({
             if (title.trim() && title !== slide.title) onChange({ title });
           }}
           placeholder="พิมพ์หัวข้อสไลด์"
-          className="mt-3 text-lg font-bold leading-snug tracking-tight text-brand-800 sm:mt-4 sm:text-xl md:text-2xl"
+          className="text-lg font-bold leading-snug tracking-tight text-brand-800 sm:text-xl md:text-2xl"
         />
+        <span className="mt-3 block h-1 w-16 rounded-full bg-gradient-to-r from-brand-600 to-brand-400 sm:mt-3.5" />
         <RichText
           plain
           value={slide.caption ?? ""}
@@ -434,7 +435,7 @@ function SlideCard({
             if (caption !== (slide.caption ?? "")) onChange({ caption });
           }}
           placeholder="คำอธิบายใต้หัวข้อ (เว้นว่างได้)"
-          className="mt-2.5 text-sm leading-relaxed text-gray-700 sm:mt-3.5 sm:text-base"
+          className="mt-3 text-sm leading-relaxed text-gray-700 sm:mt-3.5 sm:text-base"
         />
       </div>
 
