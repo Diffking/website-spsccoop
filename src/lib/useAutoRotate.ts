@@ -25,6 +25,36 @@ import { useEffect, useState, type RefObject } from "react";
  * จะฟ้อง `Cannot access refs during render` ทุกจุดที่หยิบค่าจากก้อนที่คืนมา
  * (`npm run build` ไม่ฟ้อง ต้อง `npx eslint src/` ถึงจะเห็น)
  */
+/**
+ * "ตอนนี้ของชิ้นนี้อยู่ในสายตาไหม" — ใช้ร่วมกันทุกที่ที่ต้องหยุดของที่วิ่งเองตอนพ้นจอ
+ *
+ * ⚠️ **ใช้ `rootMargin` ติดลบ ห้ามใช้ `threshold`** (เหตุผลเต็ม ๆ อยู่ที่ `useAutoRotate`)
+ * โดยสรุป: `threshold` วัดเป็น % ของ**ตัวของชิ้นนั้น** พอมันสูงกว่าจอก็ไม่มีวันถึงเกณฑ์
+ * ส่วน `rootMargin` วัดจาก**จอ** จึงใช้ได้ทุกขนาดเสมอ
+ */
+export function useInView(
+  target: RefObject<HTMLElement | null>,
+  rootMargin = "-12% 0px -12% 0px",
+) {
+  const [seen, setSeen] = useState(false);
+
+  useEffect(() => {
+    const el = target.current;
+    if (!el) return;
+
+    /* ไม่ต้องมีทางหนีสำหรับเบราว์เซอร์ที่ไม่มี IntersectionObserver —
+       Tailwind v4 ที่เว็บนี้ใช้ต้องการเบราว์เซอร์ใหม่กว่านั้นมากอยู่แล้ว
+       (และการ setState ใน effect ตรง ๆ ผิดกฎ react-hooks/set-state-in-effect) */
+    const watcher = new IntersectionObserver(([entry]) => setSeen(entry.isIntersecting), {
+      rootMargin,
+    });
+    watcher.observe(el);
+    return () => watcher.disconnect();
+  }, [target, rootMargin]);
+
+  return seen;
+}
+
 export function useAutoRotate({
   target,
   count,
@@ -45,24 +75,15 @@ export function useAutoRotate({
   alsoPause?: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
-  const [seen, setSeen] = useState(false);
-
-  useEffect(() => {
-    const el = target.current;
-    if (!el) return;
-
-    /* ไม่ต้องมีทางหนีสำหรับเบราว์เซอร์ที่ไม่มี IntersectionObserver —
-       Tailwind v4 ที่เว็บนี้ใช้ต้องการเบราว์เซอร์ใหม่กว่านั้นมากอยู่แล้ว
-       (และการ setState ใน effect ตรง ๆ ผิดกฎ react-hooks/set-state-in-effect) */
-    const watcher = new IntersectionObserver(([entry]) => setSeen(entry.isIntersecting), {
-      rootMargin: "-12% 0px -12% 0px",
-    });
-    watcher.observe(el);
-    return () => watcher.disconnect();
-  }, [target]);
+  const seen = useInView(target);
 
   const paused = hovered || alsoPause || !seen;
 
+  /*
+    เลื่อนพ้นการ์ดไปแล้ว `seen` กลับเป็น false → `paused` เป็น true → effect นี้ทำงานใหม่
+    แล้ว `clearInterval` ในขั้นเก็บกวาดก็หยุดนาฬิกาทิ้ง **ไม่มีอะไรวิ่งค้างอยู่นอกจอ**
+    (IntersectionObserver แจ้งทั้งตอนเข้าและตอนออก ไม่ได้แจ้งแค่ขาเข้า)
+  */
   useEffect(() => {
     if (paused || count <= 1) return;
     const timer = setInterval(step, ms);

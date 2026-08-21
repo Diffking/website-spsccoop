@@ -17,11 +17,22 @@ export default function SectionNav({ items }: { items: { key: string; label: str
   const [active, setActive] = useState(0);
   const [shown, setShown] = useState(false);
 
-  /* หาว่าตอนนี้อยู่ส่วนไหน — ส่วนที่ขอบบนเลยหัวเว็บไปแล้วและอยู่สูงสุด คือส่วนที่กำลังอ่าน */
+  /*
+    หาว่าตอนนี้อยู่ส่วนไหน — ส่วนที่ขอบบนเลยหัวเว็บไปแล้วและอยู่สูงสุด คือส่วนที่กำลังอ่าน
+
+    ⚠️ ต้องคิดใน requestAnimationFrame ไม่ใช่คิดทุกครั้งที่ scroll ยิงมา
+    การเลื่อนหนึ่งครั้งยิง event ได้หลายสิบครั้งต่อวินาที และงานข้างในต้องอ่าน
+    ตำแหน่งจริงของทุกส่วน (`getBoundingClientRect`) ซึ่งบังคับให้เบราว์เซอร์
+    คำนวณ layout ใหม่ทุกครั้ง — ทำตรง ๆ คือถ่วงการเลื่อนทั้งหน้าให้สะดุด
+    แบบนี้คิดอย่างมากเฟรมละครั้ง เท่าที่จอวาดได้จริง ไม่มีงานเกินความจำเป็น
+  */
   useEffect(() => {
     if (items.length === 0) return;
 
-    const onScroll = () => {
+    let queued = 0;
+
+    const measure = () => {
+      queued = 0;
       // โผล่มาเมื่อเลื่อนพ้นช่วงหัวเว็บแล้ว ไม่งั้นบังแบนเนอร์ตอนเพิ่งเปิดหน้า
       setShown(window.scrollY > 240);
 
@@ -35,9 +46,17 @@ export default function SectionNav({ items }: { items: { key: string; label: str
       setActive(found);
     };
 
-    onScroll();
+    const onScroll = () => {
+      if (queued) return;
+      queued = requestAnimationFrame(measure);
+    };
+
+    measure();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (queued) cancelAnimationFrame(queued);
+    };
   }, [items]);
 
   const goTo = useCallback(
