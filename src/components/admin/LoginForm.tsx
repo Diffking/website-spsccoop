@@ -3,34 +3,28 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogIn, Loader2 } from "lucide-react";
+import LineMark from "@/components/admin/LineMark";
 
 /**
  * หน้าเข้าสู่ระบบ — ปุ่ม LINE เป็นทางหลัก รหัสผ่านเป็นทางเข้าครั้งแรก
  *
  * คนที่ผูก LINE แล้วจะใส่รหัสผ่านไม่ผ่าน (API ตอบ 403 พร้อม useLine)
  * เพราะรหัสผ่านของระบบนี้อ่อน — ตั้งต้นเป็นเลข 4 ตัวท้ายเบอร์ซึ่งคนในสำนักงานรู้กันหมด
- * ผูก LINE แล้วจึงไม่มีเหตุผลจะเปิดทางที่อ่อนกว่าค้างไว้
+ *
+ * ⚠️ **อย่าอธิบายซ้ำหลายที่ในจอเดียว** — รอบแรกเขียนไว้ทั้งบนแถบคั่น ทั้งใต้ปุ่ม
+ * ทั้งในกล่องเตือน สามชุดพูดเรื่องเดียวกัน อ่านแล้วไม่รู้ว่าต้องทำอะไรกันแน่
+ * ตอนนี้เหลือที่เดียว: กล่องเตือนบอกว่าให้ทำอะไรต่อ ที่เหลือเป็นแค่ป้ายสั้น ๆ
  */
 
 /** ข้อความอธิบายว่าทำไมกลับมาที่หน้านี้ — รหัสมาจาก /api/auth/line/callback */
 const LINE_MESSAGE: Record<string, string> = {
   denied: "ยกเลิกการเข้าสู่ระบบด้วย LINE แล้ว",
-  expired: "ขั้นตอนหมดอายุ (เกิน 10 นาที) กรุณากดปุ่ม LINE ใหม่อีกครั้ง",
-  state: "คำขอไม่ถูกต้อง กรุณาเริ่มใหม่จากหน้านี้ อย่ากดจากลิงก์ที่คนอื่นส่งมา",
+  expired: "หมดเวลา กรุณากดปุ่ม LINE ใหม่อีกครั้ง",
+  state: "คำขอไม่ถูกต้อง กรุณาเริ่มใหม่จากหน้านี้",
   verify: "ยืนยันตัวตนกับ LINE ไม่สำเร็จ กรุณาลองใหม่",
-  toomany: "ลองหลายครั้งเกินไป กรุณารอสักครู่แล้วค่อยลองใหม่",
-  nolink:
-    "บัญชี LINE นี้ยังไม่ได้ผูกกับเจ้าหน้าที่คนไหน — เข้าด้วยชื่อผู้ใช้และรหัสผ่านก่อน แล้วไปผูกที่เมนู “บัญชีของฉัน”",
+  toomany: "ลองหลายครั้งเกินไป กรุณารอสักครู่",
+  nolink: "บัญชี LINE นี้ยังไม่ได้ผูก — ใส่ชื่อผู้ใช้และรหัสผ่านด้านล่างก่อน",
 };
-
-/** โลโก้ LINE — ฝังไว้ในหน้าเลย ไม่ต้องโหลดไฟล์จากข้างนอก */
-function LineMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5" fill="currentColor">
-      <path d="M12 2C6.5 2 2 5.6 2 10.1c0 4 3.6 7.4 8.4 8 .3.07.8.22.9.5.1.26.07.66.03.92l-.14.87c-.05.26-.2 1.02.9.56 1.1-.46 5.9-3.48 8.05-5.96C21.6 13.3 22 11.8 22 10.1 22 5.6 17.5 2 12 2ZM8.2 12.9h-2a.53.53 0 0 1-.53-.53V8.3a.53.53 0 0 1 1.06 0v3.54H8.2a.53.53 0 0 1 0 1.06Zm2.07-.53a.53.53 0 0 1-1.06 0V8.3a.53.53 0 0 1 1.06 0v4.07Zm4.75 0a.53.53 0 0 1-.95.32l-2.08-2.83v2.51a.53.53 0 0 1-1.06 0V8.3a.53.53 0 0 1 .95-.32l2.09 2.84V8.3a.53.53 0 0 1 1.05 0v4.07Zm3.2-2.57a.53.53 0 0 1 0 1.06h-1.48v.95h1.48a.53.53 0 0 1 0 1.06h-2a.53.53 0 0 1-.54-.53V8.3a.53.53 0 0 1 .53-.53h2a.53.53 0 0 1 0 1.06h-1.47v.94h1.47Z" />
-    </svg>
-  );
-}
 
 export default function LoginForm({
   lineReady,
@@ -94,15 +88,15 @@ export default function LoginForm({
             */}
             <a
               href="/api/auth/line/start/?mode=login"
-              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#06C755] px-4 py-3 font-medium text-white transition hover:bg-[#05b34c]"
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#06C755] px-4 py-3 font-medium text-white transition hover:bg-[#05b34c]"
             >
-              <LineMark />
+              <LineMark className="h-6 w-6" />
               เข้าสู่ระบบด้วย LINE
             </a>
 
-            <div className="mt-6 flex items-center gap-3">
+            <div className="mt-5 flex items-center gap-3">
               <span className="h-px flex-1 bg-gray-200" />
-              <span className="text-xs text-gray-400">เข้าครั้งแรก ยังไม่ได้ผูก LINE</span>
+              <span className="text-xs text-gray-400">หรือ</span>
               <span className="h-px flex-1 bg-gray-200" />
             </div>
           </>
@@ -150,24 +144,16 @@ export default function LoginForm({
           <button
             type="submit"
             disabled={busy}
-            className={`mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 font-medium transition disabled:opacity-60 ${
+            className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 font-medium transition disabled:opacity-60 ${
               lineReady
                 ? "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                 : "bg-brand-600 text-white hover:bg-brand-700"
             }`}
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-            เข้าสู่ระบบ
+            เข้าสู่ระบบด้วยรหัสผ่าน
           </button>
         </form>
-
-        {lineReady && (
-          <p className="mt-4 text-center text-xs leading-relaxed text-gray-400">
-            เข้าด้วยรหัสผ่านได้ครั้งแรกเท่านั้น
-            <br />
-            เข้าแล้วไปผูก LINE ที่เมนู “บัญชีของฉัน”
-          </p>
-        )}
       </div>
     </main>
   );
