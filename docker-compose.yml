@@ -123,7 +123,32 @@ services:
     entrypoint:
       - sh
       - -c
-      - apk add --no-cache curl >/dev/null 2>&1; while true; do if [ -n "$$MIRROR_PURGE_TOKEN" ]; then echo "อุ่นแคช $$(date '+%F %H:%M')"; curl -s -m 900 "$${MIRROR_WARM_URL:-https://www.spsccoop.com/warm.php}?token=$$MIRROR_PURGE_TOKEN&by=auto" | tail -2; fi; sleep 3600; done
+      - |
+        apk add --no-cache curl >/dev/null 2>&1
+        # ยิงไม่สำเร็จแล้วต้องหยุด ห้ามยิงซ้ำ — 21 ส.ค. 2026 ไฟร์วอลล์โฮสต์แบนไอพีเรา
+        # ทั้งที่แตะไม่ถึงสิบครั้ง · พอโดนแบนแล้วยิงต่อก็ไม่ได้อะไร แต่ยังเติมตัวนับ
+        # ให้ CSF/LFD จนเลื่อนเป็นแบนถาวรได้ · รอบละ ~500 คำขอ ยิ่งอันตราย
+        fails=0
+        while true; do
+          if [ -z "$$MIRROR_PURGE_TOKEN" ]; then
+            sleep 3600
+            continue
+          fi
+          echo "อุ่นแคช $$(date '+%F %H:%M')"
+          out=$$(curl -sS -f -m 900 "$${MIRROR_WARM_URL:-https://www.spsccoop.com/warm.php}?token=$$MIRROR_PURGE_TOKEN&by=auto" 2>&1)
+          if [ $$? -eq 0 ]; then
+            echo "$$out" | tail -2
+            fails=0
+            sleep 3600
+          else
+            fails=$$((fails + 1))
+            # พลาดครั้งแรกพัก 1 ชม. · ครั้งที่สอง 6 ชม. · จากนั้นวันละครั้ง
+            if [ $$fails -eq 1 ]; then hold=3600; elif [ $$fails -eq 2 ]; then hold=21600; else hold=86400; fi
+            echo "อุ่นแคชไม่สำเร็จ ครั้งที่ $$fails — หยุดยิงหาโฮสต์ $$((hold / 3600)) ชม. กันโดนไฟร์วอลล์แบน"
+            echo "$$out" | tail -1
+            sleep $$hold
+          fi
+        done
 
   # ดึงวันหยุดจากระบบสำนักงานในวงแลนอัตโนมัติ ทุก 6 ชม.
   # เช็คก่อนเสมอ — เหมือนเดิมก็ไม่เขียนฐาน ไม่ล้างแคช และไม่ขึ้น log อะไรเลย
