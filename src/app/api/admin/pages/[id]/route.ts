@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireWritePage, toSlug } from "@/lib/apiAuth";
 import { canPage } from "@/lib/permissions";
-import { cleanPageFolder, pageFolder } from "@/lib/ftp";
+import { cleanPageFolder, pageFolder } from "@/lib/assetFolders";
 import { repairStructure } from "@/lib/htmlStructure";
 import { cleanPageHtml, limitInlineStyles } from "@/lib/pageHtml";
 import { purgeEverySite } from "@/lib/mirrorPurge";

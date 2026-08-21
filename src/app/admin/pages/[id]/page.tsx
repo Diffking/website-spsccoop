@@ -7,7 +7,7 @@ import { ADMIN_HOME, canPage, filterPages } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { AI_READY } from "@/lib/ai";
 import PageEditor from "@/components/admin/PageEditor";
-import { pageFolder } from "@/lib/ftp";
+import { pageFolder } from "@/lib/assetFolders";
 import { usedCategories } from "@/lib/pageGroups";
 
 export default async function EditPagePage({ params }: { params: Promise<{ id: string }> }) {

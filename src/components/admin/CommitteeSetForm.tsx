@@ -15,13 +15,10 @@ import { COMMITTEE_PHOTO_BASE, COMMITTEE_PHOTO_SCALES } from "@/lib/committee";
 export default function CommitteeSetForm({
   initial,
   initialScale,
-  storageBase,
 }: {
   initial: number;
   /** ขนาดรูปบนการ์ดหน้าแรก คิดเป็น % ของกรอบเต็ม */
   initialScale: number;
-  /** รากของที่เก็บไฟล์ เช่น https://beta.spsccoop.com/assets — ว่าง = เก็บในเครื่อง */
-  storageBase: string;
 }) {
   const router = useRouter();
   const [set, setSet] = useState(initial);
@@ -91,9 +88,7 @@ export default function CommitteeSetForm({
           </p>
           <p className="text-gray-500">
             รูปเก็บที่:{" "}
-            <code className="break-all font-mono text-gray-700">
-              {storageBase ? `${storageBase}/committees/set${set || "?"}/` : "เก็บในเครื่องนี้ (/uploads)"}
-            </code>
+            <code className="break-all font-mono text-gray-700">เครื่องนี้ (/uploads)</code>
           </p>
         </div>
       </div>

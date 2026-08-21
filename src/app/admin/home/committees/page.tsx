@@ -3,7 +3,7 @@ import { currentUser } from "@/lib/auth";
 import { ADMIN_HOME, canArea } from "@/lib/permissions";
 import { getItemsForAdmin } from "@/lib/homeItems";
 import { getCommitteePhotoScale, getCommitteeSet } from "@/lib/settings";
-import { committeeFolder, storageTarget } from "@/lib/ftp";
+import { committeeFolder } from "@/lib/assetFolders";
 import HomeItemsManager from "@/components/admin/HomeItemsManager";
 import CommitteeSetForm from "@/components/admin/CommitteeSetForm";
 
@@ -18,7 +18,6 @@ export default async function Page() {
     getCommitteeSet(),
     getCommitteePhotoScale(),
   ]);
-  const storage = storageTarget();
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
@@ -26,11 +25,7 @@ export default async function Page() {
       <p className="mb-5 text-sm text-gray-500">สไลด์เล็กข้างการ์ดประกาศบนหน้าแรก</p>
 
       <div className="space-y-5">
-        <CommitteeSetForm
-          initial={set}
-          initialScale={scale}
-          storageBase={storage.kind === "ftp" ? storage.label : ""}
-        />
+        <CommitteeSetForm initial={set} initialScale={scale} />
 
         {/* รูปกรรมการลงโฟลเดอร์ของชุดที่ตั้งไว้ เช่น assets/committees/set45 */}
         <HomeItemsManager

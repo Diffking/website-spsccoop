@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser, requireWrite, toSlug } from "@/lib/apiAuth";
 import { canPage, filterPages } from "@/lib/permissions";
-import { pageFolder } from "@/lib/ftp";
+import { pageFolder } from "@/lib/assetFolders";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 
 /** รายการหน้าเนื้อหาทั้งหมด */
