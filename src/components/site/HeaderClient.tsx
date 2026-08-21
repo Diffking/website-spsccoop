@@ -104,14 +104,41 @@ export default function HeaderClient({
   const [open, setOpen] = useState(false);
   const [openSub, setOpenSub] = useState<string | null>(null);
 
+  /*
+    แถบบน (โลโก้ + ชื่อสหกรณ์ + นาฬิกา + ปรับขนาดตัวอักษร) โชว์เฉพาะตอนอยู่บนสุด
+    พอเลื่อนลงก็หุบเก็บ เหลือแต่แถวเมนู — ได้พื้นที่อ่านเนื้อหาคืนมาเกือบ 50px
+    ของพวกนั้นดูตอนเปิดหน้าครั้งแรกทีเดียวก็พอ ไม่ต้องตามติดไปทั้งหน้า
+  */
+  const [atTop, setAtTop] = useState(true);
+  useEffect(() => {
+    const onScroll = () => setAtTop(window.scrollY < 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   /* whitespace-nowrap: ชื่อเมนูไทยยาว ๆ ถูกหักขึ้นบรรทัดใหม่กลางคำแล้วแถบเมนูสูงสองเท่า ดูเหมือนซ้อนกัน */
   const topBarClass =
     "flex h-full items-center gap-1 whitespace-nowrap px-3 py-3 text-sm font-medium transition hover:bg-white/15";
 
   return (
     <header className="sticky top-0 z-50 shadow-sm">
-      {/* แถบบน */}
-      <div className="bg-gradient-to-r from-brand-700 to-brand-500 text-white text-xs md:text-sm">
+      {/*
+        แถบบน — หุบเก็บตอนเลื่อนลง
+
+        ใช้ท่ากริด 1fr ↔ 0fr แทนการตั้ง max-height เดา ๆ เพราะมันหุบได้พอดีความสูงจริง
+        ไม่ว่าชื่อสหกรณ์จะตกบรรทัดหรือไม่ · `overflow-hidden` ที่ลูกจำเป็นจริง ๆ ไม่ใช่ของแถม
+        เพราะมันคือตัวที่ทำให้ช่องกริดยอมหดเหลือศูนย์ได้ (ปกติช่องกริดหดต่ำกว่าเนื้อหาไม่ได้)
+
+        ⚠️ ที่นี่ `0fr` ตั้งใจให้ช่องหดจนหมด ต่างจากกฎ minmax(0,…) ของกริดคอลัมน์
+        ในหน้าแรก ซึ่งแก้คนละปัญหากัน (ที่นั่นกันไม่ให้ช่อง**กว้าง**ตามเนื้อหา)
+      */}
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+          atTop ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+      <div className="overflow-hidden bg-gradient-to-r from-brand-700 to-brand-500 text-white text-xs md:text-sm">
         <div className="mx-auto flex max-w-344 items-center justify-between gap-3 px-4 py-1.5">
           <Link href="/" className="flex min-w-0 items-center gap-2">
             <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-white shadow ring-1 ring-black/5">
@@ -137,6 +164,7 @@ export default function HeaderClient({
             <FontSizeControl />
           </div>
         </div>
+      </div>
       </div>
 
       {/* แถบเมนู */}

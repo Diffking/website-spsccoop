@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { FileText, BookOpen, CalendarDays, ChevronLeft, ChevronRight, UserRound } from "lucide-react";
@@ -26,7 +26,16 @@ import {
 const PER_PAGE = 5;
 
 /**
- * เลื่อนเองวนไปเรื่อย ๆ — หยุดเมื่อเอาเมาส์ชี้ค้างไว้ จะได้อ่านทันและกดลิงก์ได้
+ * เลื่อนเองวนไปเรื่อย ๆ — แต่จะเริ่มต่อเมื่อคนเลื่อนหน้าจอลงมาถึงการ์ดนี้จริง ๆ
+ *
+ * ⚠️ **ต้องรอให้เห็นก่อน ไม่ใช่วิ่งตั้งแต่เปิดหน้า** — การ์ดพวกนี้อยู่กลางหน้า
+ * ถ้าปล่อยให้วิ่งตั้งแต่โหลดเสร็จ พอคนเลื่อนลงมาถึงก็ผ่านไปหลายหน้าแล้ว
+ * จะเจอเป็นหน้าที่ 3 บ้าง 4 บ้างแบบสุ่ม ไม่ได้เริ่มจากหน้าแรกอย่างที่ควรเป็น
+ * (แบนเนอร์กับตารางดอกเบี้ยไม่ต้องมีอันนี้ เพราะอยู่บนสุด เห็นตั้งแต่เปิดหน้าอยู่แล้ว)
+ *
+ * `threshold: 0.35` = ต้องเห็นการ์ดสักหนึ่งในสามก่อนถึงจะเริ่มนับ ไม่ใช่แค่ขอบโผล่มานิดเดียว
+ *
+ * หยุดด้วยเมื่อเอาเมาส์ชี้ค้างไว้ จะได้อ่านทันและกดลิงก์ได้
  *
  * ผูก effect ไว้กับ `at` ด้วย การกดปุ่มเองจึงรีเซ็ตนาฬิกาใหม่ —
  * ไม่งั้นกดเปลี่ยนหน้าปุ๊บอาจโดนตัวเลื่อนอัตโนมัติแย่งเปลี่ยนต่อในเสี้ยววินาที
@@ -34,17 +43,40 @@ const PER_PAGE = 5;
  * คืน `paused` ออกไปด้วยเพราะหลอดนับถอยหลังต้องหยุดค้างพร้อมกัน
  * ไม่งั้นหลอดวิ่งจนเต็มแล้วค้างอยู่อย่างนั้นทั้งที่เนื้อหาไม่เปลี่ยน
  */
-function useAutoRotate(count: number, at: number, step: () => void, ms: number) {
-  const [paused, setPaused] = useState(false);
+function useAutoRotate(
+  /* รับ ref ของการ์ดเข้ามา ไม่ได้สร้างแล้วคืนออกไป — กฎ react-hooks/refs ห้ามอ่าน ref
+     ระหว่าง render ซึ่งการหยิบ `.ref` ออกจากก้อนที่ hook คืนมาก็นับด้วย */
+  target: React.RefObject<HTMLDivElement | null>,
+  count: number,
+  at: number,
+  step: () => void,
+  ms: number,
+) {
+  const [hovered, setHovered] = useState(false);
+  const [seen, setSeen] = useState(false);
+
+  useEffect(() => {
+    const el = target.current;
+    if (!el) return;
+    const watcher = new IntersectionObserver(([entry]) => setSeen(entry.isIntersecting), {
+      threshold: 0.35,
+    });
+    watcher.observe(el);
+    return () => watcher.disconnect();
+  }, [target]);
+
+  const paused = hovered || !seen;
+
   useEffect(() => {
     if (paused || count <= 1) return;
     const timer = setInterval(step, ms);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paused, count, at, ms]);
+
   return {
     paused,
-    hover: { onMouseEnter: () => setPaused(true), onMouseLeave: () => setPaused(false) },
+    hover: { onMouseEnter: () => setHovered(true), onMouseLeave: () => setHovered(false) },
   };
 }
 
@@ -55,7 +87,9 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
   // กันหน้าค้างเกินขอบเวลาประกาศถูกลบจนเหลือน้อยลง
   const current = Math.min(page, pageCount - 1);
   const shown = items.slice(current * PER_PAGE, current * PER_PAGE + PER_PAGE);
+  const card = useRef<HTMLDivElement>(null);
   const auto = useAutoRotate(
+    card,
     pageCount,
     current,
     () => setPage((p) => (p + 1) % pageCount),
@@ -65,6 +99,7 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
   return (
     // overflow-hidden = ด่านสุดท้าย ไม่ว่าอะไรจะพลาด ข้อความต้องไม่ทะลุขอบการ์ดออกไป
     <div
+      ref={card}
       {...auto.hover}
       className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5"
     >
@@ -89,13 +124,13 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
           min-content เลยยาวเท่าข้อความทั้งบรรทัด — เรื่องนี้เจอเฉพาะภาษาไทย
         */
         /*
-          เปลี่ยนหน้าแบบค่อย ๆ จาง ชุดเดียวกับตารางดอกเบี้ยใน Hero.tsx
-          `mode="wait"` = หน้าเก่าจางหายให้จบก่อน หน้าใหม่ค่อยขึ้น ไม่มีสองชุดซ้อนกัน
+          เปลี่ยนหน้าแบบค่อย ๆ จางทับกัน ชุดเดียวกับตารางดอกเบี้ยใน Hero.tsx
+          กรอบนอกเป็น `grid` แล้ววางหน้าเก่ากับหน้าใหม่ไว้ในช่องเดียวกัน (STACKED)
+          ทั้งคู่จึงซ้อนทับกันตอนจางสลับ ไม่มีวูบว่างตรงกลาง — ห้ามใส่ mode="wait"
 
-          ⚠️ กรอบ `relative flex-1` ต้องอยู่ชั้นนอก AnimatePresence เสมอ ห้ามย้าย flex-1
-          ไปไว้ที่ <ul> — ระหว่างที่หน้าเก่าจางหายจบแล้วหน้าใหม่ยังไม่ขึ้น จะมีหนึ่งเฟรม
-          ที่ไม่มี <ul> อยู่เลย ถ้าที่ว่างไม่ถูกค้ำไว้ ปุ่มเปลี่ยนหน้ากับปุ่ม "ดูทั้งหมด"
-          ข้างล่างจะกระพริบขึ้นลงทุกครั้งที่วน
+          ⚠️ กรอบชั้นนอกต้องถือ `flex-1` ไว้เอง ห้ามย้ายไปไว้ที่ <ul>
+          ไม่งั้นจะมีเสี้ยววินาทีที่ที่ว่างหุบ แล้วปุ่มเปลี่ยนหน้ากับปุ่ม "ดูทั้งหมด"
+          ข้างล่างกระพริบขึ้นลงทุกครั้งที่วน
         */
         <div className="relative grid flex-1">
         <AnimatePresence initial={false}>
@@ -207,7 +242,8 @@ function CommitteeCard({
   const [i, setI] = useState(0);
   const n = members.length;
   const c = members[Math.min(i, Math.max(0, n - 1))];
-  const auto = useAutoRotate(n, i, () => setI((v) => (v + 1) % n), SLIDE_TIMING.committee.every);
+  const card = useRef<HTMLDivElement>(null);
+  const auto = useAutoRotate(card, n, i, () => setI((v) => (v + 1) % n), SLIDE_TIMING.committee.every);
 
   if (n === 0) return null;
 
@@ -215,6 +251,7 @@ function CommitteeCard({
     // min-w-0 + overflow-hidden ด้วยเหตุผลเดียวกับการ์ดประกาศ — ชื่อกรรมการยาว ๆ
     // เป็นภาษาไทยติดกันทั้งบรรทัด ต้องยอมให้การ์ดแคบกว่าชื่อได้ line-clamp ถึงจะทำงาน
     <div
+      ref={card}
       {...auto.hover}
       className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-black/5"
     >

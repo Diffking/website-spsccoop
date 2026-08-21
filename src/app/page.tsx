@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import Header from "@/components/site/Header";
 import Footer from "@/components/site/Footer";
 import SplashGate from "@/components/site/SplashGate";
@@ -13,8 +12,9 @@ import OfficerService from "@/components/home/OfficerService";
 import ScrollProgress from "@/components/ui/ScrollProgress";
 import PageTracker from "@/components/site/PageTracker";
 import BackToTop from "@/components/ui/BackToTop";
+import SectionNav from "@/components/home/SectionNav";
 import { site } from "@/data/home";
-import { orderedSections, resolveTones, type HomeSectionKey } from "@/lib/homeSections";
+import { SECTION_SHORT, orderedSections, resolveTones, type HomeSectionKey } from "@/lib/homeSections";
 import {
   getCommitteePhotoScale,
   getCommitteeSet,
@@ -148,9 +148,24 @@ export default async function Home() {
         {orderedSections(order).map((section) => {
           if (!show[section.key]) return null;
           const node = blocks[section.key];
-          return <Fragment key={section.key}>{node}</Fragment>;
+          /*
+            ห่อด้วย div ที่มี id เพื่อให้ตัวนำทางลอยด้านซ้าย (SectionNav) กระโดดมาได้
+            scroll-mt-20 = เว้นที่ให้แถบเมนูที่ปักอยู่หัวจอไม่บังหัวข้อของส่วนนั้น
+            (แถบบนหุบไปตอนเลื่อนแล้ว เหลือแค่แถวเมนูสูงราว 44px — เว้น 80px พอมีที่หายใจ)
+          */
+          return (
+            <div key={section.key} id={`sec-${section.key}`} className="scroll-mt-20">
+              {node}
+            </div>
+          );
         })}
       </main>
+      {/* รายการในตัวนำทางต้องตรงกับที่วาดจริง — ส่งลำดับที่กรองแล้วไปเลย ไม่ให้มันคำนวณเอง */}
+      <SectionNav
+        items={orderedSections(order)
+          .filter((s) => show[s.key] && SECTION_SHORT[s.key])
+          .map((s) => ({ key: s.key, label: SECTION_SHORT[s.key] as string }))}
+      />
       <BackToTop />
       <Footer />
     </>
