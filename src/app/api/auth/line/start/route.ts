@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { currentView } from "@/lib/auth";
-import { hashToken, lineAuthorizeUrl, lineConfig, randomToken } from "@/lib/line";
+import { hashToken, lineAuthorizeUrl, lineConfig, randomToken, redirectWithin } from "@/lib/line";
 import { LINE_FLOW_COOKIE, packFlow } from "@/lib/lineFlow";
 
 /**
@@ -24,11 +24,11 @@ export async function GET(request: NextRequest) {
   if (mode === "link") {
     const view = await currentView();
     if (!view) {
-      return NextResponse.redirect(new URL("/login/", request.url), 303);
+      return redirectWithin("/login/");
     }
     // อยู่ในมุมมองผู้ใช้อื่นอยู่ = ดูได้อย่างเดียว ห้ามผูกบัญชีให้คนที่ถูกสวมมุมมอง
     if (view.viewing) {
-      return NextResponse.redirect(new URL("/admin/account/?line=viewonly", request.url), 303);
+      return redirectWithin("/admin/account/?line=viewonly");
     }
   }
 
