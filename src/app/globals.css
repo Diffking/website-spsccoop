@@ -659,16 +659,21 @@ body {
 /* ---- เส้นเวลาของแบนเนอร์สไลด์หน้าแรก ----
    วิ่งเต็มความกว้างพอดีกับเวลาที่สไลด์ค้างอยู่ · หยุดค้างได้ด้วย animation-play-state
    (ตั้งจากฝั่ง React ตอนเอาเมาส์ชี้) จึงไม่ต้องมานั่งคำนวณเวลาที่เหลือเอง */
-@keyframes hero-progress {
+/*
+  หลอดนับถอยหลังของทุกสไลด์บนหน้าแรก (แบนเนอร์ · ดอกเบี้ย · ประกาศ · กรรมการ)
+  ความยาวหนึ่งรอบส่งมาทาง animationDuration ฝั่ง React — ดู SlideProgress.tsx
+  เดิมชื่อ .hero-progress ตอนที่มีแค่แบนเนอร์ใช้ ตอนนี้ใช้กัน 4 ที่แล้วจึงเปลี่ยนชื่อให้ตรงงาน
+*/
+@keyframes slide-progress {
   from { transform: scaleX(0); }
   to   { transform: scaleX(1); }
 }
-.hero-progress {
-  animation-name: hero-progress;
+.slide-progress {
+  animation-name: slide-progress;
   animation-timing-function: linear;
   animation-fill-mode: forwards;
 }
 /* คนที่ตั้งเครื่องว่าไม่เอาภาพเคลื่อนไหว ไม่ต้องมีเส้นวิ่งให้กวนสายตา */
 @media (prefers-reduced-motion: reduce) {
-  .hero-progress { display: none; }
+  .slide-progress { display: none; }
 }
