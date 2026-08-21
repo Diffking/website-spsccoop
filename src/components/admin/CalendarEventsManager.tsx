@@ -63,7 +63,7 @@ export default function CalendarEventsManager({ items }: { items: EventItem[] })
           · วันหยุดทำการอยู่คนละเมนู ที่ &ldquo;วันหยุด&rdquo;
         </p>
 
-        <div className="mt-3 grid gap-2.5 sm:grid-cols-[11rem_1fr]">
+        <div className="mt-3 grid gap-2.5 sm:grid-cols-[11rem_minmax(0,1fr)]">
           <div className="block">
             <span className="text-xs text-gray-500">วันที่</span>
             <ThaiDatePicker

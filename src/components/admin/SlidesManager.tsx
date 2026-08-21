@@ -388,7 +388,7 @@ function SlideCard({
 
   return (
     <div
-      className={`edit-frame relative grid aspect-[16/10] grid-cols-[1.05fr_1fr] items-center gap-4 overflow-hidden rounded-3xl bg-gradient-to-br from-white via-sky-50 to-brand-50 p-6 shadow-sm ring-1 ring-brand-100 sm:gap-7 sm:p-9 ${
+      className={`edit-frame relative grid aspect-[16/10] grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] items-center gap-4 overflow-hidden rounded-3xl bg-gradient-to-br from-white via-sky-50 to-brand-50 p-6 shadow-sm ring-1 ring-brand-100 sm:gap-7 sm:p-9 ${
         isLive(slide) ? "" : "opacity-60"
       }`}
     >
