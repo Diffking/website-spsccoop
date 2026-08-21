@@ -16,9 +16,11 @@
 | 2 | เพิ่ม `spsccoop.org` + `admin.spsccoop.org` เข้าอุโมงค์ `webcoopsmile` | ✅ |
 | 3 | `docker compose up -d --build web` | ✅ |
 | 4 | `config.php` บนโฮสต์ → `'backend' => 'https://spsccoop.org'` | ✅ |
-| 5 | ปลด `coopsmile.org` ออกจากอุโมงค์ | ⬜ ทำได้แล้ว |
+| 5 | ปลด `admin.coopsmile.org` ออกจากอุโมงค์ | ✅ |
+| 6 | ปลด `coopsmile.org` ออกจากอุโมงค์ | ⬜ เหลืออย่างเดียว |
 
-ขั้นที่ 5 ทำได้แล้วเพราะไม่มีอะไรพึ่ง `coopsmile.org` อีก **แต่ยืนยันตามขั้นตอนข้างล่างก่อน**
+ไม่มีอะไรพึ่ง `coopsmile.org` อีกแล้ว — `.env` เอาออกหมดแล้ว และตัวมิเรอร์บนโฮสต์
+ดึงผ่าน `spsccoop.org` เรียบร้อย · เหลือแค่ลบ public hostname ทิ้ง ทำตอนไหนก็ได้
 
 ## บทเรียน 21 ส.ค. 2026 — ลำดับสำคัญกว่าที่คิด
 
@@ -34,7 +36,7 @@
 **เวลาจะปลดอะไรทิ้ง ให้ถามก่อนว่า "ตอนนี้ยังมีอะไรพึ่งมันอยู่ไหม"** — ของที่พึ่ง
 `coopsmile.org` อยู่คือ `backend` ใน `config.php` บนโฮสต์ ซึ่งมองจากในโค้ดนี้ไม่เห็น
 
-## ขั้นที่ 5 — ปลด coopsmile.org ให้ถูกวิธี
+## ขั้นที่ 6 — ปลด coopsmile.org ให้ถูกวิธี
 
 ทำตามลำดับนี้ ถ้าพลาดก็ถอยกลับได้ใน 30 วินาที
 
@@ -57,28 +59,25 @@ curl -s -o /dev/null -w '%{http_code}\n' https://www.spsccoop.com/about/history/
 |---|---|---|---|
 | *(เว้นว่าง)* | `coopsmile.org` | `HTTP` | `web:3000` |
 
-4. ปลดสำเร็จแล้วเอา `coopsmile.org` ออกจาก `ANALYTICS_HOST` ใน `.env` ด้วย
-   (ตอนนี้ยังนับอยู่) ไม่งั้นวันที่โดเมนไปเป็นเว็บอื่น ยอดผู้เข้าชมจะปนกัน แล้ว
-   `docker compose up -d --force-recreate web`
+ขั้นเก็บกวาดใน `.env` ทำไปแล้วเมื่อ 21 ส.ค. 2026 ไม่ต้องทำซ้ำ
 
 ## ค่าที่ตั้งไว้ตอนนี้
 
-`.env` — โดเมนเก่ายังค้างอยู่ตั้งใจ เอาออกได้หลังทำขั้นที่ 5
+`.env` — เอา `coopsmile.org` ออกหมดแล้ว 21 ส.ค. 2026 (สำรองไว้ที่ `.env.bak-before-cut`)
 
 | คีย์ | ค่า |
 |---|---|
-| `ADMIN_HOST` | `admin.spsccoop.org,admin.coopsmile.org` |
-| `ADMIN_ROOT_HOST` | `admin.spsccoop.org,admin.coopsmile.org` |
+| `ADMIN_HOST` | `admin.spsccoop.org` |
+| `ADMIN_ROOT_HOST` | `admin.spsccoop.org` |
 | `PUBLIC_SITE_URL` | `https://spsccoop.org` |
-| `ANALYTICS_HOST` | `spsccoop.com,spsccoop.org,coopsmile.org` |
+| `ANALYTICS_HOST` | `spsccoop.com,spsccoop.org` |
 
 อุโมงค์ `webcoopsmile` (อีก 4 ตัวในบัญชีเป็นระบบอื่น อย่าไปแตะ)
 
 ```
 spsccoop.org               → HTTP  web:3000
 admin.spsccoop.org         → HTTP  web:3000
-coopsmile.org              → HTTP  web:3000     ← รอปลด
-admin.coopsmile.org        → HTTP  web:3000     ← รอปลด
+coopsmile.org              → HTTP  web:3000     ← เหลือตัวนี้ตัวเดียว รอปลด
 ```
 
 Type ต้องเป็น `HTTP` ไม่ใช่ HTTPS · URL เป็น `web:3000` ไม่ใช่ `localhost:3000`
