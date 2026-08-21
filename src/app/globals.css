@@ -673,7 +673,11 @@ body {
   animation-timing-function: linear;
   animation-fill-mode: forwards;
 }
-/* คนที่ตั้งเครื่องว่าไม่เอาภาพเคลื่อนไหว ไม่ต้องมีเส้นวิ่งให้กวนสายตา */
+/*
+  เครื่องที่ตั้งค่าว่าไม่เอาภาพเคลื่อนไหว — ซ่อนหลอดทิ้ง
+  เครื่องกลุ่มนี้ `useAutoRotate` หยุดเลื่อนเองให้อยู่แล้ว (ดู src/lib/useAutoRotate.ts)
+  ไม่มีอะไรกำลังนับถอยหลัง โชว์หลอดค้างไว้เฉย ๆ มีแต่ทำให้งงว่าทำไมมันไม่ขยับ
+*/
 @media (prefers-reduced-motion: reduce) {
   .slide-progress { display: none; }
 }
