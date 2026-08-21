@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type RefObject } from "react";
+import { useReducedMotion } from "motion/react";
 
 /**
  * ตัวเลื่อนอัตโนมัติที่ใช้ร่วมกันทั้ง 4 สไลด์บนหน้าแรก
@@ -77,7 +78,19 @@ export function useAutoRotate({
   const [hovered, setHovered] = useState(false);
   const seen = useInView(target);
 
-  const paused = hovered || alsoPause || !seen;
+  /*
+    เครื่องที่ตั้งค่าระบบไว้ว่า "ลดการเคลื่อนไหว" — **ไม่เลื่อนเองเลย ให้กดปุ่มเอาเอง**
+
+    เดิมเครื่องกลุ่มนี้ยังเลื่อนเองอยู่ แค่ซ่อนหลอดนับถอยหลังไป (`.slide-progress`
+    ใน `globals.css`) กลายเป็นว่าคนที่บอกระบบไว้ว่าไม่อยากเจอของเคลื่อนไหว
+    กลับเจอ**เนื้อหาเปลี่ยนเองโดยไม่มีอะไรบอกล่วงหน้า** ซึ่งแย่กว่าทั้งสองทาง
+    · เจ้าของเว็บเลือกทางนี้เอง 21 ส.ค. 2026 หลังเจอว่าบางเครื่องในสำนักงานไม่มีหลอด
+
+    ปุ่ม ‹ › กับจุดบอกลำดับยังกดได้ตามปกติ เนื้อหาครบเหมือนเดิมทุกอย่าง
+  */
+  const reduce = useReducedMotion();
+
+  const paused = hovered || alsoPause || !seen || reduce === true;
 
   /*
     เลื่อนพ้นการ์ดไปแล้ว `seen` กลับเป็น false → `paused` เป็น true → effect นี้ทำงานใหม่
