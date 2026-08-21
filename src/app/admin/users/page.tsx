@@ -23,6 +23,7 @@ export default async function AdminUsersPage() {
         areas: true,
         active: true,
         ownPassword: true,
+        lineUserId: true,
         lastLoginAt: true,
       },
     }),
@@ -45,8 +46,10 @@ export default async function AdminUsersPage() {
         <UsersManager
           meId={me.id}
           pageCategories={usedCategories(pages)}
-          users={users.map((u) => ({
+          users={users.map(({ lineUserId, ...u }) => ({
             ...u,
+            // ส่งแค่ "ผูกแล้วหรือยัง" ไม่ส่งรหัส LINE ลงหน้าจอ ไม่มีอะไรต้องใช้
+            lineLinked: Boolean(lineUserId),
             lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : null,
           }))}
         />
