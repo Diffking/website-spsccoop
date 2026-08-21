@@ -120,10 +120,19 @@ export default function OfficeHoursForm({ initial }: { initial: OfficeHours }) {
         </label>
       </div>
 
-      {/* ข้อความที่จะขึ้นจริงบนเว็บ — เห็นก่อนบันทึก */}
+      {/*
+        ข้อความที่จะขึ้นจริงบนเว็บ — เห็นก่อนบันทึก
+        ⚠️ ต้องวางเหมือน Footer.tsx เป๊ะ (ปิดทำการขึ้นก่อน รายชื่อวันลงบรรทัดสอง)
+        ไม่งั้นตัวอย่างตรงนี้จะโกหกว่าท้ายเว็บหน้าตาแบบไหน
+      */}
       <div className="mt-4 rounded-xl bg-gray-50 p-3 text-sm">
         <p className="text-gray-700">{describeOfficeHours(form)}</p>
-        {closed && <p className="mt-1 text-gray-500">{closed} และวันหยุดสหกรณ์ — ปิดทำการ</p>}
+        {closed && (
+          <p className="mt-1.5 text-gray-500">
+            ปิดทำการ
+            <span className="mt-0.5 block text-xs text-gray-400">{closed} และวันหยุดสหกรณ์</span>
+          </p>
+        )}
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">

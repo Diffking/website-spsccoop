@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Phone, Mail, Clock, Users, ExternalLink, Navigation, Printer } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, CircleX, Users, ExternalLink, Navigation, Printer } from "lucide-react";
 import { getItems } from "@/lib/homeItems";
 import { getBrand } from "@/lib/nav";
 import { getOfficeHours, getSiteInfo } from "@/lib/settings";
@@ -112,8 +112,22 @@ export default async function Footer() {
           <p className="flex gap-2 text-sm text-white/80">
             <Clock className="mt-0.5 h-4 w-4 shrink-0" /> {describeOfficeHours(hours)}
           </p>
+          {/*
+            วางคู่กับบรรทัดเวลาทำการข้างบน — ไอคอนนำหน้าเหมือนกัน สายตาจึงจับเป็นคู่
+            "เปิด/ปิด" ทันที · คำว่า "ปิดทำการ" ขึ้นก่อนเพราะเป็นใจความ ส่วนรายชื่อวัน
+            เป็นรายละเอียดขยาย จึงลงบรรทัดที่สองด้วยตัวเล็กกว่า
+            (ของเดิมเป็นบรรทัดเดียวยาว ๆ ลงท้ายด้วย "— ปิดทำการ" ซึ่งอ่านเจอช้า)
+          */}
           {closed && (
-            <p className="mt-1.5 pl-6 text-xs text-white/60">{closed} และวันหยุดสหกรณ์ — ปิดทำการ</p>
+            <p className="mt-2 flex gap-2 text-sm text-white/70">
+              <CircleX className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                ปิดทำการ
+                <span className="mt-0.5 block text-xs text-white/60">
+                  {closed} และวันหยุดสหกรณ์
+                </span>
+              </span>
+            </p>
           )}
         </div>
 
