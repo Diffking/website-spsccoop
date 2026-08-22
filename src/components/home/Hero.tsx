@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image, { type StaticImageData } from "next/image";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { ChevronLeft, ChevronRight, ZoomIn, X } from "lucide-react";
 import { activitySlides } from "@/data/home";
 import SlideProgress from "@/components/ui/SlideProgress";
@@ -23,7 +23,6 @@ const SLIDE_MS = SLIDE_TIMING.banner.every;
 const ROW_H = 48;
 
 function BannerSlider({ slides }: { slides: HeroSlide[] }) {
-  const reduce = useReducedMotion();
   const [i, setI] = useState(0);
   const [zoom, setZoom] = useState(false);
   const n = slides.length;
@@ -73,7 +72,7 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
         <AnimatePresence>
           <motion.div
             key={i}
-            {...fadeSwap(SLIDE_TIMING.banner.fade, reduce)}
+            {...fadeSwap(SLIDE_TIMING.banner.fade)}
             onClick={() => setZoom(true)}
             // minmax(0,…) ด้วยเหตุผลเดียวกับกริดชั้นนอก — หัวข้อสไลด์แต่ละใบยาวไม่เท่ากัน
             // ปล่อยเป็น 1.05fr เฉย ๆ คอลัมน์ข้อความจะกว้างตามหัวข้อ แล้วรูปฝั่งขวาขยับทุกครั้งที่สไลด์วน
@@ -123,7 +122,7 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
             <motion.div
               // ภาพค่อยๆ ซูมเข้าช้าๆ ตลอดช่วงที่สไลด์ค้างอยู่ (Ken Burns) ให้ภาพนิ่งดูมีชีวิต
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1, scale: reduce ? 1 : 1.04 }}
+              animate={{ opacity: 1, scale: 1.04 }}
               transition={{
                 opacity: { duration: 0.6, ease: "easeOut" },
                 scale: { duration: SLIDE_MS / 1000, ease: "linear" },
@@ -256,7 +255,6 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
  * ความสูงคงที่ตาม perPage ไม่ว่าหน้านั้นจะมีกี่แถว การ์ดจึงไม่กระตุกตอนเปลี่ยนหน้า
  */
 function RateCard({ rates }: { rates: InterestRates }) {
-  const reduce = useReducedMotion();
   const perPage = Math.max(1, Math.min(20, rates.perPage ?? 5));
   // เจ้าหน้าที่ตั้งเองได้ในหลังบ้าน · ไม่ได้ตั้งก็ใช้จังหวะกลางที่วางไว้ให้ไม่ตรงกับการ์ดอื่น
   const autoSeconds = rates.autoSeconds ?? SLIDE_TIMING.rates.every / 1000;
@@ -342,7 +340,7 @@ function RateCard({ rates }: { rates: InterestRates }) {
         <AnimatePresence initial={false}>
           <motion.ul
             key={index}
-            {...fadeSwap(SLIDE_TIMING.rates.fade, reduce)}
+            {...fadeSwap(SLIDE_TIMING.rates.fade)}
             style={{ ...STACKED, gridTemplateRows: `repeat(${perPage}, ${ROW_H}px)` }}
             className="grid grid-cols-1 divide-y divide-gray-100"
           >
