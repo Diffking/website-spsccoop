@@ -11,7 +11,8 @@ import { db } from "@/lib/db";
 import { pageMetadata } from "@/lib/seo";
 import { localAssetsInHtml } from "@/lib/assetFallback";
 import { repairStructure } from "@/lib/htmlStructure";
-import { LIVE_DEPOSIT_RATES, fillLiveRates } from "@/lib/liveRates";
+import { LIVE_DEPOSIT_RATES, splitAtRates } from "@/lib/liveRates";
+import DepositRates from "@/components/site/DepositRates";
 import { getRates } from "@/lib/settings";
 
 /**
@@ -66,6 +67,7 @@ export default async function ContentPage({ params }: Params) {
 
   // อ่านเฉพาะตอนหน้านั้นมีหมุดอัตราดอกเบี้ยจริง ๆ หน้าอื่นไม่ต้องเสียเวลาถามฐาน
   const rates = page.body.includes(LIVE_DEPOSIT_RATES) ? await getRates() : null;
+  const split = splitAtRates(repairStructure(localAssetsInHtml(page.body)));
 
   return (
     <>
@@ -94,16 +96,25 @@ export default async function ContentPage({ params }: Params) {
           <CalendarDays className="h-4 w-4" /> ปรับปรุงล่าสุด {thaiDate.format(page.updatedAt)}
         </p>
 
-        <PageContent
-          // ซ่อมโครงสร้างตอนแสดงผลด้วย — เนื้อหาเก่าที่บันทึกไว้ก่อนมีตัวซ่อมจะได้ไม่เพี้ยน
-          // fillLiveRates แทนหมุด live-deposit-rates ด้วยอัตราดอกเบี้ยจริงจากหลังบ้าน
-          html={
-            rates
-              ? fillLiveRates(repairStructure(localAssetsInHtml(page.body)), rates)
-              : repairStructure(localAssetsInHtml(page.body))
-          }
-          className="mt-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 md:p-8"
-        />
+        {/*
+          ซ่อมโครงสร้างตอนแสดงผลด้วย — เนื้อหาเก่าที่บันทึกไว้ก่อนมีตัวซ่อมจะได้ไม่เพี้ยน
+
+          หน้าที่มีหมุด live-deposit-rates จะถูกผ่าเป็นก่อน/หลังหมุด แล้ววาง <DepositRates>
+          คั่นตรงกลาง · กรอบการ์ดขาวย้ายมาอยู่ชั้นนอก ทั้งสามชิ้นจึงอยู่ในการ์ดใบเดียวกัน
+          ดูต่อเนื่องเหมือนเนื้อหาก้อนเดียว ไม่ใช่การ์ดขาวสองใบซ้อนกัน
+        */}
+        {rates ? (
+          <div className="mt-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 md:p-8">
+            <PageContent html={split.before} />
+            <DepositRates rates={rates} />
+            {split.after && <PageContent html={split.after} />}
+          </div>
+        ) : (
+          <PageContent
+            html={split.before}
+            className="mt-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 md:p-8"
+          />
+        )}
       </main>
       <BackToTop />
       <Footer />
