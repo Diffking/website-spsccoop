@@ -155,8 +155,18 @@ export default async function Home() {
             scroll-mt-20 = เว้นที่ให้แถบเมนูที่ปักอยู่หัวจอไม่บังหัวข้อของส่วนนั้น
             (แถบบนหุบไปตอนเลื่อนแล้ว เหลือแค่แถวเมนูสูงราว 44px — เว้น 80px พอมีที่หายใจ)
           */
+          /*
+            snap-start = จุดที่หน้าจอจะถูกดูดเข้าเวลาเลื่อนมาใกล้ (ดู scroll-snap-type ใน globals.css)
+            ยกเว้นข่าววิ่ง — มันเป็นแถบบางกว่าหนึ่งบรรทัดและอยู่ในแพ็กเดียวกับสไลด์
+            ถ้าเป็นจุดหยุดด้วยจะถูกดูดไปค้างที่แถบข่าว แล้วดูเหมือนหน้าเว็บค้าง
+            (เหตุผลเดียวกับที่ ticker ไม่มีใน SECTION_SHORT)
+          */
           return (
-            <div key={section.key} id={`sec-${section.key}`} className="scroll-mt-20">
+            <div
+              key={section.key}
+              id={`sec-${section.key}`}
+              className={`scroll-mt-20 ${section.key === "ticker" ? "" : "snap-start"}`}
+            >
               {node}
             </div>
           );

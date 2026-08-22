@@ -125,12 +125,40 @@ export async function record(path: string, ip: string, userAgent: string): Promi
 export type YearPoint = { year: number; visits: number };
 export type PagePoint = { page: string; views: number };
 
-/** ชื่อหน้าที่อ่านง่ายสำหรับกราฟ — path ที่ไม่รู้จักใช้ path เดิมไปก่อน */
+/**
+ * ชื่อหน้าที่อ่านง่ายสำหรับกราฟ — เฉพาะเส้นทางที่ **ไม่ได้** เป็นหน้าเนื้อหาในฐาน
+ *
+ * หน้าเนื้อหาทั่วไปดึงชื่อจากตาราง Page เอง (ดู `pageTitles()`) เจ้าหน้าที่ตั้งชื่อหน้า
+ * ใหม่เมื่อไหร่ในสถิติก็เปลี่ยนตาม ไม่ต้องมาเติมรายชื่อในโค้ดทีละอัน
+ */
 const PAGE_LABELS: Record<string, string> = {
   "/": "หน้าแรก",
   "/splash": "หน้าวันสำคัญ",
+  "/read": "อ่านเอกสาร (เปิดไฟล์ PDF)",
+  "/contact": "ติดต่อเรา",
   "/about/directory/board": "คณะกรรมการดำเนินการ",
 };
+
+/**
+ * ชื่อหน้าจากฐาน — คีย์เป็น "/" + slug ให้ตรงกับ path ที่ตัวนับเก็บไว้
+ * ฐานสะดุดก็คืนแมปว่าง แล้วกราฟจะโชว์เป็น path เดิม ไม่พังทั้งหน้า
+ */
+async function pageTitles(): Promise<Map<string, string>> {
+  try {
+    const rows = await db.page.findMany({ select: { slug: true, title: true } });
+    return new Map(rows.map((r) => [`/${r.slug}`, r.title]));
+  } catch {
+    return new Map();
+  }
+}
+
+/** ชื่อที่เอาไปโชว์ — รายชื่อตายตัวมาก่อน แล้วค่อยชื่อจากฐาน แล้วค่อย path เดิม */
+function pageLabel(path: string, titles: Map<string, string>): string {
+  if (PAGE_LABELS[path]) return PAGE_LABELS[path];
+  // หนังสืออิเล็กทรอนิกส์สร้าง path จากรหัสไฟล์ ไม่มีในตาราง Page
+  if (path.startsWith("/ebook/")) return "หนังสืออิเล็กทรอนิกส์";
+  return titles.get(path.replace(/\/$/, "")) ?? path;
+}
 
 /**
  * จำนวนครั้งที่เปิดเว็บรายปี (พ.ศ.) — ปีที่ยังไม่มีข้อมูลจะไม่ถูกใส่มา
@@ -207,8 +235,9 @@ export async function popularPages(take = 5): Promise<PagePoint[]> {
       take,
     });
 
+    const titles = await pageTitles();
     return rows.map((row) => ({
-      page: PAGE_LABELS[row.path] ?? row.path,
+      page: pageLabel(row.path, titles),
       views: row._sum.count ?? 0,
     }));
   } catch (error) {

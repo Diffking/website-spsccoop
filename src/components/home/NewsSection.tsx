@@ -312,7 +312,8 @@ export default function NewsSection({
   const byKind = { ANNOUNCEMENT: [], NEWSLETTER: [], REPORT: [] } as Record<Kind, AnnouncementItem[]>;
   for (const a of announcements) byKind[a.kind]?.push(a);
   return (
-    <section className={`${bg} py-12`}>
+    /* หัวส่วนห่างจากแพ็ก "สไลด์ + ตาราง + ข่าววิ่ง" มากกว่าปกติ — คนละเรื่องกัน ให้สายตาพักก่อน */
+    <section className={`${bg} pb-12 pt-16`}>
       <div className="mx-auto max-w-6xl px-4">
         <SectionHeading title="ประกาศ / จดหมายข่าว" subtitle="ประกาศและข่าวสารต่างๆ ของดูแลสมาชิกสหกรณ์ด้วยใจ" />
 

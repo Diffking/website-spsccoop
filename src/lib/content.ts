@@ -239,13 +239,20 @@ export async function getWelfareBrief(): Promise<{ label: string; note: string }
     const read = readWelfare(repairStructure(page.body));
     if (!read) return [];
 
-    return read.groups.flatMap((g) =>
-      g.items.map((item) => ({
+    return read.groups.flatMap((g) => {
+      // กลุ่มที่มีจำนวนวันชัด ๆ ใช้ชื่อกลุ่มได้เลย: "เกณฑ์กำหนดภายใน 30 วัน" → "ภายใน 30 วัน"
+      const timed = g.label.includes("ภายใน");
+      return g.items.map((item) => ({
         label: item.name,
-        // "เกณฑ์กำหนดภายใน 30 วัน" → "ภายใน 30 วัน" · ช่องบนหน้าแรกแคบ ใส่ยาวไม่พอ
-        note: g.label.replace(/^เกณฑ์กำหนด/, "").replace(/^ไม่กำหนดระยะเวลา$/, "ไม่กำหนด"),
-      })),
-    );
+        /*
+          กลุ่ม "ไม่กำหนดระยะเวลา" ไม่ได้แปลว่ายื่นเมื่อไหร่ก็ได้ — ทุกอันมีเกณฑ์ของมัน
+          (ตามประกาศสหกรณ์ · ตามระเบียบ · ตามแบบฟอร์มสหกรณ์ ฯลฯ) เจ้าของเว็บทักไว้
+          22 ส.ค. 2026 · จึงยกข้อความจริงจากช่อง "การยื่นเอกสาร" มาแสดงตรง ๆ
+          ไม่ตัดต่อเอง ยาวเกินช่องก็ให้ตัดด้วย … แล้วเอาเมาส์ชี้อ่านเต็ม
+        */
+        note: timed ? g.label.replace(/^เกณฑ์กำหนด/, "") : item.doc.join(" "),
+      }));
+    });
   } catch (error) {
     console.error("อ่านสวัสดิการไม่ได้:", error);
     return [];
