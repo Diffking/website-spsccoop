@@ -56,25 +56,51 @@ const lines = (html: string) =>
  * หากล่องแท็บที่มีคลาส `welfare-view` แล้วแปลงเป็นกลุ่ม
  * คืน null ถ้าไม่เจอหรืออ่านไม่ออก — ฝั่งเรียกจะได้รู้ว่าให้แสดงแบบเดิม
  */
+/**
+ * หาตำแหน่ง `</div>` ที่ปิดตรงกับ `<div>` ที่เปิดไว้ โดยนับชั้นจริง
+ *
+ * ⚠️ ห้ามใช้ regex หา `</div>` ตัวแรก — กล่องแท็บมี `<div>` ซ้อนข้างในหลายชั้น
+ * เคยเขียนแบบนั้นแล้วมันไปจับ `</div>` ผิดตัว กลืนตารางระเบียบกับเอกสารที่อยู่
+ * ถัดจากนั้นเข้ามาเป็นสวัสดิการด้วย จาก 7 รายการกลายเป็น 31 (22 ส.ค. 2026)
+ *
+ * คืน -1 ถ้าหาตัวปิดไม่เจอ (HTML ไม่สมบูรณ์)
+ */
+function closingDiv(html: string, openEnd: number): number {
+  const tag = /<div\b|<\/div>/g;
+  tag.lastIndex = openEnd;
+  let depth = 1;
+  let m: RegExpExecArray | null;
+  while ((m = tag.exec(html)) !== null) {
+    depth += m[0] === "</div>" ? -1 : 1;
+    if (depth === 0) return m.index;
+  }
+  return -1;
+}
+
 export function readWelfare(
   html: string,
 ): { before: string; groups: WelfareGroup[]; after: string } | null {
-  const box = html.match(/<div[^>]*class="[^"]*welfare-view[^"]*"[^>]*>([\s\S]*?)<\/div>\s*(?=<h2|$)/);
-  if (!box || box.index === undefined) return null;
+  const open = html.match(/<div[^>]*class="[^"]*welfare-view[^"]*"[^>]*>/);
+  if (!open || open.index === undefined) return null;
+
+  const innerFrom = open.index + open[0].length;
+  const closeAt = closingDiv(html, innerFrom);
+  if (closeAt === -1) return null;
+
+  const inner = html.slice(innerFrom, closeAt);
 
   /*
     แยกเป็นกลุ่มด้วย `data-title` โดยไม่สนใจว่าแอตทริบิวต์เรียงยังไง —
     ตัวจัดรูปแบบ HTML ตอนบันทึกอาจสลับลำดับ `class` กับ `data-title` ได้
-    ถ้าเขียน regex ผูกลำดับไว้ วันหนึ่งจะพังเงียบ ๆ แล้วหน้ากลับไปเป็นตาราง
   */
-  const marks = [...box[1].matchAll(/data-title="([^"]+)"/g)];
+  const marks = [...inner.matchAll(/data-title="([^"]+)"/g)];
   if (marks.length === 0) return null;
 
   const groups: WelfareGroup[] = [];
   marks.forEach((mark, i) => {
     const from = (mark.index ?? 0) + mark[0].length;
-    const to = i + 1 < marks.length ? marks[i + 1].index : box[1].length;
-    const chunk = box[1].slice(from, to);
+    const to = i + 1 < marks.length ? marks[i + 1].index : inner.length;
+    const chunk = inner.slice(from, to);
 
     const items: WelfareItem[] = [];
     for (const row of chunk.matchAll(
@@ -98,8 +124,8 @@ export function readWelfare(
   if (groups.length === 0) return null;
 
   return {
-    before: html.slice(0, box.index),
+    before: html.slice(0, open.index),
     groups,
-    after: html.slice(box.index + box[0].length),
+    after: html.slice(closeAt + "</div>".length),
   };
 }
