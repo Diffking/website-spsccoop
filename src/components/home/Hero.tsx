@@ -58,7 +58,9 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
     <>
       <div
         ref={frame}
-        className="group relative aspect-[16/10] overflow-hidden rounded-3xl bg-gradient-to-br from-white via-sky-50 to-brand-50 shadow-[0_22px_55px_-20px_rgb(15_83_144_/_.5)] ring-1 ring-brand-100"
+        // md ขึ้นไปปล่อยให้สูงเท่าแถวกริด (= ความสูงการ์ดดอกเบี้ย) สองใบจะได้จบเสมอกัน
+        // มือถือยังล็อก 16:10 ไว้ เพราะเรียงบนล่าง ไม่มีอะไรให้เทียบความสูงด้วย
+        className="group relative aspect-[16/10] overflow-hidden rounded-3xl md:aspect-auto md:h-full bg-gradient-to-br from-white via-sky-50 to-brand-50 shadow-[0_22px_55px_-20px_rgb(15_83_144_/_.5)] ring-1 ring-brand-100"
         {...auto.hover}
       >
         {/*
@@ -266,10 +268,10 @@ const TABS = {
     label: "เงินรับฝาก",
     head: "อัตราดอกเบี้ย (ต่อปี)",
     href: "/deposits/",
-    on: "bg-emerald-500 text-white shadow",
-    off: "text-emerald-700 hover:text-emerald-800",
-    value: "text-emerald-600",
-    dot: "bg-emerald-500",
+    on: "bg-brand-500 text-white shadow",
+    off: "text-brand-700 hover:text-brand-800",
+    value: "text-brand-600",
+    dot: "bg-brand-500",
   },
   loan: {
     label: "เงินให้กู้",
@@ -284,10 +286,10 @@ const TABS = {
     label: "สวัสดิการ",
     head: "กำหนดยื่นเอกสาร",
     href: "/welfare/",
-    on: "bg-violet-500 text-white shadow",
-    off: "text-violet-700 hover:text-violet-800",
-    value: "text-violet-600",
-    dot: "bg-violet-500",
+    on: "bg-emerald-500 text-white shadow",
+    off: "text-emerald-700 hover:text-emerald-800",
+    value: "text-emerald-600",
+    dot: "bg-emerald-500",
   },
 } as const;
 
@@ -403,12 +405,12 @@ function RateCard({ rates, welfare }: { rates: InterestRates; welfare: WelfareBr
                   {r.label}
                 </span>
                 {/*
-                  w-24 ตรึงคอลัมน์ขวาไว้ ไม่งั้นหน้าไหนมีข้อความยาวกว่าคอลัมน์จะกว้างขึ้น
+                  w-32 ตรึงคอลัมน์ขวาไว้ ไม่งั้นหน้าไหนมีข้อความยาวกว่าคอลัมน์จะกว้างขึ้น
                   แล้วชื่อรายการฝั่งซ้ายขยับตามทุกครั้งที่เปลี่ยนหน้า
                   · สวัสดิการไม่มีหน่วย (%) ตัวเลขจึงเล็กกว่าเพราะเป็นข้อความไม่ใช่ตัวเลข
                 */}
                 <span
-                  className={`w-24 shrink-0 truncate text-right font-bold ${tab.value} ${
+                  className={`w-32 shrink-0 truncate text-right font-bold ${tab.value} ${
                     r.unit ? "text-lg" : "text-sm"
                   }`}
                   title={r.value}
@@ -476,7 +478,13 @@ export default function Hero({
 }) {
   const shown = slides.length > 0 ? slides : activitySlides;
   return (
-    <section className="bg-gradient-to-b from-brand-500 to-brand-300 pb-8 pt-6">
+    /*
+      เปิดหน้าเว็บมาต้องเห็น "สไลด์ + ตารางดอกเบี้ย + ข่าววิ่ง" เต็มจอพอดี ไม่ให้ส่วนถัดไป
+      โผล่มาแย่งสายตา (เจ้าของเว็บสั่ง 22 ส.ค. 2026) — 9rem คือหัวเว็บ (~100px) + ข่าววิ่ง (~42px)
+      · ใช้ dvh ไม่ใช่ vh เพราะแถบล่างของเบราว์เซอร์บนมือถือยืดหดได้ vh จะเกินจอไปเสมอ
+      · เป็น min-h ไม่ใช่ h — จอเตี้ยหรือมือถือที่ของสูงกว่าจอก็แค่เลื่อนต่อ ไม่มีอะไรถูกตัด
+    */
+    <section className="flex min-h-[calc(100dvh-9rem)] items-center bg-gradient-to-b from-brand-500 to-brand-300 pb-8 pt-6 md:pt-10">
       {/*
         ต้องเป็น minmax(0,…) ไม่ใช่ 1.9fr_1fr เฉย ๆ — ช่องกริดแบบ `fr` มีความกว้าง
         ขั้นต่ำเป็น auto (= min-content ของเนื้อหา) ภาษาไทยไม่มีช่องว่างระหว่างคำ
@@ -484,7 +492,7 @@ export default function Hero({
         ที่ยาวที่สุดของ "หน้านั้น" ดันคอลัมน์ขวาให้กว้างขึ้น พอเลื่อนไปหน้าถัดไป
         ความยาวเปลี่ยน คอลัมน์ก็ขยับ — แบนเนอร์ฝั่งซ้ายเลยกระตุกตามทุกครั้งที่วน
       */}
-      <div className="mx-auto grid max-w-6xl gap-5 px-4 md:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
+      <div className="mx-auto grid w-full max-w-6xl gap-5 px-4 md:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
         <BannerSlider slides={shown} />
         <RateCard rates={rates} welfare={welfare} />
       </div>
