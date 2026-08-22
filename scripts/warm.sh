@@ -54,7 +54,7 @@ if [ "$fails" -ge 2 ]; then
   exit 0
 fi
 
-url="${MIRROR_WARM_URL:-https://www.spsccoop.com/warm.php}?token=${MIRROR_PURGE_TOKEN}&by=cron"
+url="${MIRROR_WARM_URL:-https://www.spsccoop.com/warm.php}?token=${MIRROR_PURGE_TOKEN}&by=auto"
 
 if out=$(curl -sS -f -m 900 "$url" 2>&1); then
   : > "$FAILS"
