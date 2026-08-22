@@ -25,6 +25,38 @@ import type { WelfareGroup } from "@/lib/welfareGroups";
  */
 const GROUP_MS = 11000;
 
+/**
+ * ตัวเลขที่สมาชิกมองหา — **จำนวนเงิน** กับ **จำนวนงวดการเป็นสมาชิก**
+ *
+ * จับเลข (รวมช่วงแบบ 6-60 และเลขมีจุลภาคแบบ 150,000) ที่ตามด้วยคำว่า บาท หรือ งวด
+ * แล้วขยายให้ใหญ่กว่าข้อความรอบ ๆ · หน่วย (บาท/งวด) คงขนาดเดิมไว้
+ * เพราะถ้าขยายทั้งวลีจะกลายเป็นตัวโตทั้งบรรทัด แล้วไม่มีอะไรเด่นเลย
+ *
+ * ⚠️ ไม่แตะข้อความอื่น — เนื้อความมาจากประกาศสหกรณ์ ห้ามตัดต่อ แค่เน้นตัวเลขที่มีอยู่
+ */
+function Emphasize({ text, tone }: { text: string; tone: string }) {
+  // สร้าง regex ใหม่ทุกครั้ง — ตัวที่ประกาศไว้นอกคอมโพเนนต์แก้ `lastIndex` ไม่ได้
+  // (กฎ react-hooks ห้ามแก้ค่าที่อยู่นอกคอมโพเนนต์ และของที่แชร์กันจะจำตำแหน่งข้ามรอบ)
+  const amount = /(\d[\d,]*(?:\s*-\s*\d[\d,]*)?)(\s*(?:บาท|งวด))/g;
+  const parts: React.ReactNode[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+
+  while ((m = amount.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    parts.push(
+      <span key={m.index} className="whitespace-nowrap">
+        <span className={`text-2xl font-extrabold tabular-nums ${tone}`}>{m[1]}</span>
+        <span className="ml-0.5 text-sm font-semibold text-gray-500">{m[2]}</span>
+      </span>,
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+
+  return <>{parts}</>;
+}
+
 export default function WelfareSections({ groups }: { groups: WelfareGroup[] }) {
   const [at, setAt] = useState(0);
   const box = useRef<HTMLDivElement>(null);
@@ -78,30 +110,48 @@ export default function WelfareSections({ groups }: { groups: WelfareGroup[] }) 
             style={STACKED}
             className="grid grid-cols-1 gap-4 lg:grid-cols-2"
           >
-            {group.items.map((item) => (
+            {/*
+              โครงการ์ดคิดจากลำดับที่สายตาควรเจอ — คนไทยอ่านหนังสือน้อย
+              ถ้าทุกอย่างขนาดเท่ากันหมดจะไม่มีใครอ่าน ต้องมีจุดให้สายตาเกาะทีละชั้น
+
+                1. หัวการ์ดพื้นสีทึบ ตัวขาว = รู้ทันทีว่าสวัสดิการอะไร
+                2. ตัวเลขเงิน/งวด ตัวโตหนา = สิ่งที่สมาชิกอยากรู้ที่สุด
+                3. ป้ายเอกสารพื้นอ่อนติดล่าง = ต้องทำอะไรต่อ
+            */}
+            {group.items.map((item, i) => (
               <div
                 key={item.name}
-                className={`flex flex-col rounded-2xl p-5 ring-1 ${group.tone.card} ${group.tone.ring}`}
+                className={`flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 transition hover:-translate-y-0.5 hover:shadow-lg ${group.tone.ring}`}
               >
-                <p className={`text-base font-bold leading-snug ${group.tone.text}`}>{item.name}</p>
+                {/* หัวการ์ด — เลขลำดับในวงกลมช่วยให้กวาดตานับได้ว่ามีกี่รายการ */}
+                <div className={`flex items-start gap-3 px-5 py-3.5 ${group.tone.active}`}>
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/25 text-sm font-bold tabular-nums">
+                    {i + 1}
+                  </span>
+                  <p className="min-w-0 text-base font-bold leading-snug">{item.name}</p>
+                </div>
 
-                {/* การจ่าย — บรรทัดเดียวก็เป็นย่อหน้า หลายบรรทัดค่อยทำเป็นรายการ */}
-                <div className="mt-3 space-y-1 text-sm leading-relaxed text-gray-700">
+                {/* leading-8 เพราะมีตัวเลขตัวโตปนอยู่ ถ้าชิดกว่านี้บรรทัดจะชนกัน */}
+                <div className="space-y-2 px-5 py-4 text-sm leading-8 text-gray-700">
                   {item.pay.map((line) => (
-                    <p key={line}>{line}</p>
+                    <p key={line}>
+                      <Emphasize text={line} tone={group.tone.text} />
+                    </p>
                   ))}
                 </div>
 
                 {/*
-                  เอกสารที่ต้องยื่นดันไปติดขอบล่างเสมอ (mt-auto) การ์ดในแถวเดียวกัน
-                  จึงมีเส้นคั่นอยู่ระดับเดียวกัน ต่อให้เงื่อนไขการจ่ายยาวไม่เท่ากัน
+                  ป้ายเอกสารดันไปติดขอบล่างเสมอ (mt-auto) การ์ดในแถวเดียวกัน
+                  จึงมีแถบล่างอยู่ระดับเดียวกัน ต่อให้เงื่อนไขการจ่ายยาวไม่เท่ากัน
                 */}
-                <div className="mt-auto flex items-start gap-2 border-t border-black/5 pt-3 text-sm text-gray-600">
+                <div
+                  className={`mt-auto flex items-start gap-2 px-5 py-3 text-sm font-medium ${group.tone.card} ${group.tone.text}`}
+                >
                   {/* นาฬิกา = มีกำหนดเวลา · แฟ้ม = ยื่นตามระเบียบไม่มีกำหนดวัน */}
                   {group.label.includes("ภายใน") ? (
-                    <CalendarClock className={`mt-0.5 h-4 w-4 shrink-0 ${group.tone.text}`} />
+                    <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" />
                   ) : (
-                    <FileText className={`mt-0.5 h-4 w-4 shrink-0 ${group.tone.text}`} />
+                    <FileText className="mt-0.5 h-4 w-4 shrink-0" />
                   )}
                   <span className="min-w-0 space-y-0.5">
                     {item.doc.map((line) => (
