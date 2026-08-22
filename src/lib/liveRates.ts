@@ -21,16 +21,16 @@
  * เจ้าหน้าที่ย้ายตำแหน่งหรือลบทิ้งได้ แต่ไม่ต้องไปพิมพ์ตัวเลขในนั้น
  */
 export const LIVE_DEPOSIT_RATES = "live-deposit-rates";
-
-/** `<div class="live-deposit-rates"></div>` — รับช่องว่างและลำดับแอตทริบิวต์ที่ต่างกันได้ */
-const MARKER = /<div[^>]*class="[^"]*live-deposit-rates[^"]*"[^>]*>\s*<\/div>/;
+export const LIVE_LOAN_RATES = "live-loan-rates";
 
 /**
  * ผ่าเนื้อหาออกเป็น ก่อนหมุด / หลังหมุด — ไม่มีหมุดก็คืนทั้งก้อนเป็น `before`
  * แล้ว `after` เป็น null เพื่อให้ฝั่งเรียกรู้ว่าไม่ต้องวางคอมโพเนนต์
+ *
+ * รับช่องว่างและลำดับแอตทริบิวต์ที่ต่างกันได้ เผื่อ HTML ถูกจัดรูปแบบใหม่ตอนบันทึก
  */
-export function splitAtRates(html: string): { before: string; after: string | null } {
-  const found = html.match(MARKER);
+export function splitAtRates(html: string, cls: string): { before: string; after: string | null } {
+  const found = html.match(new RegExp(`<div[^>]*class="[^"]*${cls}[^"]*"[^>]*>\s*</div>`));
   if (!found || found.index === undefined) return { before: html, after: null };
   return {
     before: html.slice(0, found.index),
