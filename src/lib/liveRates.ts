@@ -39,21 +39,39 @@ const escape = (value: string) =>
 export function fillLiveRates(html: string, rates: InterestRates): string {
   if (!html.includes(LIVE_DEPOSIT_RATES)) return html;
 
-  const rows = rates.deposit
-    .map((r) => `<tr><td>${escape(r.label)}</td><td>${escape(String(r.rate))}</td></tr>`)
-    .join("\n      ");
+  /*
+    วางเป็นการ์ดไม่ใช่ตาราง — ตัวเลขดอกเบี้ยคือสิ่งที่สมาชิกมาหา ต้องเห็นก่อนชื่อประเภท
+    ป้ายสีด้านซ้ายจึงเป็นตัวเลข ส่วนชื่อประเภทอยู่ข้าง ๆ · ใช้คลาส `.cards` ชุดเดิม
+    ที่หน้าเนื้อหาอื่นใช้อยู่ (ดู globals.css) ไม่ต้องมี CSS ใหม่ และหน้าตากลมกลืนกับทั้งเว็บ
 
-  const table = rates.deposit.length
-    ? `<table>
-    <thead>
-      <tr><th>ประเภทเงินฝาก</th><th>อัตราดอกเบี้ย (ต่อปี)</th></tr>
-    </thead>
-    <tbody>
-      ${rows}
-    </tbody>
-  </table>
-  <p class="small">* อัตราดอกเบี้ยอาจเปลี่ยนแปลงตามประกาศสหกรณ์</p>`
-    : `<p>ยังไม่ได้ตั้งอัตราดอกเบี้ยเงินฝากในระบบ</p>`;
+    อัตราสูงสุดทำเป็นสีเขียว — คิดจากข้อมูลจริงตอน render ไม่ได้ฝังไว้ตายตัว
+    เจ้าหน้าที่ปรับดอกเบี้ยเมื่อไหร่ ใบที่เป็นสีเขียวก็ย้ายตามเอง
+  */
+  const list = rates.deposit;
+  if (list.length === 0) {
+    return html.replace(MARKER, "<p>ยังไม่ได้ตั้งอัตราดอกเบี้ยเงินฝากในระบบ</p>");
+  }
 
-  return html.replace(MARKER, table);
+  const best = Math.max(...list.map((r) => Number(r.rate) || 0));
+
+  const cards = list
+    .map((r) => {
+      const top = (Number(r.rate) || 0) === best;
+      return `<div class="card ${top ? "green" : "blue"}">
+      <span class="card-badge">${escape(String(r.rate))}%</span>
+      <span class="card-text">
+        <span class="card-title">${escape(r.label)}</span>
+        <span class="card-sub">${top ? "ดอกเบี้ยสูงสุด · ต่อปี" : "ต่อปี"}</span>
+      </span>
+    </div>`;
+    })
+    .join("\n    ");
+
+  return html.replace(
+    MARKER,
+    `<div class="cards cols-2">
+    ${cards}
+  </div>
+  <p class="small">* อัตราดอกเบี้ยอาจเปลี่ยนแปลงตามประกาศสหกรณ์ ยึดตามประกาศฉบับล่าสุดเป็นสำคัญ</p>`,
+  );
 }
