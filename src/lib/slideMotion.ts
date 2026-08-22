@@ -32,18 +32,22 @@ export const SLIDE_TIMING = {
  * จังหวะข้างในจงใจให้เหลื่อมกันนิดเดียว ไม่ใช่จางพร้อมกันเป๊ะ:
  *   ของเก่าเริ่มจางทันที (เร็ว) · ของใหม่รอนิดนึงค่อยโผล่ (ช้ากว่า)
  * ทับกันแค่แวบเดียวพอไม่ให้เห็นช่องว่าง แต่ไม่ทับนานจนตัวหนังสือซ้อนกันจนอ่านไม่ออก
+ *
+ * ⚠️ **ไม่รับ `prefers-reduced-motion` แล้ว** — เคยรับแล้วให้จางทันที (duration 0)
+ * แต่เครื่องที่เปิดโหมดประหยัดพลังงาน Windows ปิดแอนิเมชันให้เอง เจ้าหน้าที่เลยเห็น
+ * เนื้อหาสลับวูบเดียวและไม่มีหลอดนับ นึกว่าเว็บพัง · เจ้าของเว็บสั่งให้แสดงเหมือนกัน
+ * ทุกเครื่อง 21 ส.ค. 2026 (ดูเหตุผลเต็มที่ src/lib/useAutoRotate.ts)
  */
-export function fadeSwap(fade: number, reduce: boolean | null) {
-  const d = reduce ? 0 : fade;
+export function fadeSwap(fade: number) {
   return {
     initial: { opacity: 0 },
     animate: {
       opacity: 1,
-      transition: { duration: d * 0.75, delay: d * 0.3, ease: "easeOut" as const },
+      transition: { duration: fade * 0.75, delay: fade * 0.3, ease: "easeOut" as const },
     },
     exit: {
       opacity: 0,
-      transition: { duration: d * 0.45, ease: "easeIn" as const },
+      transition: { duration: fade * 0.45, ease: "easeIn" as const },
     },
   };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { FileText, BookOpen, CalendarDays, ChevronLeft, ChevronRight, UserRound } from "lucide-react";
 import Reveal from "@/components/ui/Reveal";
@@ -27,7 +27,6 @@ import {
 const PER_PAGE = 5;
 
 function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Kind }) {
-  const reduce = useReducedMotion();
   const [page, setPage] = useState(0);
   const pageCount = Math.max(1, Math.ceil(items.length / PER_PAGE));
   // กันหน้าค้างเกินขอบเวลาประกาศถูกลบจนเหลือน้อยลง
@@ -82,7 +81,7 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
         <AnimatePresence initial={false}>
         <motion.ul
           key={current}
-          {...fadeSwap(SLIDE_TIMING.announcements.fade, reduce)}
+          {...fadeSwap(SLIDE_TIMING.announcements.fade)}
           style={{ ...STACKED, gridTemplateRows: `repeat(${PER_PAGE}, minmax(4.25rem, auto))` }}
           className="grid grid-cols-1 divide-y divide-gray-100"
         >
@@ -184,7 +183,6 @@ function CommitteeCard({
   /** % ของกรอบเต็ม 220x300 — เลือกได้ที่ /admin/home/committees */
   photoScale: number;
 }) {
-  const reduce = useReducedMotion();
   const [i, setI] = useState(0);
   const n = members.length;
   const c = members[Math.min(i, Math.max(0, n - 1))];
@@ -227,7 +225,7 @@ function CommitteeCard({
       <AnimatePresence initial={false}>
       <motion.div
         key={i}
-        {...fadeSwap(SLIDE_TIMING.committee.fade, reduce)}
+        {...fadeSwap(SLIDE_TIMING.committee.fade)}
         style={STACKED}
         className="flex min-w-0 flex-col"
       >
