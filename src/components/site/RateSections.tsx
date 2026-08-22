@@ -6,12 +6,12 @@ import { Check } from "lucide-react";
 import SlideProgress from "@/components/ui/SlideProgress";
 import { useAutoRotate } from "@/lib/useAutoRotate";
 import { STACKED, fadeSwap } from "@/lib/slideMotion";
-import { groupDeposits, type RateGroup } from "@/lib/depositGroups";
-import type { InterestRates } from "@/lib/settings";
+import type { RateGroup } from "@/lib/rateGroups";
 
 /**
- * อัตราดอกเบี้ยเงินรับฝาก — วางแบบการ์ดราคา (อิงหน้าตา Pricing Sections ของ Tailwind)
- * แยกเป็นกลุ่มตามประเภทแล้วเลื่อนสลับกลุ่มเอง
+ * อัตราดอกเบี้ย — วางแบบการ์ดราคา (อิงหน้าตา Pricing Sections ของ Tailwind)
+ * แยกเป็นกลุ่มตามประเภทแล้วเลื่อนสลับกลุ่มเอง · ใช้ได้ทั้งเงินฝากและเงินกู้
+ * (กลุ่มกับสีคิดมาจากฝั่งเซิร์ฟเวอร์แล้ว ดู src/lib/rateGroups.ts)
  *
  * ทำไมต้องเป็น component ไม่ใช่ HTML ที่แทนที่ตอน render เหมือนเมื่อก่อน:
  * ต้องกดสลับกลุ่มได้และเลื่อนเอง ซึ่งต้องมี state ฝั่งเบราว์เซอร์
@@ -49,8 +49,7 @@ function Card({ row, group }: { row: RateGroup["rows"][number]; group: RateGroup
   );
 }
 
-export default function DepositRates({ rates }: { rates: InterestRates }) {
-  const groups = groupDeposits(rates);
+export default function RateSections({ groups }: { groups: RateGroup[] }) {
   const [at, setAt] = useState(0);
   const box = useRef<HTMLDivElement>(null);
   const auto = useAutoRotate({

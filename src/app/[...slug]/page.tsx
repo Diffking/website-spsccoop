@@ -11,8 +11,9 @@ import { db } from "@/lib/db";
 import { pageMetadata } from "@/lib/seo";
 import { localAssetsInHtml } from "@/lib/assetFallback";
 import { repairStructure } from "@/lib/htmlStructure";
-import { LIVE_DEPOSIT_RATES, splitAtRates } from "@/lib/liveRates";
-import DepositRates from "@/components/site/DepositRates";
+import { LIVE_DEPOSIT_RATES, LIVE_LOAN_RATES, splitAtRates } from "@/lib/liveRates";
+import RateSections from "@/components/site/RateSections";
+import { groupDeposits, groupLoans } from "@/lib/rateGroups";
 import { getRates } from "@/lib/settings";
 
 /**
@@ -65,9 +66,16 @@ export default async function ContentPage({ params }: Params) {
   const user = page.published ? null : await currentUser();
   if (!page.published && !user) notFound();
 
-  // อ่านเฉพาะตอนหน้านั้นมีหมุดอัตราดอกเบี้ยจริง ๆ หน้าอื่นไม่ต้องเสียเวลาถามฐาน
-  const rates = page.body.includes(LIVE_DEPOSIT_RATES) ? await getRates() : null;
-  const split = splitAtRates(repairStructure(localAssetsInHtml(page.body)));
+  /*
+    หน้าไหนมีหมุดอัตราดอกเบี้ยถึงจะไปอ่านค่าจากฐาน หน้าอื่นไม่ต้องเสียเวลา
+    หน้าหนึ่งใส่ได้หมุดเดียว (เงินฝาก หรือ เงินกู้) ซึ่งพอสำหรับที่ใช้จริง
+  */
+  const wantsDeposit = page.body.includes(LIVE_DEPOSIT_RATES);
+  const wantsLoan = page.body.includes(LIVE_LOAN_RATES);
+  const rates = wantsDeposit || wantsLoan ? await getRates() : null;
+  const html = repairStructure(localAssetsInHtml(page.body));
+  const split = splitAtRates(html, wantsDeposit ? LIVE_DEPOSIT_RATES : LIVE_LOAN_RATES);
+  const groups = rates ? (wantsDeposit ? groupDeposits(rates) : groupLoans(rates)) : null;
 
   return (
     <>
@@ -103,10 +111,10 @@ export default async function ContentPage({ params }: Params) {
           คั่นตรงกลาง · กรอบการ์ดขาวย้ายมาอยู่ชั้นนอก ทั้งสามชิ้นจึงอยู่ในการ์ดใบเดียวกัน
           ดูต่อเนื่องเหมือนเนื้อหาก้อนเดียว ไม่ใช่การ์ดขาวสองใบซ้อนกัน
         */}
-        {rates ? (
+        {groups ? (
           <div className="mt-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 md:p-8">
             <PageContent html={split.before} />
-            <DepositRates rates={rates} />
+            <RateSections groups={groups} />
             {split.after && <PageContent html={split.after} />}
           </div>
         ) : (
