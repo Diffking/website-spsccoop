@@ -8,7 +8,7 @@ import type { MirrorStatus } from "@/lib/mirror";
  * สถานะสำเนาหน้าเว็บบนโฮสต์ + ปุ่มสั่งอุ่นเอง
  *
  * สมาชิกอ่านเว็บจากสำเนาที่โฮสต์ของ www.spsccoop.com เก็บไว้ ไม่ใช่จากเครื่องนี้โดยตรง
- * ปกติสำเนาอัปเดตเองอยู่แล้ว (กดบันทึกก็ล้างให้ทันที + มีตัวอุ่นทุกชั่วโมง) แต่เจ้าหน้าที่
+ * ปกติสำเนาอัปเดตเองอยู่แล้ว (กดบันทึกก็ล้างให้ทันที + มีตัวอุ่นวันละ 2 ครั้ง) แต่เจ้าหน้าที่
  * ควรมองเห็นว่ามันยังทำงานอยู่จริงไหม และสั่งเองได้เมื่อไม่แน่ใจ
  */
 
@@ -21,6 +21,26 @@ const thaiDateTime = new Intl.DateTimeFormat("th-TH", {
 const thaiTime = new Intl.DateTimeFormat("th-TH", { timeStyle: "short", timeZone: "Asia/Bangkok" });
 
 const mb = (bytes: number) => `${(bytes / 1_048_576).toFixed(1)} MB`;
+
+/**
+ * รอบอุ่นถัดไป — คิดจากตารางจริง ไม่ใช่ "รอบล่าสุด + 1 ชั่วโมง" อย่างเดิม
+ * ⚠️ เวลาต้องตรงกับ `WARM_CRON` ใน docker-compose.yml (ตอนนี้ `30 9,15 * * *`)
+ */
+const SLOTS = [9 * 60 + 30, 15 * 60 + 30];
+
+function nextRound(nowMs: number): Date {
+  const at = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Bangkok",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(nowMs));
+  const hour = Number(at.find((p) => p.type === "hour")?.value ?? 0);
+  const minute = Number(at.find((p) => p.type === "minute")?.value ?? 0);
+  const cur = hour * 60 + minute;
+  const next = SLOTS.find((s) => s > cur) ?? SLOTS[0] + 24 * 60;
+  return new Date(nowMs + (next - cur) * 60_000);
+}
 
 /** "3 นาทีที่แล้ว" อ่านง่ายกว่าเวลาเต็ม เวลาดูว่าระบบยังเดินอยู่ไหม */
 function ago(seconds: number): string {
@@ -81,8 +101,17 @@ export default function MirrorPanel({ initial }: { initial: MirrorStatus }) {
    */
   const autoTime = last?.auto_time ?? null;
   const autoAgo = autoTime && now ? ago(now / 1000 - autoTime) : null;
-  const nextAuto = autoTime ? new Date((autoTime + 3600) * 1000) : null;
-  const stale = !autoTime || (now !== null && now / 1000 - autoTime > 7200);
+  const nextAuto = now ? nextRound(now) : null;
+  /*
+    เกินกี่ชั่วโมงถึงเรียกว่าผิดปกติ — รอบอยู่ที่ 09:30 กับ 15:30 ช่วงห่างที่สุดคือ
+    15:30 ถึง 09:30 วันรุ่งขึ้น = 18 ชม. · เผื่ออีกนิดเป็น 20 ชม.
+    (เดิมตั้งไว้ 2 ชม. ตามตอนที่ยังอุ่นทุกชั่วโมง พอเปลี่ยนเป็นวันละ 2 ครั้ง
+    มันเลยขึ้น "ต้องตรวจสอบ" ค้างตลอดทั้งที่ระบบทำงานปกติ)
+
+    ⚠️ เช้าวันจันทร์จะขึ้นเตือนเป็นปกติ เพราะเสาร์อาทิตย์ปิดเครื่องไม่มีรอบอุ่น
+    — นั่นถูกแล้ว สำเนาบนโฮสต์เก่าจริงตั้งแต่เย็นวันศุกร์
+  */
+  const stale = !autoTime || (now !== null && now / 1000 - autoTime > 72_000);
 
   return (
     <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
@@ -94,8 +123,8 @@ export default function MirrorPanel({ initial }: { initial: MirrorStatus }) {
           <div>
             <h2 className="font-semibold text-gray-800">สำเนาหน้าเว็บบนโฮสต์</h2>
             <p className="mt-0.5 text-xs leading-relaxed text-gray-500">
-              สมาชิกอ่านเว็บจากสำเนาที่ www.spsccoop.com เก็บไว้ — ระบบอุ่นสำเนาให้เองทุกชั่วโมง
-              และล้างให้ทันทีทุกครั้งที่กดบันทึก
+              สมาชิกอ่านเว็บจากสำเนาที่ www.spsccoop.com เก็บไว้ — ระบบอุ่นสำเนาให้เอง
+              วันละ 2 ครั้ง (09:30 และ 15:30 น.) และล้างให้ทันทีทุกครั้งที่กดบันทึก
             </p>
           </div>
         </div>
@@ -158,7 +187,7 @@ export default function MirrorPanel({ initial }: { initial: MirrorStatus }) {
 
           <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-gray-50 p-3 text-xs text-gray-600">
             <Timer className="h-4 w-4 shrink-0 text-gray-400" />
-            <span className="font-medium text-gray-700">อุ่นอัตโนมัติทุกชั่วโมง</span>
+            <span className="font-medium text-gray-700">อุ่นอัตโนมัติ 09:30 และ 15:30 น.</span>
             {autoTime ? (
               <>
                 <span className="text-gray-400">·</span>

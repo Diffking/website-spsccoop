@@ -13,7 +13,7 @@ export type MirrorLastRun = {
   pages: { ok: number; skip: number; fail: number; total: number };
   assets: { ok: number; skip: number; fail: number; total: number } | null;
   bytes: number;
-  /** "auto" = ตัวตั้งเวลาทุกชั่วโมง · "manual" = เจ้าหน้าที่กดปุ่มเอง */
+  /** "auto" = รอบตามตาราง 09:30/15:30 (scripts/warm.sh) · "manual" = เจ้าหน้าที่กดปุ่มเอง */
   by: string;
   /** เวลารอบอัตโนมัติล่าสุด — กดเองไม่ทับค่านี้ ใช้ดูว่าตัวตั้งเวลายังเดินอยู่ไหม */
   auto_time: number | null;
