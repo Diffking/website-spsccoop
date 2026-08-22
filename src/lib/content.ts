@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { getTickerSettings } from "@/lib/settings";
 import { announcementLine, KINDS, type Kind } from "@/lib/announcementKinds";
 import { localAsset } from "@/lib/assetFallback";
+import { repairStructure } from "@/lib/htmlStructure";
+import { readWelfare } from "@/lib/welfareGroups";
 import type { CalendarEvent } from "@/data/home";
 
 /**
@@ -213,6 +215,39 @@ export async function getAnnouncements(take = 20, kind?: Kind): Promise<Announce
     }));
   } catch (error) {
     console.error("อ่านประกาศไม่ได้:", error);
+    return [];
+  }
+}
+
+/**
+ * ชื่อสวัสดิการ + กำหนดยื่นเอกสาร — เอาไปโชว์ในการ์ดอัตราดอกเบี้ยบนหน้าแรก
+ *
+ * ⚠️ อ่านจากหน้า /welfare/ ตัวจริง ไม่ได้พิมพ์ซ้ำไว้ในโค้ด — เจ้าหน้าที่แก้ตารางในหน้านั้น
+ * แล้วหน้าแรกเปลี่ยนตามเอง ไม่มีทางที่สองที่จะไม่ตรงกัน (สวัสดิการเปลี่ยนตามประกาศทุกปี)
+ *
+ * เอาแค่ชื่อกับกำหนดยื่น เพราะเงื่อนไขการจ่ายยาวมาก ใส่ในการ์ดเล็กไม่ไหว —
+ * อยากอ่านเต็มให้กดลิงก์ท้ายการ์ดไปหน้า /welfare/
+ */
+export async function getWelfareBrief(): Promise<{ label: string; note: string }[]> {
+  try {
+    const page = await db.page.findUnique({
+      where: { slug: "welfare" },
+      select: { body: true, published: true },
+    });
+    if (!page?.published) return [];
+
+    const read = readWelfare(repairStructure(page.body));
+    if (!read) return [];
+
+    return read.groups.flatMap((g) =>
+      g.items.map((item) => ({
+        label: item.name,
+        // "เกณฑ์กำหนดภายใน 30 วัน" → "ภายใน 30 วัน" · ช่องบนหน้าแรกแคบ ใส่ยาวไม่พอ
+        note: g.label.replace(/^เกณฑ์กำหนด/, "").replace(/^ไม่กำหนดระยะเวลา$/, "ไม่กำหนด"),
+      })),
+    );
+  } catch (error) {
+    console.error("อ่านสวัสดิการไม่ได้:", error);
     return [];
   }
 }

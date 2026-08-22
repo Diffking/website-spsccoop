@@ -25,7 +25,7 @@ import {
   getSiteInfo,
   getSplash,
 } from "@/lib/settings";
-import { getAnnouncements, getHolidayEvents, getSlides } from "@/lib/content";
+import { getAnnouncements, getHolidayEvents, getSlides, getWelfareBrief } from "@/lib/content";
 import { getCalendarEvents, getItems } from "@/lib/homeItems";
 import { pageMetadata } from "@/lib/seo";
 
@@ -56,6 +56,7 @@ export default async function Home() {
     show,
     tones,
     order,
+    welfare,
   ] = await Promise.all([
     getSiteInfo(),
     getRates(),
@@ -76,6 +77,7 @@ export default async function Home() {
     getHomeSections(),
     getHomeTones(),
     getHomeOrder(),
+    getWelfareBrief(),
   ]);
 
   // สีพื้นหลังของแต่ละส่วน — "สลับให้เอง" คิดจากส่วนที่แสดงอยู่จริง ตามลำดับที่จัดไว้
@@ -92,7 +94,7 @@ export default async function Home() {
 
   // เนื้อของแต่ละส่วน — ประกอบไว้ก่อน แล้วค่อยเรียงตามลำดับที่จัดไว้ตอน render
   const blocks: Record<HomeSectionKey, React.ReactNode> = {
-    hero: <Hero rates={rates} slides={slides} />,
+    hero: <Hero rates={rates} slides={slides} welfare={welfare} />,
     ticker: <NewsTicker bg={bg.ticker} />,
     news: (
       <NewsSection

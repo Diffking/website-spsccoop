@@ -23,6 +23,33 @@ function YouTubeIcon({ className }: { className?: string }) {
 }
 
 // ที่อยู่/เบอร์/เวลาทำการ มาจากตาราง Setting ที่แก้ได้ที่ /admin/home
+/**
+ * หั่นที่อยู่เป็นบรรทัดตามที่คนไทยเขียนซองจดหมาย — บ้านเลขที่/ถนน · ตำบล/อำเภอ · จังหวัด/รหัสไปรษณีย์
+ *
+ * ที่อยู่เก็บในฐานเป็นข้อความบรรทัดเดียว (แก้ที่หลังบ้าน → ส่วนท้ายเว็บ) ถ้าปล่อยให้ตกบรรทัดเอง
+ * มันจะไปตัดกลางคำว่า "น้ำน้อย" เพราะภาษาไทยไม่มีช่องว่างระหว่างคำ เบราว์เซอร์จึงตัดตรงไหนก็ได้
+ * — เจ้าของเว็บให้แยกบรรทัดเอง 22 ส.ค. 2026
+ *
+ * ตัดตามคำที่มีอยู่จริงในข้อความเท่านั้น ไม่ได้เดาหรือเติมอะไรเข้าไป
+ * ที่อยู่ที่ไม่มี "ตำบล" หรือไม่มีรหัสไปรษณีย์ก็ได้บรรทัดเดียวเหมือนเดิม ไม่พัง
+ */
+function addressLines(address: string): string[] {
+  const text = address.trim();
+  if (!text) return [];
+
+  // ท้ายสุด: จังหวัด + รหัสไปรษณีย์ 5 หลัก
+  const zip = /\s(\S+\s+\d{5})\s*$/.exec(text);
+  const last = zip ? zip[1] : "";
+  const rest = zip ? text.slice(0, zip.index).trim() : text;
+
+  // กลาง: ตั้งแต่คำว่า ตำบล/ต. ไปจนจบ (ปกติมีอำเภอต่อท้ายอยู่แล้ว)
+  const sub = /\s(ตำบล|ต\.)/.exec(rest);
+  const head = sub ? rest.slice(0, sub.index).trim() : rest;
+  const mid = sub ? rest.slice(sub.index).trim() : "";
+
+  return [head, mid, last].filter(Boolean);
+}
+
 export default async function Footer() {
   const [info, agencyLinks, brand, hours] = await Promise.all([
     getSiteInfo(),
@@ -89,7 +116,16 @@ export default async function Footer() {
         <div>
           <p className="mb-3 text-sm font-semibold text-white/80">ติดต่อเรา</p>
           <ul className="space-y-2.5 text-sm text-white/80">
-            <li className="flex gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0" /> {info.address}</li>
+            <li className="flex gap-2">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+              <span className="min-w-0">
+                {addressLines(info.address).map((line) => (
+                  <span key={line} className="block">
+                    {line}
+                  </span>
+                ))}
+              </span>
+            </li>
             <li className="flex gap-2"><Phone className="h-4 w-4 shrink-0" /> {info.phone}</li>
             {/* แฟกซ์ใช้ไอคอนเครื่องแฟกซ์ ไม่ใช่หูโทรศัพท์ซ้ำกับเบอร์ด้านบน */}
             <li className="flex gap-2"><Printer className="h-4 w-4 shrink-0" /> {info.fax}</li>
