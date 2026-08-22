@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
+import { useWideScreen } from "@/lib/useAutoRotate";
 
 /**
  * ตัวนำทางลอยด้านซ้ายของหน้าแรก — บอกว่าตอนนี้อ่านอยู่ส่วนไหน และกระโดดไปส่วนอื่นได้
@@ -16,6 +17,11 @@ import { ChevronUp, ChevronDown } from "lucide-react";
 export default function SectionNav({ items }: { items: { key: string; label: string }[] }) {
   const [active, setActive] = useState(0);
   const [shown, setShown] = useState(false);
+  /*
+    จอแคบกว่านี้แถบนี้ถูกซ่อนอยู่แล้ว (`xl:block`) — เช็คซ้ำที่นี่เพื่อ **ไม่ต้องทำงานเลย**
+    ไม่ใช่แค่ไม่แสดงผล · บนมือถือจะได้ไม่เสียแรงอ่านตำแหน่งทุกส่วนทุกครั้งที่เลื่อน
+  */
+  const wide = useWideScreen(1280);
 
   /*
     หาว่าตอนนี้อยู่ส่วนไหน — ส่วนที่ขอบบนเลยหัวเว็บไปแล้วและอยู่สูงสุด คือส่วนที่กำลังอ่าน
@@ -27,7 +33,7 @@ export default function SectionNav({ items }: { items: { key: string; label: str
     แบบนี้คิดอย่างมากเฟรมละครั้ง เท่าที่จอวาดได้จริง ไม่มีงานเกินความจำเป็น
   */
   useEffect(() => {
-    if (items.length === 0) return;
+    if (items.length === 0 || !wide) return;
 
     let queued = 0;
 
@@ -57,7 +63,7 @@ export default function SectionNav({ items }: { items: { key: string; label: str
       window.removeEventListener("scroll", onScroll);
       if (queued) cancelAnimationFrame(queued);
     };
-  }, [items]);
+  }, [items, wide]);
 
   const goTo = useCallback(
     (index: number) => {

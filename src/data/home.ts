@@ -4,9 +4,9 @@
  * ที่เหลือในไฟล์นี้ยังเป็น placeholder จาก mockup รอย้ายเข้าหลังบ้านทีละส่วน
  */
 
-import slideWelfare from "@/data/asset/slider-img/slide-welfare.jpg";
-import slideDepositCert from "@/data/asset/slider-img/slide-deposit-cert.jpg";
-import slideScreenshot from "@/data/asset/slider-img/Screenshot-2026-06-08-105311.png";
+import slideWelfare from "@/data/asset/slider-img/slide-welfare.webp";
+import slideDepositCert from "@/data/asset/slider-img/slide-deposit-cert.webp";
+import slideScreenshot from "@/data/asset/slider-img/Screenshot-2026-06-08-105311.webp";
 // หมายเหตุ: ภาพ "ธ สถิตในดวงใจฯ" (พระองค์ภา) ย้ายไปหน้า /splash ไม่อยู่ในสไลด์แล้ว
 
 // ข้อมูลติดต่อ (ที่อยู่ เบอร์ แฟกซ์ อีเมล เวลาทำการ จำนวนผู้เข้าชม) ย้ายไปอยู่ในฐานข้อมูลแล้ว
