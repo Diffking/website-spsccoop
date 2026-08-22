@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image, { type StaticImageData } from "next/image";
+import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronLeft, ChevronRight, ZoomIn, X } from "lucide-react";
 import { activitySlides } from "@/data/home";
@@ -254,14 +255,59 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
  * จึงตัดเป็นหน้า ๆ ละ perPage แล้วไล่ไปทีละหน้า หมดเงินฝากต่อด้วยเงินกู้แล้ววนกลับ
  * ความสูงคงที่ตาม perPage ไม่ว่าหน้านั้นจะมีกี่แถว การ์ดจึงไม่กระตุกตอนเปลี่ยนหน้า
  */
-function RateCard({ rates }: { rates: InterestRates }) {
+/**
+ * แถบสามอย่างบนการ์ดหน้าแรก — เงินรับฝาก · เงินให้กู้ · สวัสดิการสมาชิก
+ *
+ * สองอันแรกโชว์อัตราดอกเบี้ย ส่วนสวัสดิการโชว์ **ชื่อกับกำหนดยื่นเอกสาร** เท่านั้น
+ * เพราะเงื่อนไขการจ่ายยาวมาก ใส่ลงการ์ดเล็ก ๆ นี้ไม่ไหว — คนที่สนใจกดลิงก์ท้ายการ์ดไปอ่านต่อ
+ */
+const TABS = {
+  deposit: {
+    label: "เงินรับฝาก",
+    head: "อัตราดอกเบี้ย (ต่อปี)",
+    href: "/deposits/",
+    on: "bg-emerald-500 text-white shadow",
+    off: "text-emerald-700 hover:text-emerald-800",
+    value: "text-emerald-600",
+    dot: "bg-emerald-500",
+  },
+  loan: {
+    label: "เงินให้กู้",
+    head: "อัตราดอกเบี้ย (ต่อปี)",
+    href: "/loans/",
+    on: "bg-orange-500 text-white shadow",
+    off: "text-orange-700 hover:text-orange-800",
+    value: "text-orange-600",
+    dot: "bg-orange-500",
+  },
+  welfare: {
+    label: "สวัสดิการ",
+    head: "กำหนดยื่นเอกสาร",
+    href: "/welfare/",
+    on: "bg-violet-500 text-white shadow",
+    off: "text-violet-700 hover:text-violet-800",
+    value: "text-violet-600",
+    dot: "bg-violet-500",
+  },
+} as const;
+
+type TabKey = keyof typeof TABS;
+export type WelfareBrief = { label: string; note: string };
+
+function RateCard({ rates, welfare }: { rates: InterestRates; welfare: WelfareBrief[] }) {
   const perPage = Math.max(1, Math.min(20, rates.perPage ?? 5));
   // เจ้าหน้าที่ตั้งเองได้ในหลังบ้าน · ไม่ได้ตั้งก็ใช้จังหวะกลางที่วางไว้ให้ไม่ตรงกับการ์ดอื่น
   const autoSeconds = rates.autoSeconds ?? SLIDE_TIMING.rates.every / 1000;
 
-  // ตัดเป็นหน้า ๆ เรียงเงินฝากก่อนแล้วต่อด้วยเงินกู้ — ลำดับนี้คือลำดับที่จะเลื่อนไป
-  const pages = (["deposit", "loan"] as const).flatMap((group) => {
-    const rows = rates[group];
+  // ตัดเป็นหน้า ๆ เรียงเงินรับฝาก → เงินให้กู้ → สวัสดิการ — ลำดับนี้คือลำดับที่จะเลื่อนไป
+  const source: Record<TabKey, { label: string; value: string; unit?: string }[]> = {
+    deposit: rates.deposit.map((r) => ({ label: r.label, value: String(r.rate), unit: "%" })),
+    loan: rates.loan.map((r) => ({ label: r.label, value: String(r.rate), unit: "%" })),
+    welfare: welfare.map((w) => ({ label: w.label, value: w.note })),
+  };
+
+  const pages = (Object.keys(TABS) as TabKey[]).flatMap((group) => {
+    const rows = source[group];
     if (rows.length === 0) return [];
     return Array.from({ length: Math.ceil(rows.length / perPage) }, (_, i) => ({
       group,
@@ -285,13 +331,14 @@ function RateCard({ rates }: { rates: InterestRates }) {
 
   if (!current) return null;
 
-  const isDeposit = current.group === "deposit";
-  const valueColor = isDeposit ? "text-emerald-600" : "text-orange-600";
+  const tab = TABS[current.group];
   /** กดแท็บ = กระโดดไปหน้าแรกของกลุ่มนั้น */
-  const jumpTo = (group: "deposit" | "loan") => {
+  const jumpTo = (group: TabKey) => {
     const target = pages.findIndex((p) => p.group === group);
     if (target !== -1) setIndex(target);
   };
+  // โชว์เฉพาะแท็บที่มีข้อมูลจริง — ไม่มีสวัสดิการก็เหลือสองแท็บเหมือนเดิม
+  const shown = (Object.keys(TABS) as TabKey[]).filter((k) => source[k].length > 0);
 
   return (
     <div
@@ -299,22 +346,26 @@ function RateCard({ rates }: { rates: InterestRates }) {
       {...auto.hover}
       className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-lg ring-1 ring-black/5"
     >
-      <div className="grid grid-cols-2 gap-1 rounded-full bg-gray-100 p-1 text-sm font-semibold">
-        <button
-          onClick={() => jumpTo("deposit")}
-          className={`rounded-full py-1.5 transition ${isDeposit ? "bg-emerald-500 text-white shadow" : "text-emerald-700 hover:text-emerald-800"}`}
-        >
-          เงินฝาก
-        </button>
-        <button
-          onClick={() => jumpTo("loan")}
-          className={`rounded-full py-1.5 transition ${!isDeposit ? "bg-orange-500 text-white shadow" : "text-orange-700 hover:text-orange-800"}`}
-        >
-          เงินกู้
-        </button>
+      {/* กริดตามจำนวนแท็บที่มีจริง — grid-cols-N แบบมีเลข Tailwind ใส่ minmax(0,1fr) ให้เอง */}
+      <div
+        className={`grid gap-1 rounded-full bg-gray-100 p-1 text-sm font-semibold ${
+          shown.length === 3 ? "grid-cols-3" : "grid-cols-2"
+        }`}
+      >
+        {shown.map((key) => (
+          <button
+            key={key}
+            onClick={() => jumpTo(key)}
+            className={`rounded-full py-1.5 transition ${
+              current.group === key ? TABS[key].on : TABS[key].off
+            }`}
+          >
+            {TABS[key].label}
+          </button>
+        ))}
       </div>
 
-      <p className="mt-4 text-xs text-gray-400">อัตราดอกเบี้ย (ต่อปี)</p>
+      <p className="mt-4 text-xs text-gray-400">{tab.head}</p>
 
       {/*
         ล็อกขนาดสองอย่าง ไม่งั้นเปลี่ยนหน้าแล้วสะดุดตา
@@ -351,8 +402,19 @@ function RateCard({ rates }: { rates: InterestRates }) {
                 <span className="min-w-0 flex-1 truncate text-sm text-gray-600" title={r.label}>
                   {r.label}
                 </span>
-                <span className={`w-24 shrink-0 text-right text-lg font-bold ${valueColor}`}>
-                  {r.rate} <span className="text-sm font-medium text-gray-400">%</span>
+                {/*
+                  w-24 ตรึงคอลัมน์ขวาไว้ ไม่งั้นหน้าไหนมีข้อความยาวกว่าคอลัมน์จะกว้างขึ้น
+                  แล้วชื่อรายการฝั่งซ้ายขยับตามทุกครั้งที่เปลี่ยนหน้า
+                  · สวัสดิการไม่มีหน่วย (%) ตัวเลขจึงเล็กกว่าเพราะเป็นข้อความไม่ใช่ตัวเลข
+                */}
+                <span
+                  className={`w-24 shrink-0 truncate text-right font-bold ${tab.value} ${
+                    r.unit ? "text-lg" : "text-sm"
+                  }`}
+                  title={r.value}
+                >
+                  {r.value}
+                  {r.unit && <span className="text-sm font-medium text-gray-400"> {r.unit}</span>}
                 </span>
               </li>
             ))}
@@ -373,9 +435,7 @@ function RateCard({ rates }: { rates: InterestRates }) {
                 onClick={() => setIndex(i)}
                 aria-label={`ไปหน้าที่ ${i + 1}`}
                 className={`h-1.5 rounded-full transition-all ${
-                  i === index
-                    ? `w-5 ${page.group === "deposit" ? "bg-emerald-500" : "bg-orange-500"}`
-                    : "w-1.5 bg-gray-300"
+                  i === index ? `w-5 ${TABS[page.group].dot}` : "w-1.5 bg-gray-300"
                 }`}
               />
             ))}
@@ -383,13 +443,37 @@ function RateCard({ rates }: { rates: InterestRates }) {
         </>
       )}
 
-      <p className="mt-2 text-[11px] text-gray-400">* อัตราอาจเปลี่ยนแปลงตามประกาศสหกรณ์</p>
+      {/*
+        ลิงก์ไปหน้าเต็มของแท็บที่กำลังดูอยู่ — การ์ดนี้โชว์ได้แค่ย่อ ๆ
+        โดยเฉพาะสวัสดิการที่เงื่อนไขการจ่ายยาวมาก คนสนใจต้องมีทางไปอ่านต่อ
+      */}
+      <Link
+        href={tab.href}
+        className={`mt-3 inline-flex items-center justify-center gap-1 rounded-full px-4 py-2 text-sm font-semibold transition ${tab.on} hover:brightness-105`}
+      >
+        ดู{tab.label}ทั้งหมด →
+      </Link>
+
+      <p className="mt-2 text-[11px] text-gray-400">
+        {current.group === "welfare"
+          ? "* เงื่อนไขการจ่ายดูได้ที่หน้าสวัสดิการ"
+          : "* อัตราอาจเปลี่ยนแปลงตามประกาศสหกรณ์"}
+      </p>
     </div>
   );
 }
 
 // อัตราดอกเบี้ยส่งมาจากหน้า (server) เพราะ component นี้เป็น client — อ่านฐานเองไม่ได้
-export default function Hero({ rates, slides }: { rates: InterestRates; slides: HeroSlide[] }) {
+export default function Hero({
+  rates,
+  slides,
+  welfare = [],
+}: {
+  rates: InterestRates;
+  slides: HeroSlide[];
+  /** ชื่อสวัสดิการ + กำหนดยื่นเอกสาร — อ่านมาจากหน้า /welfare/ (ดู src/app/page.tsx) */
+  welfare?: WelfareBrief[];
+}) {
   const shown = slides.length > 0 ? slides : activitySlides;
   return (
     <section className="bg-gradient-to-b from-brand-500 to-brand-300 pb-8 pt-6">
@@ -402,7 +486,7 @@ export default function Hero({ rates, slides }: { rates: InterestRates; slides: 
       */}
       <div className="mx-auto grid max-w-6xl gap-5 px-4 md:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
         <BannerSlider slides={shown} />
-        <RateCard rates={rates} />
+        <RateCard rates={rates} welfare={welfare} />
       </div>
     </section>
   );
