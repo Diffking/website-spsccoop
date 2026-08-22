@@ -78,29 +78,59 @@ export function fixDivBalance(html: string): string {
  * วิธีทำ: หั่นเนื้อหาที่หัว <div class="tab"> แต่ละอัน ปรับ </div> ในแต่ละท่อนให้สมดุล
  * แล้วประกอบกลับเป็นกล่องเดียว — ข้อความข้างในไม่ถูกแตะเลย ย้ายแค่ขอบเขตของกล่อง
  */
+/**
+ * หาตำแหน่ง `</div>` ที่ปิดตรงกับ `<div>` ที่เปิดไว้ โดยนับชั้นจริง
+ * คืน -1 ถ้าหาไม่เจอ (HTML ไม่สมบูรณ์ — ปล่อยให้ตัวปรับสมดุลจัดการต่อ)
+ */
+function closingDiv(html: string, openEnd: number): number {
+  const tag = /<div\b|<\/div>/gi;
+  tag.lastIndex = openEnd;
+  let depth = 1;
+  let m: RegExpExecArray | null;
+  while ((m = tag.exec(html)) !== null) {
+    depth += m[0].toLowerCase() === "</div>" ? -1 : 1;
+    if (depth === 0) return m.index;
+  }
+  return -1;
+}
+
 export function fixTabsStructure(html: string): string {
   const tabsOpen = /<div\b[^>]*\bclass="[^"]*\btabs\b[^"]*"[^>]*>/i.exec(html);
-  if (!tabsOpen) return html;
+  if (!tabsOpen || tabsOpen.index === undefined) return html;
+
+  /*
+    ⚠️ ต้องรู้ว่ากล่องแท็บจบตรงไหน แล้วซ่อมเฉพาะข้างในกล่อง
+
+    ของเดิมไล่จากแท็บสุดท้ายไปจนจบหน้า (`html.length`) โดยคิดว่ากล่องแท็บเป็น
+    ของท้ายสุดเสมอ — พอมีหัวข้ออื่นต่อท้าย (เช่นหน้าสวัสดิการที่มีระเบียบกับ
+    เอกสารต่อจากแท็บ) เนื้อหาพวกนั้นจะถูกดูดเข้าไปอยู่ในแท็บสุดท้ายทั้งก้อน
+    ทำให้หัวข้อหายและรายการในแท็บบวมผิดปกติ (เจอ 22 ส.ค. 2026 · 7 กลายเป็น 31)
+  */
+  const innerFrom = tabsOpen.index + tabsOpen[0].length;
+  const closeAt = closingDiv(html, innerFrom);
+  const boxEnd = closeAt === -1 ? html.length : closeAt + "</div>".length;
+  const box = html.slice(0, boxEnd);
+  const tail = html.slice(boxEnd);
 
   const tabOpen = /<div\b[^>]*\bclass="[^"]*\btab\b[^"]*"[^>]*>/gi;
   const starts: { at: number; tag: string }[] = [];
-  for (const match of html.matchAll(tabOpen)) {
+  for (const match of box.matchAll(tabOpen)) {
     // class="tabs" ก็เข้าเงื่อนไข \btab\b ไม่ได้ ต้องกันตัวกล่องนอกไว้เอง
     if (/\btabs\b/i.test(match[0])) continue;
     starts.push({ at: match.index ?? 0, tag: match[0] });
   }
   if (starts.length === 0) return html;
 
-  const head = html.slice(0, tabsOpen.index);
+  const head = box.slice(0, tabsOpen.index);
   const pieces = starts.map((start, i) => {
     const from = start.at + start.tag.length;
-    const to = i + 1 < starts.length ? starts[i + 1].at : html.length;
+    const to = i + 1 < starts.length ? starts[i + 1].at : box.length;
     // ท่อนสุดท้ายจะมี </div> ปิด .tabs ติดมาด้วย — ปรับสมดุลจะตัดตัวเกินออกให้เอง
-    const inner = fixDivBalance(html.slice(from, to)).trim();
+    const inner = fixDivBalance(box.slice(from, to)).trim();
     return `  ${start.tag}\n    ${inner.split("\n").join("\n    ")}\n  </div>`;
   });
 
-  return `${head}${tabsOpen[0]}\n${pieces.join("\n")}\n</div>\n`;
+  return `${head}${tabsOpen[0]}\n${pieces.join("\n")}\n</div>\n${tail}`;
 }
 
 /**
