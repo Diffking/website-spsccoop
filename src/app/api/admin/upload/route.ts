@@ -95,7 +95,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const name = `${randomUUID()}.${extension}`;
+  // ชื่อไฟล์ตั้งหลังย่อเสร็จ เพราะรูปถูกแปลงเป็น WebP นามสกุลจึงเปลี่ยนจากที่อัปมา
+  const id = randomUUID();
+  let name = `${id}.${extension}`;
   const original = Buffer.from(await file.arrayBuffer());
 
   let bytes = original;
@@ -127,6 +129,7 @@ export async function POST(request: Request) {
       const shrunk = await shrink(original, file.type, maxEdge);
       bytes = shrunk.bytes;
       size = { width: shrunk.width, height: shrunk.height };
+      name = `${id}.${shrunk.ext}`;
     } catch (error) {
       // ย่อไม่ได้ (ไฟล์เพี้ยน/รูปแบบแปลก) ก็เก็บต้นฉบับไปก่อน ดีกว่าอัปไม่ขึ้นเลย
       console.error("ย่อรูปไม่สำเร็จ เก็บต้นฉบับแทน:", error);

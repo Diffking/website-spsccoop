@@ -18,11 +18,11 @@ export async function shrink(
   mimeType: string,
   /** ด้านยาวสุดที่ยอมให้เหลือ — รูปในหน้าเนื้อหาใช้ค่ามากกว่านี้เพราะกินพื้นที่อ่านเต็มคอลัมน์ */
   maxEdge: number = MAX_EDGE,
-): Promise<{ bytes: Buffer<ArrayBuffer>; width: number; height: number }> {
+): Promise<{ bytes: Buffer<ArrayBuffer>; width: number; height: number; ext: string }> {
   // GIF ปล่อยผ่าน — ย่อแล้วภาพเคลื่อนไหวมักเสีย และแทบไม่มีใครอัป GIF เป็นประกาศ
   if (mimeType === "image/gif") {
     const meta = await sharp(input).metadata().catch(() => null);
-    return { bytes: input, width: meta?.width ?? 0, height: meta?.height ?? 0 };
+    return { bytes: input, width: meta?.width ?? 0, height: meta?.height ?? 0, ext: "gif" };
   }
 
   const pipeline = sharp(input)
@@ -30,13 +30,16 @@ export async function shrink(
     .rotate()
     .resize({ width: maxEdge, height: maxEdge, fit: "inside", withoutEnlargement: true });
 
-  const output =
-    mimeType === "image/png"
-      ? pipeline.png({ compressionLevel: 9 })
-      : mimeType === "image/webp"
-        ? pipeline.webp({ quality: 82 })
-        : pipeline.jpeg({ quality: 82, mozjpeg: true });
-
-  const { data, info } = await output.toBuffer({ resolveWithObject: true });
-  return { bytes: data, width: info.width, height: info.height };
+  /*
+   * เก็บเป็น WebP เสมอ ไม่ว่าต้นทางจะเป็นอะไร
+   *
+   * ⚠️ 22 ส.ค. 2026 พบว่ารูปสไลด์ที่อัปเป็น PNG หนักใบละ 300-700 KB ทั้งที่ย่อเหลือ
+   * 600px แล้ว เพราะ PNG ไม่ได้ออกแบบมาสำหรับภาพถ่าย — หน้าแรกเลยหนักหลายเมกะไบต์
+   * และคะแนนมือถือตก · WebP ที่คุณภาพเท่ากันเล็กกว่า 5-10 เท่า และรองรับทุกเบราว์เซอร์
+   * ที่เว็บนี้รองรับอยู่แล้ว (Tailwind v4 ต้องการเบราว์เซอร์ใหม่กว่า WebP มาก)
+   */
+  const { data, info } = await pipeline
+    .webp({ quality: 82 })
+    .toBuffer({ resolveWithObject: true });
+  return { bytes: data, width: info.width, height: info.height, ext: "webp" };
 }

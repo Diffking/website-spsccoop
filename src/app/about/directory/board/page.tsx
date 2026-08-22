@@ -7,21 +7,21 @@ import ScrollProgress from "@/components/ui/ScrollProgress";
 import PageTracker from "@/components/site/PageTracker";
 import BackToTop from "@/components/ui/BackToTop";
 
-import c01 from "@/data/asset/committee_15_images/committee-01.png";
-import c02 from "@/data/asset/committee_15_images/committee-02.png";
-import c03 from "@/data/asset/committee_15_images/committee-03.png";
-import c04 from "@/data/asset/committee_15_images/committee-04.png";
-import c05 from "@/data/asset/committee_15_images/committee-05.png";
-import c06 from "@/data/asset/committee_15_images/committee-06.png";
-import c07 from "@/data/asset/committee_15_images/committee-07.png";
-import c08 from "@/data/asset/committee_15_images/committee-08.png";
-import c09 from "@/data/asset/committee_15_images/committee-09.png";
-import c10 from "@/data/asset/committee_15_images/committee-10.png";
-import c11 from "@/data/asset/committee_15_images/committee-11.png";
-import c12 from "@/data/asset/committee_15_images/committee-12.png";
-import c13 from "@/data/asset/committee_15_images/committee-13.png";
-import c14 from "@/data/asset/committee_15_images/committee-14.jpg";
-import c15 from "@/data/asset/committee_15_images/committee-15.png";
+import c01 from "@/data/asset/committee_15_images/committee-01.webp";
+import c02 from "@/data/asset/committee_15_images/committee-02.webp";
+import c03 from "@/data/asset/committee_15_images/committee-03.webp";
+import c04 from "@/data/asset/committee_15_images/committee-04.webp";
+import c05 from "@/data/asset/committee_15_images/committee-05.webp";
+import c06 from "@/data/asset/committee_15_images/committee-06.webp";
+import c07 from "@/data/asset/committee_15_images/committee-07.webp";
+import c08 from "@/data/asset/committee_15_images/committee-08.webp";
+import c09 from "@/data/asset/committee_15_images/committee-09.webp";
+import c10 from "@/data/asset/committee_15_images/committee-10.webp";
+import c11 from "@/data/asset/committee_15_images/committee-11.webp";
+import c12 from "@/data/asset/committee_15_images/committee-12.webp";
+import c13 from "@/data/asset/committee_15_images/committee-13.webp";
+import c14 from "@/data/asset/committee_15_images/committee-14.webp";
+import c15 from "@/data/asset/committee_15_images/committee-15.webp";
 
 // เรียงตามลำดับบนภาพ 01→15 (ซ้าย→ขวา บน→ล่าง) — ชื่อ/ตำแหน่งอยู่บนภาพ, name ใช้เป็น alt
 const members: { img: typeof c01; name: string }[] = [

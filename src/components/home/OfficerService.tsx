@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import Reveal from "@/components/ui/Reveal";
 import SectionHeading from "@/components/ui/SectionHeading";
-import officerBuilding from "@/data/asset/officer.png";
+import officerBuilding from "@/data/asset/officer.webp";
 import type { Item } from "@/lib/homeItems";
 
 const OFFICE_ICON: Record<string, LucideIcon> = {

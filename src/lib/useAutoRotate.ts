@@ -107,3 +107,26 @@ export function useAutoRotate({
     hover: { onMouseEnter: () => setHovered(true), onMouseLeave: () => setHovered(false) },
   };
 }
+
+/**
+ * "จอกว้างพอไหม" — ให้คอมโพเนนต์ที่ซ่อนตัวเองบนจอแคบเลิกทำงานไปเลย ไม่ใช่แค่ซ่อน
+ *
+ * `hidden xl:block` ซ่อนแค่ตา แต่ JavaScript ยังวิ่งอยู่ — ตัวนำทางลอยซ้ายอ่านตำแหน่ง
+ * ของทุกส่วนทุกครั้งที่เลื่อน ซึ่งบนมือถือคือแรงที่เสียไปฟรี ๆ เพราะไม่มีใครเห็นมัน
+ *
+ * คืน false ตอน render รอบแรกเสมอ (เซิร์ฟเวอร์ไม่รู้ขนาดจอ) แล้วค่อยอัปเดตฝั่งเบราว์เซอร์
+ * — คอมโพเนนต์ที่ใช้ต้องทนกับการเริ่มจาก false ได้
+ */
+export function useWideScreen(minWidth = 1280) {
+  const [wide, setWide] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(min-width: ${minWidth}px)`);
+    const sync = () => setWide(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, [minWidth]);
+
+  return wide;
+}
