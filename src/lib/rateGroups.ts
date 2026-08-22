@@ -46,7 +46,7 @@ type Def = { key: string; label: string; match: readonly string[]; tone: Tone };
  *
  * แก้สีแล้วต้องเช็คในไฟล์ CSS ที่ build ออกมาจริงว่ามีครบทุกคลาส
  */
-const TONES = {
+export const TONES = {
   sky: {
     text: "text-sky-700", card: "bg-sky-50", ring: "ring-sky-200",
     active: "bg-sky-600 text-white shadow", bar: "from-sky-500 to-sky-300",

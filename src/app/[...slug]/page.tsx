@@ -13,6 +13,8 @@ import { localAssetsInHtml } from "@/lib/assetFallback";
 import { repairStructure } from "@/lib/htmlStructure";
 import { LIVE_DEPOSIT_RATES, LIVE_LOAN_RATES, splitAtRates } from "@/lib/liveRates";
 import RateSections from "@/components/site/RateSections";
+import WelfareSections from "@/components/site/WelfareSections";
+import { readWelfare } from "@/lib/welfareGroups";
 import { groupDeposits, groupLoans } from "@/lib/rateGroups";
 import { getRates } from "@/lib/settings";
 
@@ -76,6 +78,8 @@ export default async function ContentPage({ params }: Params) {
   const html = repairStructure(localAssetsInHtml(page.body));
   const split = splitAtRates(html, wantsDeposit ? LIVE_DEPOSIT_RATES : LIVE_LOAN_RATES);
   const groups = rates ? (wantsDeposit ? groupDeposits(rates) : groupLoans(rates)) : null;
+  // สวัสดิการ: อ่านตารางในเนื้อหาไปทำเป็นการ์ด — อ่านไม่ออกก็คืน null แล้วแสดงแบบเดิม
+  const welfare = groups ? null : readWelfare(html);
 
   return (
     <>
@@ -116,6 +120,12 @@ export default async function ContentPage({ params }: Params) {
             <PageContent html={split.before} />
             <RateSections groups={groups} />
             {split.after && <PageContent html={split.after} />}
+          </div>
+        ) : welfare ? (
+          <div className="mt-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 md:p-8">
+            <PageContent html={welfare.before} />
+            <WelfareSections groups={welfare.groups} />
+            {welfare.after && <PageContent html={welfare.after} />}
           </div>
         ) : (
           <PageContent
