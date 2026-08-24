@@ -152,8 +152,10 @@ export default async function Home() {
           const node = blocks[section.key];
           /*
             ห่อด้วย div ที่มี id เพื่อให้ตัวนำทางลอยด้านซ้าย (SectionNav) กระโดดมาได้
-            scroll-mt-20 = เว้นที่ให้แถบเมนูที่ปักอยู่หัวจอไม่บังหัวข้อของส่วนนั้น
-            (แถบบนหุบไปตอนเลื่อนแล้ว เหลือแค่แถวเมนูสูงราว 44px — เว้น 80px พอมีที่หายใจ)
+            scroll-mt-12 (3rem) = เว้นที่ให้แถบเมนูที่ปักอยู่หัวจอไม่บังหัวข้อของส่วนนั้น
+            แถบบนหุบไปตอนเลื่อนแล้ว เหลือแค่แถวเมนูสูงราว 44px — เลขนี้ต้องตรงกับ
+            scroll-padding-top ใน globals.css และ min-h ด้านล่าง ทั้งสามที่ต้องเท่ากัน
+            จังหวะเลื่อนถึงจะสมดุล (เดิมเว้น 80px ทำให้หัวเรื่องลอยต่ำกว่าที่ควร)
           */
           /*
             snap-start = จุดที่หน้าจอจะถูกดูดเข้าเวลาเลื่อนมาใกล้ (ดู scroll-snap-type ใน globals.css)
@@ -184,7 +186,7 @@ export default async function Home() {
             <div
               key={section.key}
               id={`sec-${section.key}`}
-              className={`scroll-mt-20 ${section.key === "ticker" ? "" : "snap-start"} ${
+              className={`scroll-mt-12 ${section.key === "ticker" ? "" : "snap-start"} ${
                 fill
                   ? `${bg[section.key]} md:flex md:flex-col md:justify-center ` +
                     `md:[@media(min-height:700px)]:min-h-[calc(100dvh-3rem)]`
