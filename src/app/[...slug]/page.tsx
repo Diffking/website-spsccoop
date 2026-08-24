@@ -15,6 +15,7 @@ import { LIVE_DEPOSIT_RATES, LIVE_LOAN_RATES, splitAtRates } from "@/lib/liveRat
 import RateSections from "@/components/site/RateSections";
 import WelfareSections from "@/components/site/WelfareSections";
 import { readWelfare } from "@/lib/welfareGroups";
+import { readDocTables } from "@/lib/pageDocs";
 import { groupDeposits, groupLoans } from "@/lib/rateGroups";
 import { getRates } from "@/lib/settings";
 
@@ -77,7 +78,17 @@ export default async function ContentPage({ params }: Params) {
   const rates = wantsDeposit || wantsLoan ? await getRates() : null;
   const html = repairStructure(localAssetsInHtml(page.body));
   const split = splitAtRates(html, wantsDeposit ? LIVE_DEPOSIT_RATES : LIVE_LOAN_RATES);
-  const groups = rates ? (wantsDeposit ? groupDeposits(rates) : groupLoans(rates)) : null;
+  /*
+    หน้าเงินให้กู้/เงินรับฝาก: ดึงตารางระเบียบ/แบบฟอร์มท้ายหน้าออกมา
+    แล้วเอาไปแปะกับการ์ดอัตราของประเภทที่ตรงกัน — ที่เหลือ (`rest`) คือส่วนอื่นของหน้า
+    เช่น "สอบถามเพิ่มเติม" ซึ่งคงอยู่ที่เดิมตามลำดับเดิม
+  */
+  const rateDocs = rates && split.after ? readDocTables(split.after) : null;
+  const groups = rates
+    ? wantsDeposit
+      ? groupDeposits(rates, rateDocs?.tables.flatMap((t) => t.docs) ?? [])
+      : groupLoans(rates, rateDocs?.tables.flatMap((t) => t.docs) ?? [])
+    : null;
   // สวัสดิการ: อ่านตารางในเนื้อหาไปทำเป็นการ์ด — อ่านไม่ออกก็คืน null แล้วแสดงแบบเดิม
   const welfare = groups ? null : readWelfare(html);
 
@@ -118,8 +129,12 @@ export default async function ContentPage({ params }: Params) {
         {groups ? (
           <div className="mt-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 md:p-8">
             <PageContent html={split.before} />
-            <RateSections groups={groups} />
-            {split.after && <PageContent html={split.after} />}
+            <RateSections groups={groups} tables={rateDocs?.tables ?? []} />
+            {rateDocs ? (
+              rateDocs.rest && <PageContent html={rateDocs.rest} />
+            ) : (
+              split.after && <PageContent html={split.after} />
+            )}
           </div>
         ) : welfare ? (
           <div className="mt-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 md:p-8">

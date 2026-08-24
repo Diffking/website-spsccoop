@@ -6,6 +6,8 @@ import { Check } from "lucide-react";
 import SlideProgress from "@/components/ui/SlideProgress";
 import { useAutoRotate } from "@/lib/useAutoRotate";
 import { STACKED, fadeSwap } from "@/lib/slideMotion";
+import { CardDocs, DocTables } from "@/components/site/DocLinks";
+import type { DocTable } from "@/lib/pageDocs";
 import type { RateGroup } from "@/lib/rateGroups";
 
 /**
@@ -25,31 +27,52 @@ import type { RateGroup } from "@/lib/rateGroups";
  */
 const GROUP_MS = 7500;
 
+/**
+ * การ์ดอัตราหนึ่งประเภท — ตัวเลข ชื่อประเภท แล้วปิดท้ายด้วยระเบียบ/แบบฟอร์มของประเภทนั้น
+ *
+ * แถบเอกสารเป็นพื้นขาวคาดใต้การ์ด (ไม่ใช่สีเดียวกับการ์ด) เพื่อให้เห็นว่าเป็นคนละชั้นกัน
+ * — ข้างบนคือ "ข้อมูล" ข้างล่างคือ "ของที่กดได้" · ประเภทที่ยังไม่มีเอกสารก็ไม่มีแถบนี้
+ */
 function Card({ row, group }: { row: RateGroup["rows"][number]; group: RateGroup }) {
   return (
-    <div className={`rounded-2xl p-5 ring-1 ${group.tone.card} ${group.tone.ring}`}>
-      <p className={`text-sm font-semibold ${group.tone.text}`}>{group.label}</p>
-      {/*
-        ตัวเลขต้องมาก่อนชื่อ — คนเปิดหน้านี้มาหาตัวเลข ไม่ได้มาอ่านชื่อประเภท
-        tabular-nums = เลขกว้างเท่ากันทุกตัว คอลัมน์จึงไม่ขยับตอนสลับกลุ่ม
-      */}
-      <p className="mt-2 flex items-baseline gap-1">
-        <span className={`text-4xl font-bold tracking-tight tabular-nums ${group.tone.text}`}>
-          {row.rate}
-        </span>
-        <span className={`text-xl font-semibold ${group.tone.text}`}>%</span>
-        <span className="text-sm text-gray-500">ต่อปี</span>
-      </p>
-      <p className="mt-3 flex items-start gap-2 text-sm leading-relaxed text-gray-700">
-        <Check className={`mt-0.5 h-4 w-4 shrink-0 ${group.tone.text}`} />
-        {/* min-w-0 = ชื่อประเภทยาว ๆ ภาษาไทยต้องยอมตกบรรทัด ไม่ดันการ์ดให้กว้างเกิน */}
-        <span className="min-w-0">{row.label}</span>
-      </p>
+    <div
+      className={`flex flex-col overflow-hidden rounded-2xl ring-1 ${group.tone.card} ${group.tone.ring}`}
+    >
+      <div className="p-5">
+        <p className={`text-sm font-semibold ${group.tone.text}`}>{group.label}</p>
+        {/*
+          ตัวเลขต้องมาก่อนชื่อ — คนเปิดหน้านี้มาหาตัวเลข ไม่ได้มาอ่านชื่อประเภท
+          tabular-nums = เลขกว้างเท่ากันทุกตัว คอลัมน์จึงไม่ขยับตอนสลับกลุ่ม
+        */}
+        <p className="mt-2 flex items-baseline gap-1">
+          <span className={`text-4xl font-bold tracking-tight tabular-nums ${group.tone.text}`}>
+            {row.rate}
+          </span>
+          <span className={`text-xl font-semibold ${group.tone.text}`}>%</span>
+          <span className="text-sm text-gray-500">ต่อปี</span>
+        </p>
+        <p className="mt-3 flex items-start gap-2 text-sm leading-relaxed text-gray-700">
+          <Check className={`mt-0.5 h-4 w-4 shrink-0 ${group.tone.text}`} />
+          {/* min-w-0 = ชื่อประเภทยาว ๆ ภาษาไทยต้องยอมตกบรรทัด ไม่ดันการ์ดให้กว้างเกิน */}
+          <span className="min-w-0">{row.label}</span>
+        </p>
+      </div>
+
+      {/* mt-auto = แถบเอกสารติดขอบล่างเสมอ การ์ดในแถวเดียวกันจึงมีแถบล่างระดับเดียวกัน */}
+      <div className="mt-auto bg-white/70">
+        <CardDocs files={row.files} />
+      </div>
     </div>
   );
 }
 
-export default function RateSections({ groups }: { groups: RateGroup[] }) {
+export default function RateSections({
+  groups,
+  tables = [],
+}: {
+  groups: RateGroup[];
+  tables?: DocTable[];
+}) {
   const [at, setAt] = useState(0);
   const box = useRef<HTMLDivElement>(null);
   const auto = useAutoRotate({
@@ -113,6 +136,8 @@ export default function RateSections({ groups }: { groups: RateGroup[] }) {
           </motion.div>
         </AnimatePresence>
       </div>
+
+      <DocTables tables={tables} />
 
       <p className="mt-4 text-center text-xs text-gray-400">
         * อัตราดอกเบี้ยอาจเปลี่ยนแปลงตามประกาศสหกรณ์ ยึดตามประกาศฉบับล่าสุดเป็นสำคัญ

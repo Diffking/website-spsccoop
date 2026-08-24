@@ -1,4 +1,11 @@
 import type { InterestRates } from "@/lib/settings";
+import {
+  DEPOSIT_TOPICS,
+  LOAN_TOPICS,
+  matchDocs,
+  type DocTopic,
+  type PageDoc,
+} from "@/lib/pageDocs";
 
 /**
  * จัดอัตราดอกเบี้ยเป็นกลุ่มตามประเภท — ใช้ได้ทั้งเงินฝากและเงินกู้
@@ -33,7 +40,14 @@ export type RateGroup = {
   /** ชื่อบนปุ่มสลับกลุ่ม */
   label: string;
   tone: Tone;
-  rows: { label: string; rate: string }[];
+  rows: RateRow[];
+};
+
+export type RateRow = {
+  label: string;
+  rate: string;
+  /** ระเบียบ/แบบฟอร์มของเงินกู้/เงินฝากประเภทนี้ (ดู src/lib/pageDocs.ts) */
+  files: PageDoc[];
 };
 
 type Def = { key: string; label: string; match: readonly string[]; tone: Tone };
@@ -114,7 +128,12 @@ const LOAN_DEFS: readonly Def[] = [
 const OTHER = TONES.gray;
 
 /** จับกลุ่มแบบใครตรงก่อนได้ก่อน — รายการหนึ่งอยู่ได้กลุ่มเดียว ไม่นับซ้ำ */
-function build(list: { label: string; rate: string | number }[], defs: readonly Def[]): RateGroup[] {
+function build(
+  list: { label: string; rate: string | number }[],
+  defs: readonly Def[],
+  docs: PageDoc[],
+  topics: DocTopic[],
+): RateGroup[] {
   const groups: RateGroup[] = defs.map((d) => ({
     key: d.key,
     label: d.label,
@@ -124,7 +143,7 @@ function build(list: { label: string; rate: string | number }[], defs: readonly 
   const other: RateGroup = { key: "other", label: "อื่น ๆ", tone: OTHER, rows: [] };
 
   for (const item of list) {
-    const row = { label: item.label, rate: String(item.rate) };
+    const row = { label: item.label, rate: String(item.rate), files: matchDocs(item.label, docs, topics) };
     const hit = defs.findIndex((d) => d.match.some((word) => item.label.includes(word)));
     if (hit === -1) other.rows.push(row);
     else groups[hit].rows.push(row);
@@ -135,5 +154,11 @@ function build(list: { label: string; rate: string | number }[], defs: readonly 
   return out;
 }
 
-export const groupDeposits = (rates: InterestRates): RateGroup[] => build(rates.deposit, DEPOSIT_DEFS);
-export const groupLoans = (rates: InterestRates): RateGroup[] => build(rates.loan, LOAN_DEFS);
+/*
+  `docs` คือระเบียบ/แบบฟอร์มที่อ่านมาจากตารางท้ายหน้าเดียวกัน — ไม่ส่งมาก็ได้
+  (การ์ดจะไม่มีแถบลิงก์เอกสารเฉย ๆ) หน้าอื่นที่หยิบอัตราไปใช้จึงเรียกเหมือนเดิมได้ทั้งหมด
+*/
+export const groupDeposits = (rates: InterestRates, docs: PageDoc[] = []): RateGroup[] =>
+  build(rates.deposit, DEPOSIT_DEFS, docs, DEPOSIT_TOPICS);
+export const groupLoans = (rates: InterestRates, docs: PageDoc[] = []): RateGroup[] =>
+  build(rates.loan, LOAN_DEFS, docs, LOAN_TOPICS);
