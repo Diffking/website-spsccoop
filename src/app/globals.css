@@ -575,6 +575,13 @@ body {
 }
 .edit-insert.is-big .edit-insert-button:hover { background: #eaf4fc; border-color: #1c7fca; }
 .edit-insert.is-big .edit-insert-menu { top: 2.9rem; }
+/*
+  เมนูเลือกชนิดเนื้อหา — **ตำแหน่งจริงตั้งจากในโค้ด** (VisualEditor.tsx) ด้วย
+  position: fixed + พิกัดของปุ่ม เพราะการ์ดในหน้าแก้ไขใช้ overflow-hidden
+  วางแบบ absolute ไว้ข้างในจะโดนตัดหายตอนปุ่มอยู่ล่างสุดของการ์ด
+  ค่าด้านล่างเป็นแค่ตัวสำรองกรณีโค้ดยังไม่ทันวางตำแหน่งให้
+  · width กับ max-height ต้องตรงกับ MENU_W / MENU_MAX_H ในไฟล์นั้น
+*/
 .edit-insert-menu {
   position: absolute; top: 1.9rem; left: 50%; transform: translateX(-50%); z-index: 40;
   display: block; width: 21rem; max-height: 24rem; overflow-y: auto;

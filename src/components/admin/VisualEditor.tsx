@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   ChevronDown,
   ChevronUp,
@@ -271,6 +272,10 @@ function Tool({
  * เส้นแทรกก้อนใหม่ — เส้นบาง ๆ ระหว่างก้อน กดแล้วเลือกว่าจะใส่อะไร
  * ------------------------------------------------------------------ */
 
+/** ความกว้าง/สูงของเมนูเลือกชนิดเนื้อหา (px) — ต้องตรงกับ .edit-insert-menu ใน globals.css */
+const MENU_W = 336;
+const MENU_MAX_H = 384;
+
 function InsertLine({
   onPick,
   first = false,
@@ -282,22 +287,77 @@ function InsertLine({
   big?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+  /** ตำแหน่งจริงบนจอของเมนู — คิดตอนกดเปิด (ดูเหตุผลที่ต้องทำแบบนี้ด้านล่าง) */
+  const [spot, setSpot] = useState<{ left: number; top: number; height: number } | null>(null);
+
+  /*
+    ⚠️ เมนูนี้ต้องลอยอยู่นอกการ์ด ไม่งั้นโดนตัดหาย
+
+    การ์ดแต่ละส่วนในหน้าแก้ไขใช้ `overflow-hidden` เพื่อให้มุมมนไม่มีอะไรล้นออกมา
+    เมนูที่วางแบบ absolute อยู่ข้างในจึงถูกตัดตามขอบการ์ด — ปุ่ม "เพิ่มเนื้อหา"
+    อยู่ล่างสุดของการ์ดพอดี เมนูเลยโผล่มาแค่สองสามบรรทัดแล้วโดนตัด
+    (เจ้าของเว็บเจอเอง 24 ส.ค. 2026)
+
+    แก้ด้วยการยกเมนูไปแขวนที่ <body> แล้ววางด้วยพิกัดจริงของปุ่ม —
+    ไม่มีการ์ดไหนมาตัดได้อีก · ที่ไม่พอด้านล่างก็พลิกขึ้นไปข้างบนปุ่มแทน
+  */
+  const place = () => {
+    const r = button.current?.getBoundingClientRect();
+    if (!r) return;
+
+    const below = window.innerHeight - r.bottom - 12;
+    const above = r.top - 12;
+    const down = below >= Math.min(MENU_MAX_H, above);
+    const height = Math.min(MENU_MAX_H, Math.max(below, above));
+
+    setSpot({
+      // กันเมนูล้นขอบซ้าย/ขวาของจอ (จอแคบหรือปุ่มอยู่ริม)
+      left: Math.max(8, Math.min(window.innerWidth - MENU_W - 8, r.left + r.width / 2 - MENU_W / 2)),
+      top: down ? r.bottom + 8 : Math.max(8, r.top - 8 - height),
+      height,
+    });
+    setOpen(true);
+  };
+
+  // เลื่อนหน้าจอตอนเมนูเปิดอยู่ = เมนูจะลอยค้างผิดที่ (มันอิงพิกัดจอ) — ปิดไปเลย
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [open]);
 
   return (
     <div className={`edit-insert ${first ? "is-first" : ""} ${big ? "is-big" : ""}`}>
       <button
+        ref={button}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => (open ? setOpen(false) : place())}
         className="edit-insert-button"
       >
         <Plus className={big ? "h-4 w-4" : "h-3.5 w-3.5"} />
         <span>{big ? "เพิ่มเนื้อหา" : "เพิ่มเนื้อหาตรงนี้"}</span>
       </button>
 
-      {open && (
+      {open && spot && createPortal(
         <>
-          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="edit-insert-menu">
+          <div className="fixed inset-0 z-[60]" onClick={() => setOpen(false)} />
+          <div
+            className="edit-insert-menu"
+            style={{
+              position: "fixed",
+              left: spot.left,
+              top: spot.top,
+              maxHeight: spot.height,
+              transform: "none",
+              zIndex: 61,
+            }}
+          >
             <p className="edit-menu-head">เลือกสิ่งที่จะใส่ตรงนี้</p>
             {ADDABLE.map((kind) => {
               const Icon = BLOCK_ICON[kind];
@@ -319,7 +379,8 @@ function InsertLine({
               );
             })}
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </div>
   );
