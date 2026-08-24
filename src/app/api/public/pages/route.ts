@@ -1,6 +1,7 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
 import { WARM_ONLY_PATHS, publicPaths } from "@/lib/publicPaths";
 
 /**
@@ -72,10 +73,48 @@ async function runtimeFiles(): Promise<string[]> {
   return found;
 }
 
+/**
+ * ไฟล์ที่ **ฐานข้อมูลรู้ว่าหน้าเว็บต้องใช้** — ไม่ต้องรอให้มันโผล่ใน HTML ก่อน
+ *
+ * ⚠️ บทเรียน 24 ส.ค. 2026: การให้ตัวอุ่นแคชอ่านที่อยู่จาก HTML อย่างเดียว
+ * **แขวนอยู่กับว่าหน้าเว็บบังเอิญวาดของชิ้นนั้นลงไปหรือเปล่า** ซึ่งเปลี่ยนได้ตลอด
+ * เวลามีคนแก้คอมโพเนนต์ — รูปกรรมการหายไป 14 จาก 15 คนเพราะแบบนี้ โดยไม่มีอะไรฟ้อง
+ *
+ * ตอนนี้ไฟล์แนบประกาศทั้ง 29 ฉบับยังอยู่ใน HTML หน้าแรกครบ (ตรวจแล้ว) จึงยังไม่พัง
+ * แต่ถ้าวันไหนเปลี่ยนรายการประกาศให้แบ่งหน้าฝั่งเซิร์ฟเวอร์ ลิงก์จะหายจาก HTML ทันที
+ * แล้วสมาชิกจะกดโหลดไม่ได้ตอนปิดเครื่อง — บอกจากฐานไปเลยจะได้ไม่ต้องพึ่งโชค
+ *
+ * เอาเฉพาะที่เผยแพร่อยู่และเป็นไฟล์ใน /uploads/ · ฐานสะดุดก็คืนลิสต์ว่าง
+ * (ตัวอุ่นยังอ่านจาก HTML ได้เหมือนเดิม ไม่ทำให้ทั้งรอบล่ม)
+ */
+async function filesInDatabase(): Promise<string[]> {
+  const keep = (url: string | null | undefined) =>
+    typeof url === "string" && url.startsWith("/uploads/");
+
+  try {
+    const [slides, items, announcements] = await Promise.all([
+      db.slide.findMany({ where: { published: true }, select: { imageUrl: true } }),
+      db.homeItem.findMany({ where: { published: true }, select: { imageUrl: true } }),
+      db.announcement.findMany({ where: { published: true }, select: { fileUrl: true } }),
+    ]);
+
+    return [
+      ...slides.map((r) => r.imageUrl),
+      ...items.map((r) => r.imageUrl),
+      ...announcements.map((r) => r.fileUrl),
+    ].filter(keep) as string[];
+  } catch (error) {
+    console.error("อ่านรายชื่อไฟล์จากฐานไม่ได้:", error);
+    return [];
+  }
+}
+
 export async function GET() {
   const paths = [...new Set([...(await publicPaths()), ...WARM_ONLY_PATHS])];
 
-  const assets = await runtimeFiles();
+  // รวมสองทาง: ไล่โฟลเดอร์ (รูปทั้งหมด) + ถามฐาน (ไฟล์แนบประกาศที่ยังเผยแพร่อยู่)
+  const [runtime, fromDb] = await Promise.all([runtimeFiles(), filesInDatabase()]);
+  const assets = [...new Set([...runtime, ...fromDb])];
 
   return NextResponse.json({
     paths,
