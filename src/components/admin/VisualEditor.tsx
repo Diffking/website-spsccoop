@@ -677,11 +677,24 @@ function BlockView({
     case "imageRow":
       return (
         <>
-          <div className="image-row">
+          <div className={`image-row cols-${block.cols}`}>
             {block.images.map((img, i) => (
               <figure key={i} className="edit-removable">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={img.src} alt={img.alt} />
+                {/* คำบรรยายของรูปใบนี้ — คลิกแล้วพิมพ์ทับได้เหมือนข้อความอื่นในหน้า */}
+                <RichText
+                  as="figcaption"
+                  singleLine
+                  value={img.caption}
+                  onChange={(caption) =>
+                    onChange({
+                      ...block,
+                      images: block.images.map((x, n) => (n === i ? { ...x, caption } : x)),
+                    })
+                  }
+                  placeholder="คำบรรยายรูปนี้"
+                />
                 <button
                   type="button"
                   title="เอารูปนี้ออก"
@@ -713,11 +726,25 @@ function BlockView({
                     ...block,
                     images: [
                       ...block.images,
-                      ...files.map((f) => ({ src: f.url, alt: f.name.replace(/\.[^.]+$/, "") })),
+                      ...files.map((f) => ({
+                        src: f.url,
+                        alt: f.name.replace(/\.[^.]+$/, ""),
+                        caption: "",
+                      })),
                     ],
                   })
                 }
               />
+              {/* ล็อกจำนวนต่อแถว — ทุกใบจึงกว้างเท่ากันเสมอ ไม่ว่าไฟล์จะสัดส่วนไหน */}
+              <span>จำนวนรูปต่อแถว</span>
+              {[2, 3, 4].map((n) => (
+                <Choice
+                  key={n}
+                  label={String(n)}
+                  active={block.cols === n}
+                  onClick={() => onChange({ ...block, cols: n })}
+                />
+              ))}
             </Options>
           )}
         </>
