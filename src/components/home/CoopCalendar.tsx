@@ -51,7 +51,11 @@ function EventItem({ ev }: { ev: CalendarEvent }) {
  * ความสูงตายตัวของการ์ดวัน — วันที่มีกิจกรรม 1 กับ 5 รายการต้องสูงเท่ากัน
  * ไม่งั้นเลื่อนไปมาแล้วทั้งแถวกระตุกขึ้นลงตามจำนวนกิจกรรมของแต่ละวัน
  */
-const CARD_HEIGHT = "h-[19rem] md:h-[23rem]";
+/*
+ * จอเตี้ย (สูงไม่ถึง 700px — โน้ตบุ๊ก 14" · มือถือแนวนอน · หน้าต่างที่ย่อลง) การ์ดเตี้ยลง
+ * เพราะจอแบบนี้ไม่ได้ถูกยืดให้เต็มจอ ปฏิทินสูง 23rem จะกินจอจนไม่เหลือที่ให้เห็นอย่างอื่น
+ */
+const CARD_HEIGHT = "h-[19rem] md:h-[23rem] [@media(max-height:699px)]:h-[15rem]";
 
 function DayCard({
   day, year, month, today, focus, events,
@@ -74,7 +78,8 @@ function DayCard({
       className={`flex min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-3 transition md:p-4 ${CARD_HEIGHT} ${
         focus
           ? "shadow-xl ring-2 ring-brand-400"
-          : "opacity-90 shadow-sm ring-1 ring-brand-100"
+          : // จอเตี้ยจางวันข้าง ๆ ลงไปอีก — สายตาจะได้อยู่ที่วันที่กำลังดูใบเดียว
+            "opacity-90 shadow-sm ring-1 ring-brand-100 [@media(max-height:699px)]:opacity-50"
       }`}
     >
       {/* ป้ายอดีต/วันนี้/อนาคต */}
@@ -84,7 +89,18 @@ function DayCard({
 
       {/* วันที่ */}
       <div className="mt-2 text-center">
-        <span className={`block font-bold leading-none ${focus ? "text-4xl text-brand-600 md:text-5xl" : "text-2xl text-gray-700 md:text-3xl"}`}>
+        {/*
+          จอเตี้ย: วันที่กำลังดูตัวโตขึ้นอีกขั้น ส่วนวันข้าง ๆ เล็กลง
+          เจ้าของเว็บสั่ง 24 ส.ค. 2026 — "วันปัจจุบันต้องใหญ่ วันผ่านมาแล้วกับล่วงหน้า
+          เลือน ๆ ได้" · เลื่อนไปวันไหน วันนั้นก็เป็นตัวโตแทน (ยึดที่ focus ไม่ใช่วันนี้)
+        */}
+        <span
+          className={`block font-bold leading-none ${
+            focus
+              ? "text-4xl text-brand-600 md:text-5xl [@media(max-height:699px)]:text-5xl"
+              : "text-2xl text-gray-700 md:text-3xl [@media(max-height:699px)]:text-lg"
+          }`}
+        >
           {day}
         </span>
         <span className="mt-1 block text-[11px] text-gray-500 md:text-sm">
@@ -96,7 +112,12 @@ function DayCard({
         กิจกรรม — วันไหนมีหลายรายการให้เลื่อนดูในกรอบ ไม่ยืดการ์ดให้สูงขึ้น
         (ก่อนหน้านี้วันที่มี 3 กิจกรรมจะดันการ์ดข้าง ๆ สูงตามไปด้วยทั้งแถว)
       */}
-      <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-0.5">
+      <div
+        className={`mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-0.5 ${
+          // จอเตี้ย: วันข้าง ๆ เอากิจกรรมออก เหลือแค่วันที่ — ที่เหลือให้วันที่กำลังดู
+          focus ? "" : "[@media(max-height:699px)]:hidden"
+        }`}
+      >
         {evs.length > 0 ? (
           evs.map((ev, i) => <EventItem key={i} ev={ev} />)
         ) : (
