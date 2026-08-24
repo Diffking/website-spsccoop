@@ -40,7 +40,13 @@ export type Block =
   | { id: string; kind: "quote"; html: string }
   | { id: string; kind: "divider" }
   | { id: string; kind: "image"; src: string; alt: string; layout: ImageLayout; caption: string }
-  | { id: string; kind: "imageRow"; images: { src: string; alt: string }[] }
+  | {
+      id: string;
+      kind: "imageRow";
+      /** จำนวนรูปต่อแถว — ล็อกไว้ ทุกใบจึงกว้างเท่ากันเสมอ */
+      cols: number;
+      images: { src: string; alt: string; caption: string }[];
+    }
   | { id: string; kind: "table"; head: string[]; rows: string[][] }
   | { id: string; kind: "pdfCard"; name: string; readHref: string; fileHref: string }
   | {
@@ -89,7 +95,7 @@ export const BLOCK_LABEL: Record<BlockKind, string> = {
   quote: "ข้อความเน้น",
   divider: "เส้นคั่น",
   image: "รูปภาพ",
-  imageRow: "รูปเรียงแถว",
+  imageRow: "รูปเรียงแถว + คำบรรยาย",
   table: "ตาราง",
   pdfCard: "ไฟล์ PDF แบบการ์ด",
   pdfIcon: "ไฟล์ PDF แบบไอคอน",
@@ -107,7 +113,7 @@ export const BLOCK_HINT: Record<BlockKind, string> = {
   quote: "ข้อความสำคัญ ใส่กรอบให้เด่นออกมาจากย่อหน้าอื่น",
   divider: "เส้นบาง ๆ ขวางหน้า ไว้แบ่งเรื่อง",
   image: "รูปหนึ่งใบ ใส่คำบรรยายใต้ภาพได้",
-  imageRow: "รูปหลายใบวางเรียงข้างกันในแถวเดียว",
+  imageRow: "รูปหลายใบ + คำบรรยายใต้แต่ละรูป เรียงเป็นแถว ขนาดเท่ากันทุกใบ",
   table: "ตารางมีช่อง มีเส้น เพิ่มแถวเพิ่มคอลัมน์ได้",
   pdfCard: "กล่องยาว ๆ มีชื่อไฟล์ กดเปิดอ่านหรือดาวน์โหลดได้",
   pdfIcon: "ไอคอนเล็ก ๆ อันเดียว เหมาะใส่ในช่องตาราง",
@@ -336,13 +342,21 @@ function elementToBlock(el: Element): Block {
     }
 
     if (has(el, "image-row")) {
+      // อ่านทีละ <figure> ไม่ใช่ทีละ <img> — คำบรรยายอยู่ใน figcaption ของ figure นั้น
+      const figures = Array.from(el.querySelectorAll("figure"));
+      const list = figures.length > 0 ? figures : Array.from(el.querySelectorAll("img"));
       return {
         id: blockId(),
         kind: "imageRow",
-        images: Array.from(el.querySelectorAll("img")).map((img) => ({
-          src: img.getAttribute("src") ?? "",
-          alt: img.getAttribute("alt") ?? "",
-        })),
+        cols: colsOf(el, 3),
+        images: list.map((node) => {
+          const img = node.tagName === "IMG" ? node : node.querySelector("img");
+          return {
+            src: img?.getAttribute("src") ?? "",
+            alt: img?.getAttribute("alt") ?? "",
+            caption: node.querySelector?.("figcaption")?.innerHTML.trim() ?? "",
+          };
+        }),
       };
     }
 
@@ -443,11 +457,13 @@ function blockToHtml(block: Block): string {
 
     case "imageRow": {
       const figures = block.images
-        .map(
-          (i) => `  <figure><img src="${escapeAttr(i.src)}" alt="${escapeAttr(i.alt)}"></figure>`,
-        )
+        .map((i) => {
+          const img = `<img src="${escapeAttr(i.src)}" alt="${escapeAttr(i.alt)}">`;
+          const caption = i.caption ? `<figcaption>${i.caption}</figcaption>` : "";
+          return `  <figure>${img}${caption}</figure>`;
+        })
         .join(NL);
-      return `<div class="image-row">${NL}${figures}${NL}</div>`;
+      return `<div class="image-row cols-${block.cols}">${NL}${figures}${NL}</div>`;
     }
 
     case "table": {
@@ -565,7 +581,7 @@ export function emptyBlock(kind: BlockKind): Block {
     case "image":
       return { id, kind, src: "", alt: "", layout: "", caption: "" };
     case "imageRow":
-      return { id, kind, images: [] };
+      return { id, kind, cols: 3, images: [] };
     case "table":
       return { id, kind, head: ["ชื่อคอลัมน์ 1", "ชื่อคอลัมน์ 2"], rows: [["", ""]] };
     case "pdfCard":

@@ -219,13 +219,39 @@ body {
   }
 }
 
-/* แถวรูปหลายใบเรียงข้างกัน — จอแคบตกลงมาเรียงเองตามพื้นที่ */
+/*
+  แถวรูปหลายใบ + คำบรรยายใต้แต่ละรูป — "รูปกับข้อความล็อกไว้เป็นชุดเดียวกัน"
+  (เจ้าของเว็บขอไว้ 24 ส.ค. 2026 · เช่นหัวข้อดาดฟ้ามี 3 ชุด รูป+คำอธิบาย)
+
+  ล็อกสองชั้น: ช่องกริดกว้างเท่ากันทุกใบ (cols-N) · กรอบรูปสัดส่วนเดียวกันทุกใบ
+  รูปกับคำบรรยายจึงไม่มีทางเหลื่อมกัน ต่อให้ไฟล์ที่อัปมาสัดส่วนต่างกัน
+
+  ไม่ใส่ cols-N มา (เนื้อหาเก่า) = เรียงเองตามพื้นที่เหมือนเดิม ไม่พัง
+*/
 .prose-page .image-row {
-  display: grid; gap: .75rem; margin: 1.5rem 0;
+  display: grid; gap: .75rem 1rem; margin: 1.5rem 0;
   grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
 }
-.prose-page .image-row figure { margin: 0; }
+.prose-page .image-row.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.prose-page .image-row.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.prose-page .image-row.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.prose-page .image-row figure { margin: 0; min-width: 0; }
 .prose-page .image-row img { margin: 0; width: 100%; }
+/* คำบรรยายของแต่ละใบ — จำกัด 2 บรรทัดและกันที่ไว้เท่ากัน การ์ดในแถวจะได้สูงเท่ากัน */
+.prose-page .image-row figcaption {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden; min-height: 2.4em; margin-top: .45rem;
+}
+/* จอแคบ: 3-4 ใบต่อแถวอ่านไม่ไหว ลดลงมาเอง */
+@media (max-width: 640px) {
+  .prose-page .image-row.cols-3,
+  .prose-page .image-row.cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 400px) {
+  .prose-page .image-row.cols-2,
+  .prose-page .image-row.cols-3,
+  .prose-page .image-row.cols-4 { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* ---- แท็บเมนูในหน้าเนื้อหา ----
    HTML ที่บันทึกไว้เป็นแค่ <div class="tabs"> ครอบ <div class="tab" data-title="...">
