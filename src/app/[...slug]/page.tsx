@@ -124,7 +124,7 @@ export default async function ContentPage({ params }: Params) {
         ) : welfare ? (
           <div className="mt-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 md:p-8">
             <PageContent html={welfare.before} />
-            <WelfareSections groups={welfare.groups} />
+            <WelfareSections groups={welfare.groups} tables={welfare.tables} />
             {welfare.after && <PageContent html={welfare.after} />}
           </div>
         ) : (
