@@ -495,6 +495,29 @@ function UploadButton({
  * ก้อนแต่ละชนิด — วาดด้วยแท็กจริงของหน้าเว็บ
  * ------------------------------------------------------------------ */
 
+/*
+ * คำบรรยายใต้ภาพเก็บเป็น HTML (ใส่ตัวหนา/ลิงก์ได้) แต่ช่องกรอกในแถบเครื่องมือ
+ * เป็นข้อความล้วน — สองตัวนี้แปลงกลับไปมาให้ตรงกัน
+ *
+ * ที่ต้องมีช่องกรอกด้วยทั้งที่คลิกพิมพ์ทับที่ใต้รูปได้อยู่แล้ว เพราะคำบรรยายเป็น
+ * ตัวหนังสือเล็ก ๆ ใต้รูป คนใหม่มองไม่ออกว่ากดพิมพ์ได้ แล้วไปพิมพ์ผิดช่อง
+ * (เจ้าของเว็บติดตรงนี้เอง 24 ส.ค. 2026 — สับสนกับช่อง "ข้อความแทนรูป")
+ */
+const toText = (html: string) =>
+  html
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&");
+
+const toHtml = (text: string) =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** คำบรรยายที่ใส่ตัวหนา/ลิงก์ไว้ — แก้ผ่านช่องกรอกจะทำให้รูปแบบหาย ต้องพิมพ์ที่ใต้รูปแทน */
+const isRichCaption = (html: string) => /<[a-z]/i.test(html);
+
 const IMAGE_LAYOUTS = [
   { key: "", label: "เต็มความกว้าง" },
   { key: "small", label: "เล็ก" },
@@ -595,7 +618,7 @@ function BlockView({
               singleLine
               value={block.caption}
               onChange={(caption) => onChange({ ...block, caption })}
-              placeholder="คำบรรยายใต้ภาพ (เว้นว่างได้)"
+              placeholder="คลิกตรงนี้เพื่อใส่คำบรรยายใต้ภาพ (เว้นว่างได้)"
             />
           </figure>
           {picked && (
@@ -622,8 +645,21 @@ function BlockView({
                   onClick={() => onChange({ ...block, layout: l.key })}
                 />
               ))}
+              {/* คำบรรยายใต้ภาพ — ตัวที่คนอ่านเห็นจริง อยู่ก่อนเสมอ */}
+              {isRichCaption(block.caption) ? (
+                <span>คำบรรยายใต้ภาพ: มีตัวหนา/ลิงก์อยู่ — พิมพ์แก้ที่ข้อความใต้รูปได้เลย</span>
+              ) : (
+                <label className="edit-field">
+                  คำบรรยายใต้ภาพ (คนอ่านเห็น)
+                  <input
+                    value={toText(block.caption)}
+                    onChange={(e) => onChange({ ...block, caption: toHtml(e.target.value) })}
+                    placeholder="เช่น โซล่าเซลล์ ดาดฟ้า"
+                  />
+                </label>
+              )}
               <label className="edit-field">
-                คำอธิบายรูป (สำหรับคนตาบอดที่ใช้โปรแกรมอ่านหน้าจอ)
+                ข้อความแทนรูป (สำหรับคนตาบอด)
                 <input
                   value={block.alt}
                   onChange={(e) => onChange({ ...block, alt: e.target.value })}
