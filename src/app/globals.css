@@ -528,6 +528,12 @@ body {
   content: attr(data-placeholder); color: #9ca3af; font-weight: 400; pointer-events: none;
 }
 
+/* คำบรรยายใต้ภาพ — ตัวหนังสือเล็กสีจาง คนใหม่มองไม่ออกว่าพิมพ์ทับได้
+   พอเลือกรูปนั้นอยู่ ขีดเส้นประใต้ไว้ให้รู้ว่าคลิกแล้วพิมพ์ได้เลย */
+.edit-frame.is-picked figcaption {
+  text-decoration: underline dashed #93c5ea; text-underline-offset: .3rem;
+}
+
 /* แถบปุ่มจัดการก้อน — ลอยที่มุมบนขวา โผล่ตอนชี้หรือตอนเลือกก้อนนั้น */
 .edit-tools {
   position: absolute; top: -.6rem; right: 0; z-index: 20;
@@ -610,6 +616,9 @@ body {
 
 /* แถบตั้งค่าของก้อนที่เลือก — ของที่พิมพ์เป็นข้อความไม่ได้ (ขนาด สี จำนวนคอลัมน์) */
 .edit-options {
+  /* clear: both — รูปที่ตั้งเป็นชิดซ้าย/ชิดขวาจะลอย (float) แถบนี้ต้องลงมาอยู่ใต้รูป
+     ไม่ใช่ไปเบียดอยู่ข้าง ๆ จนบังเนื้อหาและกดยาก (เจ้าของเว็บติดตรงนี้ 24 ส.ค. 2026) */
+  clear: both;
   display: flex; flex-wrap: wrap; align-items: center; gap: .3rem;
   margin-top: .5rem; border-radius: .6rem; background: #f3f4f6;
   padding: .4rem .5rem; font-family: system-ui, sans-serif; font-size: .78rem; color: #4b5563;
