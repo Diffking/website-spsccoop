@@ -2,11 +2,13 @@
 
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { CalendarClock, Download, FileText, ScrollText } from "lucide-react";
+import { CalendarClock, FileText } from "lucide-react";
 import SlideProgress from "@/components/ui/SlideProgress";
 import { useAutoRotate } from "@/lib/useAutoRotate";
 import { STACKED, fadeSwap } from "@/lib/slideMotion";
-import type { WelfareDoc, WelfareDocTable, WelfareGroup } from "@/lib/welfareGroups";
+import { CardDocs, DocTables } from "@/components/site/DocLinks";
+import type { DocTable } from "@/lib/pageDocs";
+import type { WelfareGroup } from "@/lib/welfareGroups";
 
 /**
  * สวัสดิการสมาชิก — วางเป็นการ์ดแบบเดียวกับอัตราดอกเบี้ย แยกกลุ่มตามกำหนดยื่นเอกสาร
@@ -57,46 +59,12 @@ function Emphasize({ text, tone }: { text: string; tone: string }) {
   return <>{parts}</>;
 }
 
-/**
- * ลิงก์เอกสารหนึ่งบรรทัด — ระเบียบเปิดอ่านในแท็บใหม่ · แบบฟอร์มโหลดลงเครื่อง
- *
- * ใช้ไอคอนคนละตัวเพราะสองอย่างนี้ใช้ต่างกัน: ระเบียบไว้ "อ่านว่าตัวเองเข้าเกณฑ์ไหม"
- * แบบฟอร์มคือ "กระดาษที่ต้องกรอกแล้วเอามายื่น" — สมาชิกส่วนใหญ่มาหาอย่างหลัง
- * จึงให้แบบฟอร์มเป็นสีเขียวเหมือนไอคอนดาวน์โหลดที่ใช้อยู่เดิมทั้งเว็บ
- */
-function DocLink({ doc }: { doc: WelfareDoc }) {
-  const reg = doc.kind === "reg";
-  return (
-    <a
-      href={doc.href}
-      title={doc.name}
-      {...(doc.download ? { download: true } : { target: "_blank", rel: "noopener noreferrer" })}
-      className="group flex items-start gap-2 text-sm text-gray-600 transition hover:text-brand-700"
-    >
-      {reg ? (
-        <ScrollText className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
-      ) : (
-        <Download className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-      )}
-      {/* min-w-0 ที่ทุกชั้น ไม่งั้นชื่อไทยยาว ๆ ดันการ์ดกว้างทะลุกริด (ดู AGENTS.md) */}
-      <span className="min-w-0 flex-1">
-        <span className={`font-semibold ${reg ? "text-brand-700" : "text-emerald-700"}`}>
-          {reg ? "ระเบียบ" : "แบบฟอร์ม"}
-        </span>{" "}
-        <span className="underline decoration-gray-300 underline-offset-2 group-hover:decoration-brand-400">
-          {doc.short}
-        </span>
-      </span>
-    </a>
-  );
-}
-
 export default function WelfareSections({
   groups,
   tables = [],
 }: {
   groups: WelfareGroup[];
-  tables?: WelfareDocTable[];
+  tables?: DocTable[];
 }) {
   const [at, setAt] = useState(0);
   const box = useRef<HTMLDivElement>(null);
@@ -205,57 +173,15 @@ export default function WelfareSections({
                 {/*
                   ระเบียบกับแบบฟอร์มของ "เรื่องนี้เรื่องเดียว" — อยู่ล่างสุดเพราะเป็น
                   ขั้นตอนสุดท้าย (รู้ว่าได้เท่าไหร่ → รู้ว่ายื่นเมื่อไหร่ → โหลดกระดาษไปกรอก)
-                  รายการไหนยังไม่มีเอกสารก็ไม่ขึ้นแถบนี้ ไม่ต้องมีที่ว่างเปล่าคาไว้
                 */}
-                {item.files.length > 0 && (
-                  <div className="space-y-1.5 border-t border-dashed border-gray-200 px-5 py-3">
-                    {item.files.map((doc) => (
-                      <DocLink key={`${doc.kind}-${doc.href}`} doc={doc} />
-                    ))}
-                  </div>
-                )}
+                <CardDocs files={item.files} />
               </div>
             ))}
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/*
-        รายการเต็มของทั้งสองตาราง — พับเก็บไว้ ไม่ได้ทิ้ง
-
-        เอกสารบางฉบับไม่ได้เป็นของสวัสดิการรายการไหนโดยตรง (ระเบียบเงินกู้ฉุกเฉิน ·
-        ใบเรียกร้องค่าสินไหมของบริษัทประกัน) ถ้าโชว์แต่บนการ์ดมันจะหายไปเฉย ๆ
-        · คนที่คุ้นกับหน้าเดิมและอยากไล่ดูทีละฉบับก็ยังเปิดดูได้ที่เดิมท้ายหน้า
-      */}
-      {tables.map((table) => (
-        <details
-          key={table.title}
-          className="group mt-4 overflow-hidden rounded-2xl bg-gray-50 ring-1 ring-gray-200"
-        >
-          <summary className="cursor-pointer list-none px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 [&::-webkit-details-marker]:hidden">
-            {/* ลูกศรหมุนลงตอนกาง — บอกสถานะโดยไม่ต้องมีตัวหนังสือว่า "ย่อ/ขยาย" */}
-            <span className="mr-1.5 inline-block text-gray-400 transition-transform group-open:rotate-90">
-              ▸
-            </span>
-            {table.title}
-            <span className="ml-1.5 font-normal text-gray-500">
-              ทั้งหมด {table.docs.length} ฉบับ
-            </span>
-          </summary>
-          <ol className="grid grid-cols-1 gap-x-6 gap-y-2 border-t border-gray-200 px-5 py-4 md:grid-cols-2">
-            {table.docs.map((doc, i) => (
-              <li key={doc.href} className="flex min-w-0 items-start gap-2">
-                <span className="mt-0.5 w-5 shrink-0 text-right text-xs text-gray-400 tabular-nums">
-                  {i + 1}.
-                </span>
-                <span className="min-w-0 flex-1">
-                  <DocLink doc={doc} />
-                </span>
-              </li>
-            ))}
-          </ol>
-        </details>
-      ))}
+      <DocTables tables={tables} />
     </div>
   );
 }
