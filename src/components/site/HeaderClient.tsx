@@ -109,12 +109,38 @@ export default function HeaderClient({
     พอเลื่อนลงก็หุบเก็บ เหลือแต่แถวเมนู — ได้พื้นที่อ่านเนื้อหาคืนมาเกือบ 50px
     ของพวกนั้นดูตอนเปิดหน้าครั้งแรกทีเดียวก็พอ ไม่ต้องตามติดไปทั้งหน้า
   */
+  /*
+    ⚠️ ต้องมีช่วงหน่วง (hysteresis) ไม่ใช่เส้นตัดเส้นเดียว
+
+    แถบนี้ปักหัวจอแบบ sticky จึงกินที่จริงบนหน้า พอกางออกเนื้อหาข้างล่างถูกดันลง ~56px
+    ถ้าใช้เกณฑ์เดียว (scrollY < 8) ตอนกดกลับขึ้นบนสุดจะเข้าลูป:
+    กาง → เนื้อหาขยับ → ตำแหน่งที่ scroll-snap เล็งไว้เปลี่ยน → เลื่อนเอง → หุบ →
+    เนื้อหาขยับกลับ → กางอีก ... เห็นเป็นอาการ **สั่นรัว ๆ ตรงหัวจอ**
+    (เจ้าของเว็บเจอเอง 24 ส.ค. 2026)
+
+    สองเกณฑ์: กางเมื่อขึ้นมาถึง < 8px · หุบเมื่อเลื่อนลงพ้น 72px
+    ช่วงระหว่างนั้นคงสถานะเดิมไว้ ไม่ว่าเนื้อหาจะขยับยังไงก็สลับไปมาไม่ได้
+
+    อ่านตำแหน่งใน requestAnimationFrame ด้วย — การเลื่อนหนึ่งครั้งยิง event
+    หลายสิบครั้งต่อวินาที คิดอย่างมากเฟรมละครั้งพอ (หลักเดียวกับ SectionNav)
+  */
   const [atTop, setAtTop] = useState(true);
   useEffect(() => {
-    const onScroll = () => setAtTop(window.scrollY < 8);
-    onScroll();
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const y = window.scrollY;
+      setAtTop((was) => (was ? y <= 72 : y < 8));
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(measure);
+    };
+    measure();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
   }, []);
 
   /* whitespace-nowrap: ชื่อเมนูไทยยาว ๆ ถูกหักขึ้นบรรทัดใหม่กลางคำแล้วแถบเมนูสูงสองเท่า ดูเหมือนซ้อนกัน */
