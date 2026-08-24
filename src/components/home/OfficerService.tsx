@@ -1,4 +1,5 @@
 import Image, { type StaticImageData } from "next/image";
+import Link from "next/link";
 import {
   Building2, Hospital, Truck, ImageIcon, ArrowRight,
   type LucideIcon,
@@ -44,52 +45,70 @@ export default function OfficerService({ items, bg = "bg-sky-soft" }: { items: I
             const OfficeIcon = OFFICE_ICON[kind] ?? Building2;
             // รูปจากหลังบ้านมาก่อน ถ้าไม่มีค่อยใช้ภาพที่ติดมากับโค้ด
             const img: string | StaticImageData | null = s.imageUrl ?? OFFICE_IMAGE[kind] ?? null;
-            return (
-              <Reveal key={s.id} delay={i * 0.06}>
-                <article className="group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-black/5 transition duration-300 hover:-translate-y-1.5 hover:shadow-xl">
-                  {/* ภาพห้องการเงิน — สาขา/รถตู้ยังเว้นว่างไว้ */}
-                  <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
-                    {img ? (
-                      <Image
-                        src={img}
-                        alt={s.title}
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="object-cover transition duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex h-full flex-col items-center justify-center gap-2 text-gray-400 transition group-hover:text-gray-500">
-                        <ImageIcon className="h-8 w-8" />
-                        <span className="text-xs font-medium">ภาพห้องการเงิน</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* เนื้อหา */}
-                  <div className="flex flex-1 flex-col p-5">
-                    <div className="flex items-center gap-2.5">
-                      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${t.iconBg}`}>
-                        <OfficeIcon className="h-5 w-5" />
-                      </span>
-                      <h3 className="line-clamp-1 font-bold text-gray-800" title={s.title}>
-                        {s.title}
-                      </h3>
+            /*
+              ทั้งใบกดได้ถ้ามีหน้าปลายทาง — ตั้งลิงก์ที่ /admin/home/officers ช่อง "ลิงก์"
+              ยังไม่ได้ตั้งก็เป็นการ์ดเฉย ๆ เหมือนเดิม (และซ่อนคำว่า "ดูรายละเอียด" ไว้
+              ไม่งั้นสมาชิกกดแล้วไม่มีอะไรเกิดขึ้น นึกว่าเว็บเสีย)
+            */
+            const shell =
+              "group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-black/5 transition duration-300 hover:-translate-y-1.5 hover:shadow-xl";
+            const inside = (
+              <>
+                {/* ภาพห้องการเงิน — สาขา/รถตู้ยังเว้นว่างไว้ */}
+                <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+                  {img ? (
+                    <Image
+                      src={img}
+                      alt={s.title}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover transition duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center gap-2 text-gray-400 transition group-hover:text-gray-500">
+                      <ImageIcon className="h-8 w-8" />
+                      <span className="text-xs font-medium">ภาพห้องการเงิน</span>
                     </div>
-                    <p
-                      title={s.subtitle ?? ""}
-                      className="mt-3 line-clamp-3 min-h-[4.5rem] flex-1 text-sm leading-relaxed text-gray-500"
-                    >
-                      {s.subtitle}
-                    </p>
+                  )}
+                </div>
+
+                {/* เนื้อหา */}
+                <div className="flex flex-1 flex-col p-5">
+                  <div className="flex items-center gap-2.5">
+                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${t.iconBg}`}>
+                      <OfficeIcon className="h-5 w-5" />
+                    </span>
+                    <h3 className="line-clamp-1 font-bold text-gray-800" title={s.title}>
+                      {s.title}
+                    </h3>
+                  </div>
+                  <p
+                    title={s.subtitle ?? ""}
+                    className="mt-3 line-clamp-3 min-h-[4.5rem] flex-1 text-sm leading-relaxed text-gray-500"
+                  >
+                    {s.subtitle}
+                  </p>
+                  {s.href && (
                     <span className={`mt-4 inline-flex items-center gap-1 text-sm font-medium ${t.link}`}>
                       ดูรายละเอียด
                       <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
                     </span>
-                  </div>
+                  )}
+                </div>
 
-                  {/* แถบสีลูกเล่น — ยืดเต็มความกว้างตอน hover */}
-                  <div className={`h-1 w-0 transition-all duration-300 group-hover:w-full ${t.bar}`} />
-                </article>
+              {/* แถบสีลูกเล่น — ยืดเต็มความกว้างตอน hover */}
+              <div className={`h-1 w-0 transition-all duration-300 group-hover:w-full ${t.bar}`} />
+              </>
+            );
+            return (
+              <Reveal key={s.id} delay={i * 0.06}>
+                {s.href ? (
+                  <Link href={s.href} className={shell}>
+                    {inside}
+                  </Link>
+                ) : (
+                  <article className={shell}>{inside}</article>
+                )}
               </Reveal>
             );
           })}
