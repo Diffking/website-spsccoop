@@ -16,6 +16,19 @@ import { TONES, type Tone } from "@/lib/rateGroups";
  * — เนื้อหาไม่มีทางหายไปเพราะตัวอ่านพัง
  */
 
+/** ระเบียบหรือแบบฟอร์มหนึ่งฉบับ — อ่านมาจากตารางท้ายหน้า */
+export type WelfareDoc = {
+  /** `reg` = ระเบียบสหกรณ์ · `form` = แบบฟอร์มที่ต้องกรอกยื่น */
+  kind: "reg" | "form";
+  /** ชื่อเต็มตามที่เจ้าหน้าที่พิมพ์ไว้ในตาราง */
+  name: string;
+  /** ชื่อที่ตัดคำนำหน้าซ้ำ ๆ ออกแล้ว ("ระเบียบสหกรณ์ ว่าด้วย ", "แบบฟอร์ม - ") */
+  short: string;
+  href: string;
+  /** ตารางแบบฟอร์มใส่ `download` ไว้ = กดแล้วโหลดลงเครื่องเลย ไม่เปิดอ่านในเบราว์เซอร์ */
+  download: boolean;
+};
+
 export type WelfareItem = {
   /** ชื่อสวัสดิการ */
   name: string;
@@ -23,6 +36,8 @@ export type WelfareItem = {
   pay: string[];
   /** การยื่นเอกสาร */
   doc: string[];
+  /** ระเบียบ/แบบฟอร์มของสวัสดิการรายการนี้ (เรียงระเบียบก่อน แล้วค่อยแบบฟอร์ม) */
+  files: WelfareDoc[];
 };
 
 export type WelfareGroup = {
@@ -32,8 +47,48 @@ export type WelfareGroup = {
   items: WelfareItem[];
 };
 
+/** ตารางเอกสารท้ายหน้าหนึ่งตาราง — เก็บไว้ให้ดูรายการเต็มได้ที่เดิม */
+export type WelfareDocTable = {
+  /** หัวข้อเดิมของตาราง เช่น "ระเบียบสวัสดิการ" */
+  title: string;
+  kind: "reg" | "form";
+  docs: WelfareDoc[];
+};
+
 /** สีตามความเร่งด่วน — ยิ่งต้องรีบยื่นยิ่งร้อน */
 const TONE_BY_ORDER = [TONES.rose, TONES.orange, TONES.sky, TONES.emerald, TONES.violet, TONES.gray];
+
+/**
+ * จับคู่ "สวัสดิการ" กับ "ระเบียบ/แบบฟอร์ม" ด้วยคำที่ปรากฏในชื่อของทั้งสองฝั่ง
+ *
+ * เจ้าของเว็บขอไว้ 24 ส.ค. 2026 ว่าให้เอกสารไปอยู่กับสวัสดิการที่มันใช้ — เปิดแท็บ
+ * "เกณฑ์กำหนดภายใน 90 วัน" แล้วต้องเห็นระเบียบกับแบบฟอร์มของ 3 เรื่องนั้นเลย
+ * ไม่ต้องเลื่อนลงไปหาเองในตารางรวม 12 บรรทัดว่าอันไหนของเรื่องไหน
+ *
+ * ⚠️ **จับจากคำ ไม่ได้ผูกด้วยรหัส** เพราะเจ้าหน้าที่แก้ตารางเองได้ทั้งสองฝั่ง
+ * ถ้าไปผูกด้วยเลขลำดับหรือ data-* เจ้าหน้าที่จะทำหลุดโดยไม่รู้ตัว (EditUI ไม่มีที่ให้ตั้ง)
+ *
+ * ⚠️ **จับไม่ได้ = ไม่หาย** เอกสารที่ไม่ตรงกับสวัสดิการรายการไหนเลย (เช่น ระเบียบเงินกู้
+ * ฉุกเฉิน · ใบเรียกร้องค่าสินไหมของบริษัทประกัน) ยังอยู่ครบในรายการเต็มท้ายหน้า
+ * เพิ่มสวัสดิการใหม่แล้วอยากให้เอกสารไปเกาะการ์ด ต้องมาเพิ่มหัวข้อในตารางนี้
+ *
+ * ⚠️ **ห้ามใช้ตัวเลขลอย ๆ เป็นคำจับ** — "65" ไปตรงกับ "พ.ศ. 2565" ของระเบียบเงินกู้ฉุกเฉิน
+ * ต้องเขียนเป็น `65\s*ปี` เสมอ (เจอตอนทดสอบครั้งแรก เอกสารไปเกาะผิดเรื่อง)
+ */
+const TOPICS: { key: string; item: RegExp; doc: RegExp }[] = [
+  { key: "medical", item: /รักษาพยาบาล|เคมีบำบัด|คีโม/, doc: /รักษาพยาบาล/ },
+  { key: "funeralLoan", item: /เงินยืม|ยืมเงิน/, doc: /เงินยืม|ยืมเงิน|ทดรองจ่าย|ทดลองจ่าย/ },
+  { key: "familyDeath", item: /(ครอบครัว|บิดา|มารดา|คู่สมรส).*เสียชีวิต/, doc: /เกี่ยวกับศพ|บำเพ็ญกุศล/ },
+  { key: "memberDeath", item: /สมาชิก(ผู้)?เสียชีวิต/, doc: /สมาชิก(ผู้)?เสียชีวิต|เกี่ยวกับศพ/ },
+  { key: "retire", item: /เกษียณ|อายุ\s*60\s*ปี/, doc: /เกษียณ/ },
+  { key: "age65", item: /65\s*ปี/, doc: /65\s*ปี/ },
+  { key: "age55", item: /55\s*ปี/, doc: /55\s*ปี/ },
+  { key: "newborn", item: /แรกเกิด|รับขวัญ/, doc: /แรกเกิด|รับขวัญ/ },
+  { key: "education", item: /การศึกษา/, doc: /การศึกษา/ },
+  { key: "bedridden", item: /ติดเตียง/, doc: /ติดเตียง/ },
+  { key: "disaster", item: /ภัยพิบัติ/, doc: /ภัยพิบัติ/ },
+  { key: "disability", item: /สติปัญญา|บกพร่อง/, doc: /สติปัญญา|บกพร่อง/ },
+];
 
 const stripTags = (html: string) =>
   html
@@ -77,9 +132,72 @@ function closingDiv(html: string, openEnd: number): number {
   return -1;
 }
 
-export function readWelfare(
-  html: string,
-): { before: string; groups: WelfareGroup[]; after: string } | null {
+/** ตัดคำนำหน้าที่ซ้ำกันทุกบรรทัดออก — บนการ์ดมีที่จำกัด ชื่อยาวเท่ากันหมดอ่านไม่ทัน */
+const shortName = (name: string) =>
+  name
+    .replace(/^ระเบียบ\S*\s+ว่าด้วย\s*/, "")
+    .replace(/^แบบฟอร์ม\s*[-–—]\s*/, "")
+    .trim() || name;
+
+/** อ่านแถวในตารางเอกสาร — แถวที่ไม่มีลิงก์หรือไม่มีชื่อ ถือว่าไม่ใช่เอกสาร ข้ามไป */
+function readDocRows(block: string, kind: "reg" | "form"): WelfareDoc[] {
+  const out: WelfareDoc[] = [];
+  for (const row of block.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)) {
+    const href = row[1].match(/href="([^"]+)"/)?.[1];
+    if (!href) continue;
+
+    /*
+      ชื่อเอกสารคือช่องที่ยาวที่สุดที่ไม่ใช่เลขลำดับ — ไม่ยึดว่าต้องเป็นช่องที่เท่าไหร่
+      เผื่อวันหลังเจ้าหน้าที่เพิ่ม/สลับคอลัมน์ในตาราง (ทำได้เองใน EditUI)
+    */
+    const name = [...row[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)]
+      .map((cell) => stripTags(cell[1]))
+      .filter((text) => text && !/^\d+\s*[.)]?$/.test(text))
+      .sort((a, b) => b.length - a.length)[0];
+    if (!name) continue;
+
+    out.push({ kind, name, short: shortName(name), href, download: /\sdownload[\s>]/.test(row[1]) });
+  }
+  return out;
+}
+
+/**
+ * ดึงตาราง "ระเบียบ" กับ "เอกสารดาวน์โหลด" ท้ายหน้าออกมา แล้วคืนเนื้อหาที่เหลือ
+ *
+ * ที่ต้องดึงออกเพราะเอาไปแสดงใหม่แล้ว (บนการ์ด + รายการเต็มแบบพับเก็บ)
+ * ถ้าปล่อยไว้จะเห็นของเดียวกันสองรอบ · ตารางอื่นที่ไม่ใช่สองอย่างนี้ไม่แตะ
+ */
+function readDocTables(html: string): { tables: WelfareDocTable[]; rest: string } {
+  const tables: WelfareDocTable[] = [];
+  let rest = "";
+  let last = 0;
+
+  for (const block of html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>\s*<table[\s\S]*?<\/table>/g)) {
+    const title = stripTags(block[1]);
+    const kind = /ระเบียบ/.test(title)
+      ? "reg"
+      : /ดาวน์โหลด|แบบฟอร์ม/.test(title)
+        ? "form"
+        : null;
+    if (!kind) continue;
+
+    const docs = readDocRows(block[0], kind);
+    if (docs.length === 0) continue;
+
+    tables.push({ title, kind, docs });
+    rest += html.slice(last, block.index);
+    last = block.index + block[0].length;
+  }
+
+  return { tables, rest: rest + html.slice(last) };
+}
+
+export function readWelfare(html: string): {
+  before: string;
+  groups: WelfareGroup[];
+  tables: WelfareDocTable[];
+  after: string;
+} | null {
   const open = html.match(/<div[^>]*class="[^"]*welfare-view[^"]*"[^>]*>/);
   if (!open || open.index === undefined) return null;
 
@@ -96,6 +214,9 @@ export function readWelfare(
   const marks = [...inner.matchAll(/data-title="([^"]+)"/g)];
   if (marks.length === 0) return null;
 
+  const { tables, rest } = readDocTables(html.slice(closeAt + "</div>".length));
+  const allDocs = tables.flatMap((t) => t.docs);
+
   const groups: WelfareGroup[] = [];
   marks.forEach((mark, i) => {
     const from = (mark.index ?? 0) + mark[0].length;
@@ -108,7 +229,15 @@ export function readWelfare(
     )) {
       const name = stripTags(row[1]);
       if (!name) continue;
-      items.push({ name, pay: lines(row[2]), doc: lines(row[3]) });
+
+      // หัวข้อที่ชื่อสวัสดิการนี้เข้าข่าย — เอกสารที่เข้าข่ายหัวข้อเดียวกันคือของรายการนี้
+      const topics = TOPICS.filter((t) => t.item.test(name));
+      items.push({
+        name,
+        pay: lines(row[2]),
+        doc: lines(row[3]),
+        files: topics.length === 0 ? [] : allDocs.filter((d) => topics.some((t) => t.doc.test(d.name))),
+      });
     }
 
     if (items.length > 0) {
@@ -123,9 +252,5 @@ export function readWelfare(
 
   if (groups.length === 0) return null;
 
-  return {
-    before: html.slice(0, open.index),
-    groups,
-    after: html.slice(closeAt + "</div>".length),
-  };
+  return { before: html.slice(0, open.index), groups, tables, after: rest.trim() };
 }
