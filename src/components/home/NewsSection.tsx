@@ -26,6 +26,51 @@ import {
 
 const PER_PAGE = 5;
 
+/**
+ * หน้าตากรอบการ์ดของส่วนนี้ — **การ์ดประกาศกับการ์ดทำเนียบกรรมการต้องเหมือนกันเป๊ะ**
+ * สองใบนี้วางเคียงกันในแถวเดียว ต่างกันนิดเดียวก็เห็นออกทันที จึงเก็บคลาสไว้ที่เดียว
+ *
+ * เดิมเป็นขาวล้วนบนพื้นส่วนที่ก็ขาว มองไม่ออกว่าการ์ดเริ่มตรงไหนจบตรงไหน
+ * (เจ้าของเว็บทักมา 25 ส.ค. 2026) — ตอนนี้จึงไล่สีอ่อน ๆ ลงท้องการ์ด
+ * บวกเงาสีน้ำเงินแทนเงาเทา การ์ดจึงลอยขึ้นจากพื้นโดยไม่ต้องเพิ่มสีจัด
+ *
+ * ⚠️ **สีอ่อนขนาดนี้ตั้งใจ** ส่วนนี้มีพื้นหลังที่เจ้าหน้าที่เปลี่ยนเองได้ที่ /admin/home
+ * ถ้าทำการ์ดเข้มกว่านี้ พอเจ้าหน้าที่เลือกพื้นสีอื่น มันจะตีกันทันที
+ */
+const CARD_SHELL =
+  "relative isolate flex h-full min-w-0 flex-col overflow-hidden rounded-2xl " +
+  "bg-gradient-to-b from-white via-brand-50/40 to-brand-50/80 " +
+  "shadow-[0_14px_34px_-18px_rgba(21,104,176,0.35)] ring-1 ring-brand-100/80 " +
+  "transition-shadow duration-300 hover:shadow-[0_18px_42px_-16px_rgba(21,104,176,0.45)]";
+
+/**
+ * แสงนุ่มหลังการ์ด + เส้นผมที่ขอบบน
+ *
+ * ตั้งใจให้จางจนมองไม่ออกว่ามีอะไร — หน้าที่ของมันคือทำให้การ์ดไม่แบนสนิท
+ * ไม่ใช่เพื่อให้เห็นลวดลาย · อยู่ใต้ `isolate` ของการ์ด จึงใช้ `-z-10`
+ * ดันลงไปหลังเนื้อหาได้โดยไม่ทะลุออกนอกการ์ด และไม่ไปบังของส่วนอื่น
+ *
+ * `pointer-events-none` สำคัญ — ไม่งั้นมันจะบังลิงก์กับปุ่มที่อยู่ใต้มัน
+ */
+function CardGlow() {
+  return (
+    <>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-brand-300/70 to-transparent"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-20 -top-24 -z-10 h-56 w-56 rounded-full bg-brand-200/25 blur-3xl"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -bottom-24 -left-16 -z-10 h-52 w-52 rounded-full bg-sky-200/25 blur-3xl"
+      />
+    </>
+  );
+}
+
 function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Kind }) {
   const [page, setPage] = useState(0);
   const pageCount = Math.max(1, Math.ceil(items.length / PER_PAGE));
@@ -43,12 +88,9 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
 
   return (
     // overflow-hidden = ด่านสุดท้าย ไม่ว่าอะไรจะพลาด ข้อความต้องไม่ทะลุขอบการ์ดออกไป
-    <div
-      ref={card}
-      {...auto.hover}
-      className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5"
-    >
-      <p className="mb-3 border-b border-gray-100 pb-2 text-sm font-semibold text-brand-700">
+    <div ref={card} {...auto.hover} className={`${CARD_SHELL} p-5`}>
+      <CardGlow />
+      <p className="mb-3 border-b border-brand-100/70 pb-2 text-sm font-semibold text-brand-700">
         {KIND_HEADING[kind]}
       </p>
 
@@ -200,11 +242,8 @@ function CommitteeCard({
   return (
     // min-w-0 + overflow-hidden ด้วยเหตุผลเดียวกับการ์ดประกาศ — ชื่อกรรมการยาว ๆ
     // เป็นภาษาไทยติดกันทั้งบรรทัด ต้องยอมให้การ์ดแคบกว่าชื่อได้ line-clamp ถึงจะทำงาน
-    <div
-      ref={card}
-      {...auto.hover}
-      className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-black/5"
-    >
+    <div ref={card} {...auto.hover} className={`${CARD_SHELL} p-5 text-center`}>
+      <CardGlow />
       {/*
         ต้องเป็น "คณะกรรมการดำเนินการ" เต็ม ๆ ไม่ใช่ "คณะกรรมการ" ลอย ๆ
         สหกรณ์มีคณะกรรมการหลายชุด (ดำเนินการ · สรรหา · ผู้ตรวจสอบกิจการ)
