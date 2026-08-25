@@ -1152,7 +1152,16 @@ function PeopleView({
 
   return (
     <>
-      <div className={`people cols-${block.cols}`}>
+      {/*
+        บอกให้รู้ตั้งแต่ตอนมอง ว่าชื่อที่เห็นจาง ๆ นี้จะไม่ขึ้นจริง — ไม่งั้น
+        เจ้าหน้าที่จะนึกว่าตัวแก้ไขเสีย · ข้อความยังอยู่ครบ กดเปิดกลับเมื่อไหร่ก็เห็นเหมือนเดิม
+      */}
+      {block.noCaption && (
+        <p className="edit-note">
+          ซ่อนชื่อกับตำแหน่งใต้รูปอยู่ — บนหน้าเว็บจริงจะเห็นแค่รูป · ข้อความยังเก็บไว้ครบ ไม่หายไปไหน
+        </p>
+      )}
+      <div className={`people cols-${block.cols}${block.noCaption ? " no-caption" : ""}`}>
         {block.people.map((person, i) => (
           <figure key={i} className="person edit-removable">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1218,6 +1227,22 @@ function PeopleView({
               onClick={() => onChange({ ...block, cols: n })}
             />
           ))}
+          {/*
+            รูปบุคลากรของสหกรณ์มีแถบชื่อ-สกุลกับตำแหน่งพิมพ์ติดมาในภาพเลย
+            ถ้าหน้าเว็บพิมพ์ชื่อให้อีก ก็เห็นชื่อซ้ำสองรอบ (เจ้าของเว็บขอ 25 ส.ค. 2026)
+            — ซ่อนเฉย ๆ ไม่ได้ลบ จะได้กลับมาได้ทันถ้าวันหนึ่งเปลี่ยนรูปเป็นรูปที่ไม่มีตัวหนังสือ
+          */}
+          <span>ชื่อกับตำแหน่งใต้รูป</span>
+          <Choice
+            label="แสดง"
+            active={!block.noCaption}
+            onClick={() => onChange({ ...block, noCaption: false })}
+          />
+          <Choice
+            label="ซ่อน (รูปมีชื่ออยู่แล้ว)"
+            active={block.noCaption}
+            onClick={() => onChange({ ...block, noCaption: true })}
+          />
         </Options>
       )}
     </>

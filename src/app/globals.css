@@ -338,6 +338,23 @@ body {
 }
 .prose-page .person figcaption,
 .prose-page .people figure figcaption { margin-top: .6rem; text-align: center; }
+
+/* ---- ซ่อนชื่อกับตำแหน่งใต้รูป ----
+   รูปบุคลากรของสหกรณ์มีแถบชื่อ-สกุลกับตำแหน่งพิมพ์ติดมาในภาพเลย
+   พิมพ์ซ้ำใต้รูปอีกจึงเห็นชื่อสองรอบ — เจ้าของเว็บขอให้ปิดได้ 25 ส.ค. 2026
+
+   ซ่อนด้วย CSS ไม่ได้ลบข้อความทิ้ง — กดปิดแล้วเปิดกลับได้ทันที ชื่อไม่หายไปไหน
+   ⚠️ ใน EditUI (.prose-edit) **ห้ามซ่อน** ไม่งั้นเจ้าหน้าที่จะแก้ชื่อไม่ได้เลย */
+.prose-page:not(.prose-edit) .people.no-caption figcaption { display: none; }
+/* ในตัวแก้ไขทำให้จางลงเฉย ๆ พอให้รู้ว่าช่องนี้จะไม่ขึ้นจริง แต่ยังคลิกพิมพ์แก้ได้ตามปกติ */
+.prose-edit .people.no-caption figcaption { opacity: .45; }
+
+/* บรรทัดบอกสถานะเหนือก้อนในตัวแก้ไข — เช่น "ชื่อถูกซ่อนอยู่" · ไม่มีบนหน้าเว็บจริง */
+.edit-note {
+  margin: 0 0 .6rem; border-radius: .5rem; background: #fef4de; padding: .35rem .7rem;
+  font-family: system-ui, sans-serif; font-size: .75rem; color: #92600a;
+}
+
 .prose-page .person-name {
   display: block; font-weight: 600; color: #1f2937; line-height: 1.45; font-size: .95rem;
 }
