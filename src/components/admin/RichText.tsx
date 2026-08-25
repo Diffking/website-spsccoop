@@ -136,8 +136,15 @@ export default function RichText({
           setBar(null);
           publish();
         }}
+        /*
+          ช่องบรรทัดเดียวกด Enter ไม่ขึ้นบรรทัดใหม่ — แต่ **Shift+Enter ขึ้นได้**
+          เพราะบางช่องจำเป็นต้องขึ้นบรรทัด เช่นตำแหน่งที่ปรึกษา ที่ต้องแยก
+          "นายแพทย์สาธารณสุขจังหวัดสงขลา" กับ "ที่ปรึกษากิตติมศักดิ์" ออกจากกัน (เจ้าของเว็บขอ 25 ส.ค. 2026)
+
+          โหมด plain กดไม่ขึ้นทั้งสองแบบ — ปลายทางเก็บเป็นข้อความล้วน ใส่ <br> ไปก็หายเงียบ ๆ อยู่ดี
+        */
         onKeyDown={(e: React.KeyboardEvent) => {
-          if (singleLine && e.key === "Enter") e.preventDefault();
+          if (singleLine && e.key === "Enter" && (plain || !e.shiftKey)) e.preventDefault();
         }}
         /*
          * วางข้อความจาก Word/เว็บอื่นให้เหลือแต่ตัวอักษร — ของที่ก๊อปมามักพ่วง
