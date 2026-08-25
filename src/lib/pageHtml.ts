@@ -33,7 +33,9 @@ export const ALLOWED_CLASSES = new Set([
   // สีของการ์ด
   "blue", "green", "amber", "pink", "purple", "teal", "gray",
   // ทำเนียบบุคลากร (ดู .people ใน globals.css) — cols-N คือจำนวนคนต่อแถว
-  "people", "person", "person-name", "person-role",
+  // no-caption = ซ่อนชื่อ/ตำแหน่งใต้รูป (รูปมีชื่อพิมพ์ติดมาในภาพแล้ว)
+  // ⚠️ ลืมใส่ที่นี่ = ตัวกรองกินคลาสทิ้งตอนกดบันทึก ชื่อจะเด้งกลับมาเองโดยไม่มีอะไรฟ้อง
+  "people", "person", "person-name", "person-role", "no-caption",
   // หมุดอัตราดอกเบี้ยดึงสด — เนื้อในถูกใส่ให้ตอน render (ดู src/lib/liveRates.ts)
   // ไม่มีคลาสนี้ใน ALLOWED_CLASSES หมุดจะโดนตัวกรองกินตอนเจ้าหน้าที่กดบันทึก
   "live-deposit-rates", "live-loan-rates", "welfare-view",

@@ -74,6 +74,17 @@ export type Block =
        * — พอมีใครใส่ตำแหน่งให้สักคน ถึงค่อยเปลี่ยนไปใช้โครงเต็มที่รองรับตำแหน่ง
        */
       plain: boolean;
+      /**
+       * ซ่อนชื่อกับตำแหน่งใต้รูปบนหน้าเว็บจริง — สำหรับรูปที่มีชื่อพิมพ์ติดมาในรูปอยู่แล้ว
+       *
+       * รูปบุคลากรของสหกรณ์มีแถบชื่อ-สกุลกับตำแหน่งพิมพ์ติดมาในภาพเลย ถ้าหน้าเว็บ
+       * พิมพ์ชื่อใต้รูปให้อีก ก็เห็นชื่อซ้ำสองรอบติดกัน (เจ้าของเว็บทักมา 25 ส.ค. 2026)
+       *
+       * ⚠️ **ซ่อนด้วย CSS ไม่ได้ลบข้อความทิ้ง** ชื่อกับตำแหน่งยังอยู่ในเนื้อหาครบ
+       * กดปิดแล้วเปิดกลับได้ทันที ไม่มีอะไรหาย · และ alt ของรูปยังเก็บชื่อไว้เสมอ
+       * คนที่ใช้โปรแกรมอ่านหน้าจอจึงยังรู้ว่ารูปนี้คือใคร
+       */
+      noCaption: boolean;
     }
   | { id: string; kind: "tabs"; tabs: Tab[] }
   | { id: string; kind: "html"; html: string };
@@ -273,6 +284,7 @@ function peopleOf(el: Element): Block {
     kind: "people",
     cols: colsOf(el, 3),
     plain: figures.length > 0 && !el.querySelector(".person-name"),
+    noCaption: has(el, "no-caption"),
     people: figures.map((figure) => {
       const name = figure.querySelector(".person-name");
       const role = figure.querySelector(".person-role");
@@ -539,7 +551,9 @@ function blockToHtml(block: Block): string {
         "  </figure>";
 
       const list = block.people.map(figure).join(NL);
-      return `<div class="people cols-${block.cols}">${NL}${list}${NL}</div>`;
+      // no-caption = ซ่อนชื่อ/ตำแหน่งตอนแสดง แต่ข้อความยังอยู่ในหน้าครบ กดเปิดกลับได้ทันที
+      const hide = block.noCaption ? " no-caption" : "";
+      return `<div class="people cols-${block.cols}${hide}">${NL}${list}${NL}</div>`;
     }
 
     case "tabs": {
@@ -597,7 +611,7 @@ export function emptyBlock(kind: BlockKind): Block {
       };
     case "people":
       // คนที่เพิ่มใหม่ใช้โครงเต็มเสมอ จะได้ใส่ตำแหน่งได้
-      return { id, kind, cols: 3, people: [], plain: false };
+      return { id, kind, cols: 3, people: [], plain: false, noCaption: false };
     case "tabs":
       return {
         id,
