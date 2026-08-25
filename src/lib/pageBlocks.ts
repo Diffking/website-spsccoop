@@ -223,8 +223,13 @@ export function cleanInline(html: string): string {
 
 /** ข้อความล้วนของก้อน — ใช้ดูว่าก้อนว่างไหม และทำคำโปรยบนหัวก้อนที่ยุบอยู่ */
 export function plainText(html: string): string {
-  if (typeof DOMParser === "undefined") return html.replace(/<[^>]*>/g, "");
-  const doc = new DOMParser().parseFromString(`<div>${html}</div>`, "text/html");
+  /*
+    <br> ต้องกลายเป็น "ช่องว่าง" ก่อนเสมอ — textContent เฉย ๆ จะเอาสองบรรทัดมาติดกัน
+    กลายเป็น "…สงขลาที่ปรึกษา" ซึ่งไปโผล่ใน alt ของรูปและคำโปรยบนหัวก้อนที่ยุบอยู่
+  */
+  const spaced = html.replace(/<br\s*\/?>/gi, " ");
+  if (typeof DOMParser === "undefined") return spaced.replace(/<[^>]*>/g, "");
+  const doc = new DOMParser().parseFromString(`<div>${spaced}</div>`, "text/html");
   return (doc.body.textContent ?? "").replace(/\s+/g, " ").trim();
 }
 
@@ -283,16 +288,31 @@ function peopleOf(el: Element): Block {
     id: blockId(),
     kind: "people",
     cols: colsOf(el, 3),
-    plain: figures.length > 0 && !el.querySelector(".person-name"),
+    /*
+      ต้นฉบับเขียนแบบง่ายหรือเปล่า — ดูจาก **คลาสของ <figure>** ไม่ใช่ดูว่ามี span ชื่อไหม
+
+      เดิมดูจาก `.person-name` ซึ่งพังกับหน้าที่ชื่อถูกลบออกหมด (รูปมีชื่ออยู่ในภาพแล้ว)
+      มันจะคิดว่าหน้านั้นเขียนแบบง่าย แล้วเขียนกลับโดยถอด `class="person"` ทิ้งเงียบ ๆ
+      (ตัวตรวจจับได้ 25 ส.ค. 2026 — person 18 → 0 ที่หน้าบุคลากร)
+    */
+    plain: figures.length > 0 && !figures.some((figure) => figure.classList.contains("person")),
     noCaption: has(el, "no-caption"),
     people: figures.map((figure) => {
       const name = figure.querySelector(".person-name");
       const role = figure.querySelector(".person-role");
+      /*
+        อ่านเป็น HTML ไม่ใช่ข้อความล้วน — ช่องชื่อ/ตำแหน่งมี <br> ได้
+        (หน้าที่ปรึกษาขอขึ้นบรรทัดใหม่ก่อนคำว่า "ที่ปรึกษา" 25 ส.ค. 2026)
+
+        ⚠️ เดิมใช้ textContent ซึ่งกิน <br> ทิ้ง **และกินช่องไฟตรงนั้นด้วย**
+        คำสองคำเลยติดกัน ("…สงขลาที่ปรึกษา") — หายเงียบ ๆ ตอนมีคนเปิด EditUI แล้วกดบันทึก
+      */
+      const html = (el: Element | null) => el?.innerHTML.trim() ?? "";
       return {
         src: figure.querySelector("img")?.getAttribute("src") ?? "",
         // ไม่มี span ชื่อ = ทั้ง figcaption คือชื่อ (หน้าทำเนียบที่ปรึกษาเขียนแบบนี้)
-        name: (name ?? figure.querySelector("figcaption"))?.textContent?.trim() ?? "",
-        role: role?.textContent?.trim() ?? "",
+        name: html(name ?? figure.querySelector("figcaption")),
+        role: html(role),
       };
     }),
   };
@@ -535,9 +555,16 @@ function blockToHtml(block: Block): string {
        * ไม่งั้นแค่เปิด EditUI แล้วแก้ก้อนอื่น ชื่อบนหน้าเว็บจะกลายเป็นตัวหนาขึ้นมาเอง
        */
       const plain = block.plain && block.people.every((p) => !p.role.trim());
+      /*
+        ทุกช่องว่างหมด = หน้าที่ตั้งใจให้รูปพูดอย่างเดียว (ชื่อพิมพ์ติดมาในภาพ)
+        เขียน <figcaption> เปล่ากลับไปตรง ๆ อย่ายัดเยียด span เปล่าเข้าไปใหม่
+      */
+      const blank = block.people.every((p) => !plainText(p.name) && !plainText(p.role));
 
       const caption = (p: Person) =>
-        plain
+        blank
+          ? `    <figcaption></figcaption>${NL}`
+          : plain
           ? `    <figcaption>${p.name}</figcaption>${NL}`
           : `    <figcaption>${NL}` +
             `      <span class="person-name">${p.name}</span>${NL}` +
@@ -546,7 +573,8 @@ function blockToHtml(block: Block): string {
 
       const figure = (p: Person) =>
         (plain ? `  <figure>${NL}` : `  <figure class="person">${NL}`) +
-        `    <img src="${escapeAttr(p.src)}" alt="${escapeAttr(p.name)}">${NL}` +
+        // alt เป็นข้อความล้วนเสมอ — ชื่อที่มี <br> ต้องแปลงเป็นช่องว่างก่อน
+        `    <img src="${escapeAttr(p.src)}" alt="${escapeAttr(plainText(p.name))}">${NL}` +
         caption(p) +
         "  </figure>";
 
