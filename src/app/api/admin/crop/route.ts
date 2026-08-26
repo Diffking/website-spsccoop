@@ -5,6 +5,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { requireWrite } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
+import { MAX_EDGE } from "@/lib/image";
 
 /**
  * ครอบตัดรูปที่อัปไว้แล้ว → ได้ไฟล์ใหม่ (ไม่ทับของเดิม)
@@ -88,6 +89,15 @@ export async function POST(request: Request) {
       // ไม่ต้อง .rotate() — ไฟล์ที่เก็บถูกหมุนตาม EXIF ตั้งแต่ตอนอัปแล้ว
       // ใส่ซ้ำจะกลายเป็นหมุนสองรอบ แล้วกรอบที่ผู้ใช้ลากไว้จะไปคนละที่กับที่เห็น
       .extract({ left: Math.max(0, x), top: Math.max(0, y), width: w, height: h })
+      /*
+        ⚠️ **ย่อให้ไม่เกินเพดานเดิมของทั้งเว็บเสมอ** — เจ้าของเว็บสั่งไว้ว่าอะไรที่เกี่ยวกับ
+        รูป/ไฟล์ต้องไม่ใหญ่เกินจำเป็น (ย้ำอีกครั้ง 26 ส.ค. 2026)
+
+        ปกติรูปที่อัปผ่านหลังบ้านถูกย่อเหลือ 600px ตั้งแต่ตอนเก็บอยู่แล้ว ตัดแล้วจึงเล็กลง
+        เสมอ — แต่รูปเก่าที่มีมาก่อนมีตัวย่อ หรือไฟล์ที่วันหลังใครเอาเข้า uploads/ ตรง ๆ
+        อาจใหญ่กว่านั้น ถ้าไม่กันไว้ตรงนี้ ไฟล์ที่ตัดออกมาจะใหญ่ตามต้นฉบับโดยไม่มีใครรู้
+      */
+      .resize({ width: MAX_EDGE, height: MAX_EDGE, fit: "inside", withoutEnlargement: true })
       .webp({ quality: 82 })
       .toBuffer({ resolveWithObject: true });
     bytes = result.data;
