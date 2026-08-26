@@ -79,7 +79,14 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
             onClick={() => setZoom(true)}
             // minmax(0,…) ด้วยเหตุผลเดียวกับกริดชั้นนอก — หัวข้อสไลด์แต่ละใบยาวไม่เท่ากัน
             // ปล่อยเป็น 1.05fr เฉย ๆ คอลัมน์ข้อความจะกว้างตามหัวข้อ แล้วรูปฝั่งขวาขยับทุกครั้งที่สไลด์วน
-            className="absolute inset-0 grid cursor-zoom-in grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] items-center gap-4 p-6 sm:gap-7 sm:p-9"
+            /*
+              ⚠️ **ระยะขอบซ้าย-ขวาต้องกว้างพอให้ปุ่มเลื่อนมีช่องของตัวเอง**
+              ปุ่มลูกศรลอยทับข้อความกับภาพจนอ่านไม่ออก เจ้าของเว็บทัก 26 ส.ค. 2026
+              · ปุ่มกว้าง 36px (จอเล็ก) / 40px (จอใหญ่) บวกระยะห่างจากขอบแล้ว
+                กินพื้นที่ราว 38px / 52px — ระยะขอบตรงนี้จึงต้องมากกว่านั้นเสมอ
+              · แก้ขนาดปุ่มหรือตำแหน่งปุ่มเมื่อไหร่ ต้องขยับเลขคู่นี้ตามด้วย
+            */
+            className="absolute inset-0 grid cursor-zoom-in grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] items-center gap-4 py-6 pl-12 pr-12 sm:gap-7 sm:py-9 sm:pl-16 sm:pr-16"
           >
             {/* ข้อความด้านซ้าย (ตัวใหญ่) */}
             <div className="min-w-0 text-left">
@@ -156,16 +163,16 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
         <button
           onClick={() => go(-1)}
           aria-label="สไลด์ก่อนหน้า"
-          className="absolute left-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-brand-700 shadow-lg ring-1 ring-brand-100 backdrop-blur transition hover:scale-110 hover:bg-white hover:text-brand-800 active:scale-95"
+          className="absolute left-2 top-1/2 z-20 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-brand-700 shadow-lg ring-1 ring-brand-100 backdrop-blur transition hover:scale-110 hover:bg-white hover:text-brand-800 active:scale-95 sm:left-3 sm:h-10 sm:w-10"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
         </button>
         <button
           onClick={() => go(1)}
           aria-label="สไลด์ถัดไป"
-          className="absolute right-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-brand-700 shadow-lg ring-1 ring-brand-100 backdrop-blur transition hover:scale-110 hover:bg-white hover:text-brand-800 active:scale-95"
+          className="absolute right-2 top-1/2 z-20 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-brand-700 shadow-lg ring-1 ring-brand-100 backdrop-blur transition hover:scale-110 hover:bg-white hover:text-brand-800 active:scale-95 sm:right-3 sm:h-10 sm:w-10"
         >
-          <ChevronRight className="h-5 w-5" />
+          <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
         </button>
 
         {/* จุดบอกลำดับ — ใส่แผ่นขาวรองไว้ จะได้เห็นชัดไม่ว่าสไลด์นั้นพื้นสีอะไร */}
