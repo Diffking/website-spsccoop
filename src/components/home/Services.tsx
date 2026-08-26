@@ -46,11 +46,28 @@ export default function Services({ items, bg = "bg-sky-soft" }: { items: Item[];
                       href={s.href}
                       className="group flex h-full min-h-16 items-center gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5 transition hover:-translate-y-1 hover:shadow-md"
                     >
-                      <span
-                        className={`grid h-11 w-11 shrink-0 place-items-center rounded-lg transition ${group.tone.chip} ${group.tone.chipHover}`}
-                      >
-                        <Icon name={s.icon ?? "LayoutGrid"} className="h-5 w-5" />
-                      </span>
+                      {/*
+                        ใส่รูปไว้ = ใช้รูปเป็นโลโก้ของบริการนั้น · ไม่ใส่ = ไอคอนเหมือนเดิม
+                        เจ้าของเว็บขอไว้ 26 ส.ค. 2026 เพราะโปรแกรมที่พัฒนาเองมีโลโก้ของตัวเอง
+                        ซึ่งไอคอนเส้น ๆ แทนไม่ได้
+
+                        ⚠️ กรอบขนาดเดียวกันเป๊ะทั้งสองแบบ (h-11 w-11) การ์ดในแถวเดียวกัน
+                        จึงสูงเท่ากันเสมอ ต่อให้ปนกันทั้งแบบรูปและแบบไอคอน
+                        · รูปใช้ object-contain ไม่ครอบตัด โลโก้จะได้ไม่โดนตัดขอบ
+                      */}
+                      {s.imageUrl ? (
+                        <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-lg bg-white ring-1 ring-black/5">
+                          {/* รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={s.imageUrl} alt="" className="h-full w-full object-contain" />
+                        </span>
+                      ) : (
+                        <span
+                          className={`grid h-11 w-11 shrink-0 place-items-center rounded-lg transition ${group.tone.chip} ${group.tone.chipHover}`}
+                        >
+                          <Icon name={s.icon ?? "LayoutGrid"} className="h-5 w-5" />
+                        </span>
+                      )}
                       <span
                         title={s.title}
                         className={`line-clamp-2 text-sm font-medium text-gray-700 ${group.tone.titleHover}`}

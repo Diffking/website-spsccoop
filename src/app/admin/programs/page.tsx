@@ -7,8 +7,10 @@ import { getSetting } from "@/lib/settings";
 import { publicSiteUrl } from "@/lib/siteUrl";
 import {
   CHECKUP_IMAGES_KEY,
+  CHECKUP_INTRO_KEY,
   CHECKUP_LOGO_KEY,
   CHECKUP_QUESTIONS_KEY,
+  fillIntro,
   type CheckupImages,
 } from "@/lib/programPages";
 import { fillQuestions } from "@/lib/financialCheckup";
@@ -27,10 +29,11 @@ export default async function AdminProgramsPage() {
   // ไม่ได้ดูแลส่วนนี้ก็ไม่ต้องเห็น — เมนูซ่อนให้แล้ว ตรงนี้กันคนพิมพ์ที่อยู่เข้ามาเอง
   if (!canArea(user, "programs")) redirect(ADMIN_HOME);
 
-  const [images, saved, logo] = await Promise.all([
+  const [images, saved, logo, intro] = await Promise.all([
     getSetting<CheckupImages>(CHECKUP_IMAGES_KEY, {}),
     getSetting<unknown>(CHECKUP_QUESTIONS_KEY, null),
     getSetting<string>(CHECKUP_LOGO_KEY, ""),
+    getSetting<unknown>(CHECKUP_INTRO_KEY, null),
   ]);
 
   return (
@@ -49,6 +52,7 @@ export default async function AdminProgramsPage() {
           initialQuestions={fillQuestions(saved)}
           initialImages={images}
           initialLogo={logo}
+          initialIntro={fillIntro(intro)}
           publicBase={publicSiteUrl()}
         />
       </main>

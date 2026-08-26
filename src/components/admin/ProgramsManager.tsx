@@ -25,7 +25,15 @@ import {
   type CheckupQuestion,
   type ScaleKey,
 } from "@/lib/financialCheckup";
-import { CHECKUP_CREDIT, CHECKUP_VERSION, PROGRAM_PAGES, type CheckupImages } from "@/lib/programPages";
+import {
+  CHECKUP_CREDIT,
+  CHECKUP_VERSION,
+  COUNT_TOKEN,
+  DEFAULT_INTRO,
+  PROGRAM_PAGES,
+  type CheckupImages,
+  type CheckupIntro,
+} from "@/lib/programPages";
 
 /**
  * หน้าโปรแกรมในหลังบ้าน — ดูที่อยู่ของแต่ละโปรแกรม และแก้ของในโปรแกรมนั้น
@@ -53,16 +61,20 @@ export default function ProgramsManager({
   initialQuestions,
   initialImages,
   initialLogo,
+  initialIntro,
   publicBase,
 }: {
   initialQuestions: CheckupQuestion[];
   initialImages: CheckupImages;
   initialLogo: string;
+  initialIntro: CheckupIntro;
   publicBase: string;
 }) {
   const [questions, setQuestions] = useState<CheckupQuestion[]>(initialQuestions);
   const [images, setImages] = useState<CheckupImages>(initialImages);
   const [logo, setLogo] = useState(initialLogo);
+  const [intro, setIntro] = useState<CheckupIntro>(initialIntro);
+  const [savedIntro, setSavedIntro] = useState(() => JSON.stringify(initialIntro));
   const [saved, setSaved] = useState(() => JSON.stringify(initialQuestions));
   const [busyId, setBusyId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -78,6 +90,7 @@ export default function ProgramsManager({
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
   const dirty = JSON.stringify(questions) !== saved;
+  const introDirty = JSON.stringify(intro) !== savedIntro;
 
   async function send(body: Record<string, unknown>): Promise<boolean> {
     const response = await fetch("/api/admin/programs/", {
@@ -111,6 +124,16 @@ export default function ProgramsManager({
       setSaved(JSON.stringify(questions));
       setStatus({ kind: "ok", text: "บันทึกภาพแล้ว" });
     }
+  }
+
+  async function saveIntro() {
+    setSaving(true);
+    setStatus(null);
+    const ok = await send({ checkupIntro: intro });
+    setSaving(false);
+    if (!ok) return;
+    setSavedIntro(JSON.stringify(intro));
+    setStatus({ kind: "ok", text: "บันทึกข้อความหน้าแรกแล้ว" });
   }
 
   /** โลโก้บันทึกให้เองทันทีเหมือนภาพประกอบ — กดครั้งเดียวจบ ไม่มีอะไรให้พิมพ์ต่อ */
@@ -273,6 +296,103 @@ export default function ProgramsManager({
           ท้ายหน้าโปรแกรมแสดงว่า <b>{CHECKUP_CREDIT}</b> · เวอร์ชัน <b>{CHECKUP_VERSION}</b>{" "}
           — สองอย่างนี้กำหนดไว้ในโค้ด แก้จากหน้านี้ไม่ได้ (เวอร์ชันต้องตรงกับโค้ดจริงเสมอ)
         </p>
+      </section>
+
+      {/* ข้อความหน้าแรกของโปรแกรม */}
+      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-bold text-gray-800">ข้อความหน้าแรกของโปรแกรม</h2>
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm("ดึงข้อความชุดตั้งต้นกลับมาทับของที่แก้ไว้?")) setIntro(DEFAULT_INTRO);
+            }}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400 transition hover:text-gray-700"
+          >
+            <RotateCcw className="h-3.5 w-3.5" /> ใช้ข้อความชุดตั้งต้น
+          </button>
+        </div>
+        <p className="mt-1 text-sm text-gray-600">
+          ข้อความที่สมาชิกเห็นก่อนกดเริ่มตรวจ · พิมพ์{" "}
+          <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs">{COUNT_TOKEN}</code>{" "}
+          ตรงไหน ระบบจะแทนที่ด้วยจำนวนคำถามจริงให้เอง (ตอนนี้ {questions.length} ข้อ)
+          — <b>อย่าพิมพ์เลขเอง</b> ไม่งั้นวันที่เพิ่มหรือลบคำถาม ตัวเลขจะไม่ตรงกับของจริง
+        </p>
+
+        <label className="mt-4 block text-sm font-medium text-gray-700">
+          หัวเรื่อง
+          <textarea
+            value={intro.heading}
+            onChange={(e) => setIntro({ ...intro, heading: e.target.value })}
+            rows={2}
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+          />
+        </label>
+
+        <label className="mt-3 block text-sm font-medium text-gray-700">
+          ย่อหน้าแรก
+          <textarea
+            value={intro.lead}
+            onChange={(e) => setIntro({ ...intro, lead: e.target.value })}
+            rows={3}
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+          />
+        </label>
+
+        <label className="mt-3 block text-sm font-medium text-gray-700">
+          ย่อหน้าที่สอง <span className="font-normal text-gray-400">(เว้นว่างได้)</span>
+          <textarea
+            value={intro.detail}
+            onChange={(e) => setIntro({ ...intro, detail: e.target.value })}
+            rows={3}
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+          />
+        </label>
+
+        <p className="mt-4 text-sm font-medium text-gray-700">บรรทัดวิธีใช้ (ในกรอบสีเทา)</p>
+        <ul className="mt-1.5 space-y-2">
+          {intro.tips.map((tip, i) => (
+            <li key={i} className="flex items-center gap-2">
+              <input
+                value={tip}
+                onChange={(e) =>
+                  setIntro({
+                    ...intro,
+                    tips: intro.tips.map((t, n) => (n === i ? e.target.value : t)),
+                  })
+                }
+                className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-brand-400"
+              />
+              <button
+                type="button"
+                title="ลบบรรทัดนี้"
+                onClick={() => setIntro({ ...intro, tips: intro.tips.filter((_, n) => n !== i) })}
+                className="shrink-0 rounded p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          onClick={() => setIntro({ ...intro, tips: [...intro.tips, ""] })}
+          className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 transition hover:text-brand-800"
+        >
+          <Plus className="h-3.5 w-3.5" /> เพิ่มบรรทัด
+        </button>
+
+        {introDirty && (
+          <button
+            type="button"
+            onClick={() => void saveIntro()}
+            disabled={saving}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-brand-700 disabled:opacity-60"
+          >
+            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            บันทึกข้อความ
+          </button>
+        )}
       </section>
 
       {/* คำถาม */}

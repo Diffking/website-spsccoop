@@ -26,7 +26,13 @@ import {
   type CheckupAnswers,
   type CheckupQuestion,
 } from "@/lib/financialCheckup";
-import { CHECKUP_CREDIT, CHECKUP_VERSION, type CheckupImages } from "@/lib/programPages";
+import {
+  CHECKUP_CREDIT,
+  CHECKUP_VERSION,
+  withCount,
+  type CheckupImages,
+  type CheckupIntro,
+} from "@/lib/programPages";
 
 /**
  * ตรวจสุขภาพการเงิน — ถามทีละข้อ ตอบด้วยการเลื่อนสเกล แล้วสรุปผลให้
@@ -46,10 +52,13 @@ export default function FinancialCheckup({
   questions,
   images,
   logo,
+  intro,
   contactPhone,
 }: {
   questions: CheckupQuestion[];
   images: CheckupImages;
+  /** ข้อความหน้าแรก — เจ้าหน้าที่แก้เองได้ที่ หลังบ้าน → หน้าโปรแกรม */
+  intro: CheckupIntro;
   /** โลโก้โปรแกรม — เว้นว่าง = ใช้ไอคอนกระเป๋าเงินแทน (อัปได้ที่ หลังบ้าน → หน้าโปรแกรม) */
   logo: string;
   /** เบอร์สหกรณ์ที่โชว์ตอนแนะนำให้ขอคำปรึกษา — แอดมินแก้ได้ที่ หลังบ้าน → ส่วนท้ายเว็บ */
@@ -135,7 +144,7 @@ export default function FinancialCheckup({
         <AnimatePresence initial={false}>
           {at === -1 && (
             <motion.div key="intro" {...fadeSwap(0.35)} style={STACKED}>
-              <Intro onStart={() => setAt(0)} total={total} logo={logo} />
+              <Intro onStart={() => setAt(0)} total={total} logo={logo} intro={intro} />
             </motion.div>
           )}
 
@@ -271,7 +280,17 @@ function MoneyScale({
  * หน้าเริ่มต้น
  * ------------------------------------------------------------------ */
 
-function Intro({ onStart, total, logo }: { onStart: () => void; total: number; logo: string }) {
+function Intro({
+  onStart,
+  total,
+  logo,
+  intro,
+}: {
+  onStart: () => void;
+  total: number;
+  logo: string;
+  intro: CheckupIntro;
+}) {
   return (
     /*
       จัดหน้าใหม่ 26 ส.ค. 2026 — เจ้าของเว็บทักว่า "ดูเกะกะไปหมด"
@@ -313,30 +332,20 @@ function Intro({ onStart, total, logo }: { onStart: () => void; total: number; l
           กันคำโดดบรรทัดสุดท้ายอย่าง "ก็ หมด?" ที่เจ้าของเว็บเห็นแล้วสะดุดตา
         */}
         <h2 className="mx-auto mt-5 max-w-xl text-balance text-xl font-bold leading-snug text-brand-900 md:text-2xl">
-          ท่านเคยสังเกตหรือไม่ว่า เงินในกระเป๋าเริ่ม &ldquo;มีอาการผิดปกติ&rdquo; ใช้ไม่นานก็หมด
+          {withCount(intro.heading, total)}
         </h2>
       </div>
 
       {/* เนื้อหาที่ต้องอ่าน — ชิดซ้าย คุมความกว้างบรรทัดไม่ให้ยาวเกินสายตา */}
       <div className="px-6 py-7 md:px-10">
         <div className="mx-auto max-w-xl space-y-3 text-[15px] leading-loose text-gray-600">
-          <p>
-            ขอเชิญท่านร่วม &ldquo;คัดกรองค่าใช้จ่าย&rdquo; ประจำเดือน ผ่านคำถาม {total} ข้อ
-            เปรียบเสมือนการวินิจฉัยเพื่อค้นหาจุดที่เงินไหลออกมากที่สุด
-          </p>
-          <p>
-            เมื่อทราบว่า &ldquo;จุดใดบอบช้ำ&rdquo; หรือ &ldquo;จุดใดรั่วไหล&rdquo;
-            สหกรณ์จะได้ร่วมวางแผนดูแลสุขภาพการเงินของท่าน ให้กลับมาแข็งแรงและฟื้นตัวได้เร็วขึ้น
-          </p>
+          <p>{withCount(intro.lead, total)}</p>
+          {intro.detail && <p>{withCount(intro.detail, total)}</p>}
         </div>
 
         {/* วิธีใช้ 3 ข้อ — ใส่กรอบสีอ่อนแยกออกจากย่อหน้า จะได้ไม่กลืนกันเป็นพืดเดียว */}
         <ul className="mx-auto mt-6 max-w-xl space-y-2.5 rounded-2xl bg-gray-50 p-5 text-sm text-gray-600">
-          {[
-            "ตอบโดยเลื่อนแถบเลือกจำนวนเงิน ไม่ต้องพิมพ์ตัวเลข",
-            "ใช้เวลาประมาณ 3 นาที ย้อนกลับไปแก้ไขคำตอบเดิมได้ตลอด",
-            "ประมาณเป็นตัวเลขกลม ๆ ได้ ไม่จำเป็นต้องละเอียดถึงหลักบาท",
-          ].map((line) => (
+          {intro.tips.map((line) => (
             <li key={line} className="flex items-start gap-2.5">
               <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
               <span className="min-w-0">{line}</span>
