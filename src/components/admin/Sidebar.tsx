@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
+  Calculator,
   LayoutDashboard,
   Megaphone,
   PanelTop,
@@ -37,6 +38,7 @@ export type MenuKey =
   | "holidays"
   | "pages"
   | "designed"
+  | "programs"
   | "seo"
   | "users";
 
@@ -125,6 +127,14 @@ const ITEMS: {
     icon: Sparkles,
     label: "หน้าออกแบบอัตโนมัติ",
     desc: "หน้าที่ระบบจัดหน้าให้เอง เช่น ติดต่อเรา",
+  },
+  {
+    key: "programs",
+    area: "programs",
+    href: "/admin/programs",
+    icon: Calculator,
+    label: "หน้าโปรแกรม",
+    desc: "เครื่องมือที่สมาชิกกดใช้ เช่น ตรวจสุขภาพการเงิน",
   },
   {
     key: "seo",

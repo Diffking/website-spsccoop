@@ -12,6 +12,7 @@
 import { db } from "@/lib/db";
 import { DESIGNED_PAGES } from "@/lib/designedPages";
 import { CODED_ROUTES } from "@/lib/siteRoutes";
+import { PROGRAM_PATHS } from "@/lib/programPages";
 
 /** เว็บนี้ตั้งให้ทุกที่อยู่ลงท้ายด้วย / — ไม่ใส่จะโดนพาไปที่อยู่ใหม่ก่อนหนึ่งจังหวะ */
 function withSlash(path: string): string {
@@ -36,6 +37,8 @@ export async function publicPaths(): Promise<string[]> {
       ...CODED_ROUTES.map(withSlash),
       // หน้าที่ระบบจัดหน้าให้เอง เช่น ติดต่อสหกรณ์
       ...DESIGNED_PAGES.map((p) => withSlash(p.path)),
+      // หน้าโปรแกรม เช่น ตรวจสุขภาพการเงิน
+      ...PROGRAM_PATHS.map(withSlash),
       // หน้าเนื้อหาที่เจ้าหน้าที่สร้างเอง (เฉพาะที่เผยแพร่แล้ว)
       ...pages.map((p) => withSlash(p.slug)),
     ]),

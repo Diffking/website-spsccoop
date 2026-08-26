@@ -786,3 +786,35 @@ body {
   เจ้าหน้าที่เลยเห็นหน้าแรกนิ่งสนิทแล้วนึกว่าเว็บพัง (ดู src/lib/useAutoRotate.ts)
   ตอนนี้หลอดโชว์ทุกเครื่องเหมือนกันหมด
 */
+
+/* ---- สเกลเลื่อนจำนวนเงิน (โปรแกรมตรวจสุขภาพการเงิน) ----
+   แต่งเองทั้งรางและหัวจับ — ของที่เบราว์เซอร์ให้มาเล็กเกินกว่าจะกดโดนด้วยนิ้วโป้งบนมือถือ
+   หัวจับ 28px คือขนาดที่นิ้วโป้งคนทั่วไปกดติดตั้งแต่ครั้งแรก */
+.money-scale {
+  -webkit-appearance: none; appearance: none;
+  display: block; width: 100%; height: 28px; background: transparent; cursor: pointer;
+}
+.money-scale::-webkit-slider-runnable-track {
+  height: 8px; border-radius: 999px; background: #e5e7eb;
+}
+.money-scale::-moz-range-track { height: 8px; border-radius: 999px; background: #e5e7eb; }
+.money-scale::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  margin-top: -10px; height: 28px; width: 28px; border-radius: 999px;
+  background: #fff; border: 3px solid #1c7fca;
+  box-shadow: 0 2px 8px rgb(21 104 176 / .35); transition: transform .12s;
+}
+.money-scale::-moz-range-thumb {
+  height: 28px; width: 28px; border-radius: 999px;
+  background: #fff; border: 3px solid #1c7fca;
+  box-shadow: 0 2px 8px rgb(21 104 176 / .35);
+}
+.money-scale:active::-webkit-slider-thumb { transform: scale(1.12); }
+.money-scale:focus-visible { outline: none; }
+.money-scale:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgb(28 127 202 / .25); }
+
+/* หน้าผลตรวจสั่งพิมพ์ได้ — เอาส่วนที่กดไม่ได้บนกระดาษออกให้หมด */
+@media print {
+  header, footer, .money-scale { display: none !important; }
+  body { background: #fff; }
+}

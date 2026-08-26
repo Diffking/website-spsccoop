@@ -30,6 +30,7 @@ export type AreaKey =
   | "holidays"
   | "pages"
   | "designed"
+  | "programs"
   | "seo";
 
 /** รายชื่อพื้นที่ทั้งหมด — ใช้ทำรายการติ๊กเลือกในหน้าผู้ใช้งาน และหาที่อยู่ของแต่ละพื้นที่ */
@@ -49,6 +50,7 @@ export const AREAS: { key: AreaKey; href: string; label: string; group: string }
   { key: "splash", href: "/admin/splash", label: "วันสำคัญ", group: "ทั้งเว็บ" },
   { key: "holidays", href: "/admin/holidays", label: "วันหยุด", group: "ทั้งเว็บ" },
   { key: "designed", href: "/admin/designed", label: "หน้าออกแบบอัตโนมัติ", group: "ทั้งเว็บ" },
+  { key: "programs", href: "/admin/programs", label: "หน้าโปรแกรม", group: "ทั้งเว็บ" },
   { key: "seo", href: "/admin/seo", label: "SEO", group: "ทั้งเว็บ" },
   { key: "pages", href: "/admin/pages", label: "หน้าเนื้อหา — ทุกหมวด", group: "หน้าเนื้อหา" },
 ];
