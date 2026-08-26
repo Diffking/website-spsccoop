@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -9,10 +9,12 @@ import {
   ChevronRight,
   Coins,
   Lock,
+  Maximize2,
   Phone,
   Printer,
   RotateCcw,
   Wallet,
+  X,
 } from "lucide-react";
 import { STACKED, fadeSwap } from "@/lib/slideMotion";
 import {
@@ -104,7 +106,7 @@ export default function FinancialCheckup({
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="mx-auto w-full max-w-5xl">
       {question && (
         <div className="mb-4">
           <div className="mb-2 flex items-baseline justify-between text-sm">
@@ -327,6 +329,17 @@ function QuestionCard({
   onPick: (next: number) => void;
 }) {
   const tone = GROUP_TONE[question.group];
+  const [zoom, setZoom] = useState(false);
+
+  // กด Esc ปิดภาพเต็มจอ — คนที่ใช้คีย์บอร์ดคาดหวังแบบนี้เสมอ
+  useEffect(() => {
+    if (!zoom) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setZoom(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [zoom]);
 
   return (
     <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5">
@@ -335,27 +348,64 @@ function QuestionCard({
         จึงใช้ object-contain ไม่ใช่ object-cover · ภาพที่อัปมาสัดส่วนไม่เท่ากันทุกใบ
         ถ้าครอบให้เต็มกรอบจะโดนตัดหัวตัดท้าย ยอมมีขอบว่างข้างภาพดีกว่าเห็นไม่ครบ
 
-        ⚠️ กรอบยังต้องสูงคงที่เหมือนเดิม ไม่งั้นการ์ดกระตุกทุกครั้งที่เปลี่ยนข้อ
-        (ข้อที่ไม่มีภาพก็สูงเท่ากัน)
+        ⚠️ **ความสูงผูกกับความสูงจอ (vh) ไม่ใช่ค่าคงที่เป็นพิกเซล** — จอสูงก็ได้ภาพใหญ่
+        จอเตี้ย (มือถือแนวนอน) ก็ยังเหลือที่ให้สเกลกับปุ่ม · แต่ยังคงที่เท่ากันทุกข้อ
+        การ์ดจึงไม่กระตุกตอนเปลี่ยนข้อ (ข้อที่ไม่มีภาพก็สูงเท่ากัน)
+
+        กดที่ภาพแล้วขยายเต็มจอได้อีกชั้น สำหรับใบที่มีตัวหนังสือเยอะ
       */}
-      <div className={`grid h-52 place-items-center overflow-hidden ${tone.bg} md:h-64`}>
+      <div
+        className={`relative grid h-[38vh] max-h-[420px] min-h-[190px] place-items-center overflow-hidden ${tone.bg}`}
+      >
         {image ? (
-          // รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" className="h-full w-full object-contain" />
+          <>
+            <button
+              type="button"
+              onClick={() => setZoom(true)}
+              title="กดเพื่อดูภาพเต็มจอ"
+              className="h-full w-full cursor-zoom-in"
+            >
+              {/* รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={image} alt="" className="h-full w-full object-contain" />
+            </button>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-medium text-white"
+            >
+              <Maximize2 className="h-3 w-3" /> กดที่ภาพเพื่อดูเต็มจอ
+            </span>
+          </>
         ) : (
           <Coins className={`h-12 w-12 opacity-30 ${tone.text}`} />
         )}
       </div>
 
-      <div className="p-6 md:p-8">
-        <h2 className="text-lg font-bold leading-snug text-gray-800 md:text-2xl">{question.text}</h2>
-        {question.hint && (
-          <p className="mt-2 text-sm leading-relaxed text-gray-500">{question.hint}</p>
-        )}
+      {/* ภาพเต็มจอ — กดที่ไหนก็ปิด ไม่ต้องเล็งปุ่มกากบาท */}
+      {zoom && image && (
+        <div
+          role="presentation"
+          onClick={() => setZoom(false)}
+          className="fixed inset-0 z-50 grid cursor-zoom-out place-items-center bg-black/90 p-3"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={image} alt={question.text} className="max-h-full max-w-full object-contain" />
+          <button
+            type="button"
+            aria-label="ปิดภาพ"
+            className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+
+      <div className="p-5 md:p-7">
+        <h2 className="text-lg font-bold leading-snug text-gray-800 md:text-xl">{question.text}</h2>
+        {question.hint && <p className="mt-1.5 text-sm leading-relaxed text-gray-500">{question.hint}</p>}
 
         {/* ตัวเลขตัวโต — สิ่งเดียวที่ต้องมองตอนเลื่อน */}
-        <p className="mt-6 text-center">
+        <p className="mt-5 text-center">
           <span className={`text-5xl font-extrabold tabular-nums ${tone.text}`}>{baht(value)}</span>
           <span className="ml-2 text-lg font-semibold text-gray-400">บาท / เดือน</span>
         </p>
