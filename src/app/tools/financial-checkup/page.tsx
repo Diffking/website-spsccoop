@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import Header from "@/components/site/Header";
-import Footer from "@/components/site/Footer";
 import PageTracker from "@/components/site/PageTracker";
 import BackToTop from "@/components/ui/BackToTop";
 import FinancialCheckup from "@/components/tools/FinancialCheckup";
@@ -13,11 +11,17 @@ import { fillQuestions } from "@/lib/financialCheckup";
 /**
  * โปรแกรมตรวจสุขภาพการเงิน — โปรแกรมตัวแรกของ "หน้าโปรแกรม" (ดู src/lib/programPages.ts)
  *
- * หน้านี้ทำแค่สองอย่าง: หยิบภาพประกอบคำถามจากฐาน แล้ววางกรอบหน้าเว็บให้
+ * หน้านี้ทำแค่สองอย่าง: หยิบคำถามกับภาพประกอบจากฐาน แล้ววางกรอบหน้าเว็บให้
  * ตัวโปรแกรมจริงอยู่ใน components/tools/FinancialCheckup.tsx ซึ่งทำงานฝั่งเบราว์เซอร์ล้วน
+ *
+ * ⚠️ **หน้านี้ไม่มีส่วนหัวและส่วนท้ายของเว็บ ตั้งใจ** — เจ้าของเว็บสั่งไว้ 26 ส.ค. 2026
+ * เพราะแถบเมนูด้านบนกับส่วนท้ายกินความสูงจอไปมาก จนภาพประกอบคำถามแสดงได้ไม่เต็มใบ
+ * หน้าโปรแกรมเป็น "เครื่องมือที่กดใช้ทีละหน้าจอ" ไม่ใช่หน้าไว้อ่านยาว ๆ จึงไม่ต้องมีเมนู
+ * มาแย่งที่ · ทางกลับเว็บใช้ลิงก์ "กลับหน้าแรก" ที่มุมบนซ้ายแทน — **ห้ามเอาออก**
+ * ไม่งั้นคนที่เปิดหน้านี้จากลิงก์ตรง ๆ จะกลับเข้าเว็บไม่ได้เลย
  */
 
-// Footer อ่านข้อมูลติดต่อจากฐาน — prerender ตอน build ไม่ได้ (ยังไม่มี DATABASE_URL)
+// อ่านข้อมูลจากฐานทุกครั้ง — prerender ตอน build ไม่ได้ (ยังไม่มี DATABASE_URL)
 export const dynamic = "force-dynamic";
 
 // ตั้งค่า SEO ของหน้านี้ที่ /admin/seo
@@ -36,36 +40,26 @@ export default async function FinancialCheckupPage() {
   return (
     <>
       <PageTracker />
-      <Header />
-      <main>
-        <section className="bg-gradient-to-b from-brand-600 to-brand-400 py-10 text-center text-white">
-          <div className="mx-auto max-w-6xl px-4">
-            <p className="text-sm font-medium opacity-80">เครื่องมือสำหรับสมาชิก</p>
-            <h1 className="mt-1.5 text-2xl font-bold md:text-3xl">ตรวจสุขภาพการเงิน</h1>
-            <p className="mx-auto mt-2 max-w-xl text-sm opacity-90">
-              รู้ว่าเดือนหนึ่งเงินไปไหนหมด และสุขภาพการเงินของเราอยู่ระดับไหน
-            </p>
-          </div>
-        </section>
-
-        <section className="bg-sky-soft py-10">
-          <div className="mx-auto max-w-6xl px-4">
+      <main className="min-h-screen bg-sky-soft">
+        <div className="mx-auto max-w-3xl px-4 py-5 md:py-7">
+          {/*
+            แถบบนบางที่สุดเท่าที่ยังบอกได้ว่านี่หน้าอะไรและกลับยังไง
+            — ชื่อหน้าอยู่บรรทัดเดียวกับลิงก์กลับ ไม่กินความสูงเป็นแบนเนอร์เต็มแถบ
+          */}
+          <div className="mb-4 flex items-center justify-between gap-3">
             <Link
               href="/"
-              className="mb-5 inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-brand-600"
+              className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-brand-600"
             >
               <ArrowLeft className="h-4 w-4" /> กลับหน้าแรก
             </Link>
-            <FinancialCheckup
-              questions={questions}
-              images={images}
-              contactPhone={site.phone ?? ""}
-            />
+            <h1 className="text-sm font-semibold text-brand-800 md:text-base">ตรวจสุขภาพการเงิน</h1>
           </div>
-        </section>
+
+          <FinancialCheckup questions={questions} images={images} contactPhone={site.phone ?? ""} />
+        </div>
       </main>
       <BackToTop />
-      <Footer />
     </>
   );
 }
