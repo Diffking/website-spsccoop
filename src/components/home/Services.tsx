@@ -39,12 +39,12 @@ export default function Services({ items, bg = "bg-sky-soft" }: { items: Item[];
                 </p>
               )}
 
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-4">
                 {group.items.map((s, i) => (
                   <Reveal key={s.id} delay={i * 0.05}>
                     <MaybeLink
                       href={s.href}
-                      className="group flex h-full min-h-16 items-center gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5 transition hover:-translate-y-1 hover:shadow-md"
+                      className="group flex h-full min-h-20 items-center gap-3.5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 transition hover:-translate-y-1 hover:shadow-md"
                     >
                       {/*
                         ใส่รูปไว้ = ใช้รูปเป็นโลโก้ของบริการนั้น · ไม่ใส่ = ไอคอนเหมือนเดิม
@@ -56,21 +56,21 @@ export default function Services({ items, bg = "bg-sky-soft" }: { items: Item[];
                         · รูปใช้ object-contain ไม่ครอบตัด โลโก้จะได้ไม่โดนตัดขอบ
                       */}
                       {s.imageUrl ? (
-                        <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-lg bg-white ring-1 ring-black/5">
+                        <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-white ring-1 ring-black/5 sm:h-14 sm:w-14">
                           {/* รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา */}
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={s.imageUrl} alt="" className="h-full w-full object-contain" />
                         </span>
                       ) : (
                         <span
-                          className={`grid h-11 w-11 shrink-0 place-items-center rounded-lg transition ${group.tone.chip} ${group.tone.chipHover}`}
+                          className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl transition sm:h-14 sm:w-14 ${group.tone.chip} ${group.tone.chipHover}`}
                         >
-                          <Icon name={s.icon ?? "LayoutGrid"} className="h-5 w-5" />
+                          <Icon name={s.icon ?? "LayoutGrid"} className="h-6 w-6 sm:h-7 sm:w-7" />
                         </span>
                       )}
                       <span
                         title={s.title}
-                        className={`line-clamp-2 text-sm font-medium text-gray-700 ${group.tone.titleHover}`}
+                        className={`line-clamp-2 text-sm font-medium text-gray-700 sm:text-[15px] ${group.tone.titleHover}`}
                       >
                         {s.title}
                       </span>
