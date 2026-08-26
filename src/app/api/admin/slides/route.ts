@@ -3,6 +3,7 @@ import { requireWrite } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
 import { isEventType } from "@/lib/homeItems";
 import { purgeEverySite } from "@/lib/mirrorPurge";
+import { alreadyQueued, queuedIds } from "@/lib/slideQueue";
 
 /** "YYYY-MM-DD" จากช่องเลือกวัน → เที่ยงคืนเวลาไทย · ว่าง = ไม่จำกัด */
 export function parseDay(value?: string): Date | null {
@@ -10,6 +11,39 @@ export function parseDay(value?: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null;
   const date = new Date(`${text}T00:00:00+07:00`);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * จัดคิวใหม่ทั้งชุดตามวันหยุดเผยแพร่ (ดูกฎที่ src/lib/slideQueue.ts)
+ *
+ * เรียกหลังจากที่มีการเพิ่มสไลด์ หรือแก้ช่องวัน — เจ้าหน้าที่ไม่ต้องมานั่งไล่เอง
+ * ว่าประกาศไหนใกล้หมดเขตแล้วควรเลื่อนขึ้น · กดปุ่มขึ้น/ลงเองยังทำได้เหมือนเดิม
+ * จนกว่าจะมีการแก้วันครั้งถัดไป
+ *
+ * ไม่มีอะไรเปลี่ยนก็ไม่เขียนฐานเลย — การเขียนทุกครั้งจะไปดัน `updatedAt`
+ * ของสไลด์ทุกใบโดยไม่จำเป็น
+ */
+export async function requeueSlides(): Promise<void> {
+  const rows = await db.slide.findMany({
+    select: { id: true, endsAt: true },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+  /*
+    วันที่เก็บเป็นเที่ยงคืนเวลาไทย หรือ 17:00Z ของวันก่อน — บวกเจ็ดชั่วโมงก่อนตัด
+    ไม่งั้นจะได้วันก่อนหน้าหนึ่งวัน (เรื่อเดียวกับ `day::date` ใน psql ที่ AGENTS.md เตือนไว้)
+  */
+  const list = rows.map((row) => ({
+    id: row.id,
+    endsAt: row.endsAt
+      ? new Date(row.endsAt.getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10)
+      : null,
+  }));
+
+  if (alreadyQueued(list)) return;
+
+  await db.$transaction(
+    queuedIds(list).map((id, index) => db.slide.update({ where: { id }, data: { sortOrder: index } })),
+  );
 }
 
 /** เพิ่มสไลด์แบนเนอร์หน้าแรก */
@@ -51,6 +85,9 @@ export async function POST(request: Request) {
       sortOrder: (last?.sortOrder ?? 0) + 1,
     },
   });
+
+  // สไลด์ใหม่ต่อท้ายไว้ก่อน แล้วให้ตัวจัดคิวย้ายไปตำแหน่งที่ถูกตามวันหยุดเผยแพร่
+  await requeueSlides();
 
   // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
   purgeEverySite();
