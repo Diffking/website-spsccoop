@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -8,13 +8,10 @@ import {
   ArrowRight,
   ChevronRight,
   Coins,
-  Lock,
-  Maximize2,
   Phone,
   Printer,
   RotateCcw,
   Wallet,
-  X,
 } from "lucide-react";
 import { STACKED, fadeSwap } from "@/lib/slideMotion";
 import {
@@ -29,7 +26,7 @@ import {
   type CheckupAnswers,
   type CheckupQuestion,
 } from "@/lib/financialCheckup";
-import type { CheckupImages } from "@/lib/programPages";
+import { CHECKUP_CREDIT, CHECKUP_VERSION, type CheckupImages } from "@/lib/programPages";
 
 /**
  * ตรวจสุขภาพการเงิน — ถามทีละข้อ ตอบด้วยการเลื่อนสเกล แล้วสรุปผลให้
@@ -48,10 +45,13 @@ const baht = (n: number) => n.toLocaleString("th-TH");
 export default function FinancialCheckup({
   questions,
   images,
+  logo,
   contactPhone,
 }: {
   questions: CheckupQuestion[];
   images: CheckupImages;
+  /** โลโก้โปรแกรม — เว้นว่าง = ใช้ไอคอนกระเป๋าเงินแทน (อัปได้ที่ หลังบ้าน → หน้าโปรแกรม) */
+  logo: string;
   /** เบอร์สหกรณ์ที่โชว์ตอนแนะนำให้ขอคำปรึกษา — แอดมินแก้ได้ที่ หลังบ้าน → ส่วนท้ายเว็บ */
   contactPhone: string;
 }) {
@@ -135,7 +135,7 @@ export default function FinancialCheckup({
         <AnimatePresence initial={false}>
           {at === -1 && (
             <motion.div key="intro" {...fadeSwap(0.35)} style={STACKED}>
-              <Intro onStart={() => setAt(0)} total={total} />
+              <Intro onStart={() => setAt(0)} total={total} logo={logo} />
             </motion.div>
           )}
 
@@ -271,18 +271,43 @@ function MoneyScale({
  * หน้าเริ่มต้น
  * ------------------------------------------------------------------ */
 
-function Intro({ onStart, total }: { onStart: () => void; total: number }) {
+function Intro({ onStart, total, logo }: { onStart: () => void; total: number; logo: string }) {
   return (
     <div className="rounded-3xl bg-gradient-to-b from-white to-brand-50/70 p-7 text-center shadow-sm ring-1 ring-brand-100 md:p-10">
-      <p className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/25">
-        <Wallet className="h-8 w-8" />
-      </p>
-      <h2 className="mt-5 text-2xl font-bold text-brand-900 md:text-3xl">
-        เดือนหนึ่ง เงินของเราไปไหนหมด?
+      {/*
+        โลโก้โปรแกรม — อัปได้ที่ หลังบ้าน → หน้าโปรแกรม · ยังไม่ได้อัป = ไอคอนกระเป๋าเงินเหมือนเดิม
+        กรอบสี่เหลี่ยมจัตุรัสขนาดคงที่ ไม่ว่าโลโก้จะสัดส่วนไหนก็ไม่ดันหน้าให้ขยับ
+      */}
+      {logo ? (
+        // รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logo}
+          alt="โลโก้โปรแกรมคัดกรองค่าใช้จ่าย"
+          className="mx-auto h-28 w-28 rounded-2xl object-contain shadow-lg shadow-brand-600/15 md:h-32 md:w-32"
+        />
+      ) : (
+        <p className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/25">
+          <Wallet className="h-8 w-8" />
+        </p>
+      )}
+      {/*
+        ⚠️ **ถ้อยคำหน้าเริ่มต้นเจ้าของเว็บเขียนมาเอง (26 ส.ค. 2026) ห้ามแก้เองโดยไม่ถาม**
+        ตั้งใจใช้ภาษาแบบหมอคุยกับคนไข้ให้เข้ากับชื่อโปรแกรม "ตรวจสุขภาพการเงิน"
+
+        จำนวนข้อดึงจาก {total} ไม่ได้พิมพ์เลขตายตัว — เจ้าหน้าที่เพิ่ม/ลบคำถามได้ที่หลังบ้าน
+        ถ้าพิมพ์ "22" ทิ้งไว้ วันที่เพิ่มเป็น 23 ข้อ หน้าแรกจะบอกเลขผิดโดยไม่มีใครรู้
+      */}
+      <h2 className="mx-auto mt-5 max-w-2xl text-xl font-bold leading-snug text-brand-900 md:text-2xl">
+        เคยรู้สึกมั้ยครับว่าเงินในกระเป๋าเราเริ่ม &lsquo;มีอาการแปลกๆ&rsquo; แป๊บๆ ก็หมด?
       </h2>
-      <p className="mx-auto mt-3 max-w-xl text-gray-600">
-        ตอบคำถาม {total} ข้อ เกี่ยวกับรายจ่ายในหนึ่งเดือน
-        แล้วระบบจะรวมให้ว่าเดือนหนึ่งต้องใช้เงินเท่าไร และเงินไหลไปทางไหนมากที่สุด
+      <p className="mx-auto mt-3 max-w-xl leading-relaxed text-gray-600">
+        มาลอง &lsquo;คัดกรองค่าใช้จ่าย&rsquo; ประจำเดือนไปด้วยกันผ่าน {total} คำถามง่ายๆ
+        เหมือนการวินิจฉัยเพื่อหาจุดที่เงินเราไหลออกมากที่สุด
+      </p>
+      <p className="mx-auto mt-2.5 max-w-xl leading-relaxed text-gray-600">
+        เมื่อรู้ว่า &lsquo;จุดไหนช้ำ&rsquo; หรือ &lsquo;ตรงไหนรั่ว&rsquo;
+        เราจะได้ช่วยกันวางแผนดูแลสุขภาพการเงินของคุณให้กลับมาร่างกายแข็งแรงและฟื้นตัวได้ไวขึ้นครับ
       </p>
 
       <ul className="mx-auto mt-6 grid max-w-lg gap-2.5 text-left text-sm text-gray-600">
@@ -306,10 +331,20 @@ function Intro({ onStart, total }: { onStart: () => void; total: number }) {
         เริ่มตรวจ <ArrowRight className="h-5 w-5" />
       </button>
 
-      {/* บอกเรื่องความเป็นส่วนตัวตั้งแต่ก่อนเริ่ม — คนไม่กล้าตอบเรื่องเงินถ้าไม่รู้ว่าข้อมูลไปไหน */}
-      <p className="mt-5 flex items-center justify-center gap-1.5 text-xs text-gray-400">
-        <Lock className="h-3.5 w-3.5" />
-        คำตอบอยู่ในเครื่องของคุณเท่านั้น ไม่ถูกส่งหรือเก็บไว้ที่สหกรณ์
+      {/*
+        บอกเรื่องความเป็นส่วนตัวตั้งแต่ก่อนเริ่ม — คนไม่กล้าตอบเรื่องเงินถ้าไม่รู้ว่าข้อมูลไปไหน
+        ⚠️ ถ้อยคำเจ้าของเว็บเขียนมาเอง (26 ส.ค. 2026) ห้ามแก้เองโดยไม่ถาม
+        · ใช้อิโมจิกุญแจตามที่เขียนมา ไม่ใช่ไอคอนของไลบรารี
+        · ข้อความนี้เป็นจริงตามที่เขียน — โปรแกรมไม่มี fetch ไม่มี localStorage
+          **ใครจะเพิ่มการเก็บคำตอบต้องแก้ข้อความนี้ก่อน** ไม่งั้นกลายเป็นโกหกสมาชิก
+      */}
+      <p className="mt-5 text-xs text-gray-400">
+        🔒 สบายใจได้ 100% คำตอบของคุณเป็นความลับและไม่ถูกจัดเก็บไว้ในระบบใดๆ
+      </p>
+
+      {/* เครดิตผู้พัฒนากับเวอร์ชัน — เจ้าของเว็บสั่งให้ใส่ 26 ส.ค. 2026 (ดู CHECKUP_VERSION) */}
+      <p className="mt-4 border-t border-brand-100 pt-4 text-xs text-gray-400">
+        {CHECKUP_CREDIT} · เวอร์ชัน {CHECKUP_VERSION}
       </p>
     </div>
   );
@@ -331,82 +366,33 @@ function QuestionCard({
   onPick: (next: number) => void;
 }) {
   const tone = GROUP_TONE[question.group];
-  const [zoom, setZoom] = useState(false);
-
-  // กด Esc ปิดภาพเต็มจอ — คนที่ใช้คีย์บอร์ดคาดหวังแบบนี้เสมอ
-  useEffect(() => {
-    if (!zoom) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setZoom(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [zoom]);
 
   return (
     <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5">
       {/*
-        ภาพประกอบของข้อนี้ — **ต้องเห็นเต็มใบ ห้ามครอบตัด** (เจ้าของเว็บสั่ง 26 ส.ค. 2026)
-        จึงใช้ object-contain ไม่ใช่ object-cover · ภาพที่อัปมาสัดส่วนไม่เท่ากันทุกใบ
-        ถ้าครอบให้เต็มกรอบจะโดนตัดหัวตัดท้าย ยอมมีขอบว่างข้างภาพดีกว่าเห็นไม่ครบ
+        ภาพประกอบของข้อนี้ — **ต้องเห็นครบใบ ห้ามครอบตัด** (เจ้าของเว็บสั่ง 26 ส.ค. 2026)
 
-        ⚠️ **ความสูงผูกกับความสูงจอ (vh) ไม่ใช่ค่าคงที่เป็นพิกเซล** — จอสูงก็ได้ภาพใหญ่
-        จอเตี้ย (มือถือแนวนอน) ก็ยังเหลือที่ให้สเกลกับปุ่ม · แต่ยังคงที่เท่ากันทุกข้อ
-        การ์ดจึงไม่กระตุกตอนเปลี่ยนข้อ (ข้อที่ไม่มีภาพก็สูงเท่ากัน)
+        ⚠️ **ภาพต้องกว้างตามสัดส่วนจริง (`w-auto`) ไม่ใช่ `w-full`** — ของเดิมใส่ `w-full`
+        ทำให้กล่องของภาพกว้างเต็มการ์ด (เกือบ 1,000px) ทั้งที่ไฟล์จริงกว้างแค่ 600px
+        ภาพเลยถูกดันให้เต็มความกว้างแล้วหัวท้ายหาย
 
-        กดที่ภาพแล้วขยายเต็มจอได้อีกชั้น สำหรับใบที่มีตัวหนังสือเยอะ
+        ⚠️ **สูงสุด 400px คือความสูงจริงของไฟล์ (600x400) ห้ามขยับขึ้น** — ใหญ่กว่านั้น
+        คือการขยายเกินขนาดจริงแล้วภาพเบลอ ไม่ได้อะไรเพิ่ม (เจ้าของเว็บย้ำ 26 ส.ค. 2026
+        ว่าเท่าขนาดจริงพอ ไม่ต้องขยาย จึงเอาปุ่มดูเต็มจอออกไปแล้วด้วย)
+
+        กรอบสูงคงที่เท่ากันทุกข้อ การ์ดจึงไม่กระตุกตอนเปลี่ยนข้อ (ข้อที่ไม่มีภาพก็สูงเท่ากัน)
       */}
       <div
-        className={`relative grid h-[42vh] max-h-[400px] min-h-[210px] place-items-center overflow-hidden ${tone.bg}`}
+        className={`grid h-[42vh] max-h-[400px] min-h-[210px] place-items-center overflow-hidden ${tone.bg}`}
       >
         {image ? (
-          <>
-            {/*
-              ⚠️ **ภาพต้องกว้างตามสัดส่วนจริง (`w-auto`) ไม่ใช่ `w-full`**
-              ของเดิมใส่ `w-full h-full` ทำให้กล่องของภาพกว้างเต็มการ์ด (เกือบ 1,000px)
-              ทั้งที่ไฟล์จริงกว้างแค่ 600px — ภาพเลยถูกดันให้เต็มความกว้าง แล้วหัวท้ายหาย
-              · `w-auto` ทำให้กล่องเท่าสัดส่วนภาพพอดี เห็นครบใบ ไม่มีแถบดำข้าง ๆ ด้วย
-            */}
-            <button
-              type="button"
-              onClick={() => setZoom(true)}
-              title="กดเพื่อดูภาพเต็มจอ"
-              className="h-full cursor-zoom-in"
-            >
-              {/* รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image} alt="" className="h-full w-auto max-w-full object-contain" />
-            </button>
-            <span
-              aria-hidden
-              className="pointer-events-none absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-medium text-white"
-            >
-              <Maximize2 className="h-3 w-3" /> กดที่ภาพเพื่อดูเต็มจอ
-            </span>
-          </>
+          // รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={image} alt="" className="h-full w-auto max-w-full object-contain" />
         ) : (
           <Coins className={`h-12 w-12 opacity-30 ${tone.text}`} />
         )}
       </div>
-
-      {/* ภาพเต็มจอ — กดที่ไหนก็ปิด ไม่ต้องเล็งปุ่มกากบาท */}
-      {zoom && image && (
-        <div
-          role="presentation"
-          onClick={() => setZoom(false)}
-          className="fixed inset-0 z-50 grid cursor-zoom-out place-items-center bg-black/90 p-3"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={image} alt={question.text} className="max-h-full max-w-full object-contain" />
-          <button
-            type="button"
-            aria-label="ปิดภาพ"
-            className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-      )}
 
       <div className="p-5 md:p-7">
         <h2 className="text-lg font-bold leading-snug text-gray-800 md:text-xl">{question.text}</h2>
@@ -645,6 +631,9 @@ function Result({
       <p className="pt-1 text-center text-xs text-gray-400">
         ผลตรวจนี้เป็นการประเมินเบื้องต้นจากตัวเลขที่กรอกเอง ไม่ใช่คำแนะนำทางการเงินรายบุคคล
         · อยากคุยรายละเอียดติดต่อเจ้าหน้าที่สหกรณ์ได้เลย
+      </p>
+      <p className="text-center text-xs text-gray-400">
+        {CHECKUP_CREDIT} · เวอร์ชัน {CHECKUP_VERSION}
       </p>
     </div>
   );

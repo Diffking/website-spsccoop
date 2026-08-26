@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireWrite } from "@/lib/apiAuth";
 import { saveSetting } from "@/lib/settings";
-import { CHECKUP_IMAGES_KEY, CHECKUP_QUESTIONS_KEY } from "@/lib/programPages";
+import { CHECKUP_IMAGES_KEY, CHECKUP_LOGO_KEY, CHECKUP_QUESTIONS_KEY } from "@/lib/programPages";
 import { fillQuestions } from "@/lib/financialCheckup";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 import { getSetting } from "@/lib/settings";
@@ -23,7 +23,17 @@ export async function PUT(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
     checkupImages?: Record<string, unknown>;
     checkupQuestions?: unknown;
+    checkupLogo?: unknown;
   };
+
+  /*
+    โลโก้ — รับเฉพาะที่อยู่รูปในเว็บนี้ (`/uploads/…`) กันคนฝังที่อยู่รูปจากเว็บอื่นมาโผล่ในหน้าเรา
+    ส่งค่าว่างมา = เอาโลโก้ออก กลับไปใช้ไอคอนเดิม
+  */
+  if (body.checkupLogo !== undefined) {
+    const logo = String(body.checkupLogo ?? "").trim();
+    await saveSetting(CHECKUP_LOGO_KEY, logo.startsWith("/uploads/") ? logo : "");
+  }
 
   /*
     คำถามกับภาพส่งมาด้วยกันก็ได้ ส่งมาอย่างเดียวก็ได้
