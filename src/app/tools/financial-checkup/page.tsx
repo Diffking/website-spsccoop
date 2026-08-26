@@ -41,19 +41,23 @@ export default async function FinancialCheckupPage() {
     <>
       <PageTracker />
       <main className="min-h-screen bg-sky-soft">
-        <div className="mx-auto max-w-3xl px-4 py-5 md:py-7">
+        {/* กว้างกว่าหน้าเนื้อหาทั่วไป (max-w-5xl) — เจ้าของเว็บขอ 26 ส.ค. 2026
+              เพราะหน้านี้ไม่มีเมนูมาแย่งที่แล้ว ภาพประกอบจึงได้พื้นที่เต็มที่ */}
+        <div className="mx-auto max-w-5xl px-4 py-4">
           {/*
             แถบบนบางที่สุดเท่าที่ยังบอกได้ว่านี่หน้าอะไรและกลับยังไง
             — ชื่อหน้าอยู่บรรทัดเดียวกับลิงก์กลับ ไม่กินความสูงเป็นแบนเนอร์เต็มแถบ
           */}
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="mb-3 flex items-center gap-2.5">
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-brand-600"
+              title="กลับหน้าแรก"
+              aria-label="กลับหน้าแรก"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-gray-500 ring-1 ring-gray-200 transition hover:text-brand-600 hover:ring-brand-200"
             >
-              <ArrowLeft className="h-4 w-4" /> กลับหน้าแรก
+              <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-sm font-semibold text-brand-800 md:text-base">ตรวจสุขภาพการเงิน</h1>
+            <h1 className="text-sm font-semibold text-brand-800">ตรวจสุขภาพการเงิน</h1>
           </div>
 
           <FinancialCheckup questions={questions} images={images} contactPhone={site.phone ?? ""} />
