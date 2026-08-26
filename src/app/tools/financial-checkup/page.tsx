@@ -7,7 +7,8 @@ import BackToTop from "@/components/ui/BackToTop";
 import FinancialCheckup from "@/components/tools/FinancialCheckup";
 import { pageMetadata } from "@/lib/seo";
 import { getSetting } from "@/lib/settings";
-import { CHECKUP_IMAGES_KEY, type CheckupImages } from "@/lib/programPages";
+import { CHECKUP_IMAGES_KEY, CHECKUP_QUESTIONS_KEY, type CheckupImages } from "@/lib/programPages";
+import { fillQuestions } from "@/lib/financialCheckup";
 
 /**
  * โปรแกรมตรวจสุขภาพการเงิน — โปรแกรมตัวแรกของ "หน้าโปรแกรม" (ดู src/lib/programPages.ts)
@@ -23,7 +24,12 @@ export const dynamic = "force-dynamic";
 export const generateMetadata = () => pageMetadata("/tools/financial-checkup");
 
 export default async function FinancialCheckupPage() {
-  const images = await getSetting<CheckupImages>(CHECKUP_IMAGES_KEY, {});
+  const [images, saved] = await Promise.all([
+    getSetting<CheckupImages>(CHECKUP_IMAGES_KEY, {}),
+    getSetting<unknown>(CHECKUP_QUESTIONS_KEY, null),
+  ]);
+  // ยังไม่เคยแก้จากหลังบ้าน = ใช้ชุดตั้งต้น · อ่านไม่ออกก็ถอยกลับชุดตั้งต้นเหมือนกัน
+  const questions = fillQuestions(saved);
 
   return (
     <>
@@ -48,7 +54,7 @@ export default async function FinancialCheckupPage() {
             >
               <ArrowLeft className="h-4 w-4" /> กลับหน้าแรก
             </Link>
-            <FinancialCheckup images={images} />
+            <FinancialCheckup questions={questions} images={images} />
           </div>
         </section>
       </main>

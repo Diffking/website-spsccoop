@@ -3,52 +3,59 @@
  *
  * โปรแกรมแรกของ "หน้าโปรแกรม" (ดู src/lib/programPages.ts) · เจ้าของเว็บสั่งไว้ 25 ส.ค. 2026
  *
+ * ⚠️ **คำถามชุดนี้เจ้าของเว็บเขียนมาเอง** (ให้ไว้ 26 ส.ค. 2026) — ที่อยู่ในไฟล์นี้คือ
+ * **ค่าตั้งต้น** เท่านั้น ของจริงที่หน้าเว็บใช้อ่านจาก `Setting["checkupQuestions"]`
+ * ซึ่งเจ้าหน้าที่แก้เองได้ที่ หลังบ้าน → หน้าโปรแกรม · ยังไม่เคยแก้ = ใช้ชุดนี้
+ *
  * ⚠️ **ห้ามให้สมาชิกพิมพ์ตัวเลขเอง** — ทุกข้อตอบด้วยการเลื่อนสเกล เพราะ
  *   1. สมาชิกส่วนใหญ่เปิดจากมือถือ พิมพ์เลขยาว ๆ บนคีย์บอร์ดจอเล็กแล้วเลิกกลางคัน
  *   2. พิมพ์เองได้เมื่อไหร่จะมีคนใส่ "12,000฿" หรือ "หมื่นสอง" แล้วคำนวณไม่ได้
  *   3. ตัวเลขกลม ๆ พอสำหรับการประเมิน ไม่ต้องเป๊ะถึงหลักบาท
  *
  * ⚠️ **ไม่เก็บคำตอบลงฐานเลยสักข้อ** ทุกอย่างอยู่ในเครื่องของคนตอบ กดปิดหน้าก็หายหมด
- * เรื่องเงินในบ้านเป็นข้อมูลอ่อนไหวที่สุดที่เว็บนี้จะแตะได้ ถ้าเก็บก็ต้องมีคนดูแล
- * ต้องมีสิทธิ์เข้าถึง ต้องมีวันลบ — ไม่คุ้มกับประโยชน์ที่ได้
+ * เรื่องเงินในบ้านเป็นข้อมูลอ่อนไหวที่สุดที่เว็บนี้จะแตะได้
  */
 
-/** กลุ่มของคำถาม — คุมทั้งสีบนจอและวิธีคิดคะแนน */
-export type CheckupGroup = "income" | "need" | "debt" | "save" | "want";
+/** กลุ่มของคำถาม — คุมทั้งสีบนจอและวิธีคิดผล */
+export type CheckupGroup = "need" | "debt" | "save" | "want";
+
+/** ช่วงเงินของสเกล — เลือกได้ต่อข้อ เพราะค่าตัดผมกับค่าผ่อนบ้านคนละสเกลกันคนละโลก */
+export type ScaleKey = "small" | "medium" | "large";
 
 export type CheckupQuestion = {
   id: string;
   group: CheckupGroup;
-  /** คำถามที่คนตอบเห็น — ถามเป็นภาษาพูด ไม่ใช่ศัพท์บัญชี */
+  /** คำถามที่คนตอบเห็น */
   text: string;
-  /** ขยายความว่านับอะไรบ้าง กันคนตอบซ้ำซ้อนกับข้ออื่น */
+  /** ขยายความว่านับอะไรบ้าง — เว้นว่างได้ */
   hint: string;
-  /**
-   * ค่าที่เลื่อนเลือกได้ — เก็บเป็นขั้นไม่เท่ากัน (ถี่ตอนเงินน้อย ห่างตอนเงินเยอะ)
-   * เพราะความต่างระหว่าง 500 กับ 1,000 สำคัญกว่าความต่างระหว่าง 41,000 กับ 41,500
-   */
-  steps: number[];
+  scale: ScaleKey;
 };
 
 export const GROUP_LABEL: Record<CheckupGroup, string> = {
-  income: "รายรับ",
   need: "รายจ่ายจำเป็น",
   debt: "ภาระหนี้",
   save: "เงินออม",
-  want: "รายจ่ายตามใจ",
+  want: "รายจ่ายส่วนตัว",
 };
 
-/** สีประจำกลุ่ม — ใช้ทั้งบนการ์ดคำถามและแท่งสรุปผล ต้องเป็นชื่อคลาสเต็ม (Tailwind อ่านจากซอร์ส) */
+export const GROUP_HINT: Record<CheckupGroup, string> = {
+  need: "ของที่ไม่จ่ายไม่ได้ — กิน อยู่ เดินทาง ดูแลครอบครัว",
+  debt: "เงินที่ต้องส่งคืนทุกเดือน — ผ่อน ชำระหนี้ หักเงินเดือน",
+  save: "เงินที่เก็บไว้เป็นของตัวเอง — ค่าหุ้น เงินฝาก",
+  want: "ของที่ลดได้ถ้าจำเป็น — ความสวยงาม สังสรรค์ ช่วยงาน",
+};
+
+/** สีประจำกลุ่ม — ต้องเขียนชื่อคลาสเต็ม (Tailwind อ่านจากซอร์สแบบข้อความตรง ๆ) */
 export const GROUP_TONE: Record<CheckupGroup, { text: string; bg: string; ring: string; bar: string }> = {
-  income: { text: "text-emerald-700", bg: "bg-emerald-50", ring: "ring-emerald-200", bar: "bg-emerald-500" },
   need: { text: "text-sky-700", bg: "bg-sky-50", ring: "ring-sky-200", bar: "bg-sky-500" },
   debt: { text: "text-rose-700", bg: "bg-rose-50", ring: "ring-rose-200", bar: "bg-rose-500" },
   save: { text: "text-violet-700", bg: "bg-violet-50", ring: "ring-violet-200", bar: "bg-violet-500" },
   want: { text: "text-amber-700", bg: "bg-amber-50", ring: "ring-amber-200", bar: "bg-amber-500" },
 };
 
-/** สร้างขั้นสเกลจากช่วงที่พบบ่อย — ขั้นถี่ช่วงต้น ห่างขึ้นเรื่อย ๆ */
-function steps(...parts: { to: number; by: number }[]): number[] {
+/** สร้างขั้นสเกล — ขั้นถี่ตอนเงินน้อย ห่างขึ้นตอนเงินเยอะ */
+function build(...parts: { to: number; by: number }[]): number[] {
   const out = [0];
   let at = 0;
   for (const part of parts) {
@@ -60,202 +67,245 @@ function steps(...parts: { to: number; by: number }[]): number[] {
   return out;
 }
 
-const SMALL = steps({ to: 2000, by: 100 }, { to: 5000, by: 250 }, { to: 10000, by: 500 });
-const MEDIUM = steps({ to: 5000, by: 250 }, { to: 20000, by: 1000 }, { to: 50000, by: 2500 });
-const LARGE = steps({ to: 10000, by: 500 }, { to: 50000, by: 1000 }, { to: 150000, by: 5000 });
+export const SCALES: Record<ScaleKey, number[]> = {
+  small: build({ to: 2000, by: 100 }, { to: 5000, by: 250 }, { to: 10000, by: 500 }),
+  medium: build({ to: 5000, by: 250 }, { to: 20000, by: 1000 }, { to: 50000, by: 2500 }),
+  large: build({ to: 10000, by: 500 }, { to: 50000, by: 1000 }, { to: 150000, by: 5000 }),
+};
+
+export const SCALE_LABEL: Record<ScaleKey, string> = {
+  small: "ไม่เกิน 10,000",
+  medium: "ไม่เกิน 50,000",
+  large: "ไม่เกิน 150,000",
+};
 
 /**
- * คำถาม 21 ข้อ — เรียงตามลำดับที่ถาม
+ * คำถามตั้งต้น 21 ข้อ — ตามที่เจ้าของเว็บเขียนมา
  *
- * ⚠️ **ข้อความต้องไม่ทับกันเอง** ค่าเช่าบ้านอยู่ข้อ 5 ส่วนค่างวดผ่อนบ้านอยู่กลุ่มหนี้
- * ถ้าถามซ้ำสองที่ คนตอบจะใส่ทั้งสองข้อแล้วรายจ่ายบวมเกินจริงเป็นเท่าตัว
+ * แก้คำผิดให้ 4 จุด: น้ำนันเชื้อเพลิง → น้ำมันเชื้อเพลิง · น้ำปะปา → น้ำประปา
+ * · หนี้สกหรณ์ → หนี้สหกรณ์ · คอนโดมิเนี่ยม → คอนโดมิเนียม
+ * (แก้กลับเป็นแบบเดิมได้ที่หลังบ้าน ถ้าอยากให้เป็นอย่างที่เขียนมาเป๊ะ ๆ)
  */
-export const CHECKUP_QUESTIONS: CheckupQuestion[] = [
-  {
-    id: "salary",
-    group: "income",
-    text: "เงินเดือนที่ได้รับจริงต่อเดือน",
-    hint: "ยอดที่โอนเข้าบัญชีจริงหลังหักทุกอย่างแล้ว",
-    steps: LARGE,
-  },
-  {
-    id: "extra",
-    group: "income",
-    text: "รายได้เสริมต่อเดือน",
-    hint: "ค่าเวร ค่าล่วงเวลา ค้าขาย เงินปันผล ค่าเช่า — ไม่มีก็เลื่อนไว้ที่ 0",
-    steps: MEDIUM,
-  },
+export const DEFAULT_QUESTIONS: CheckupQuestion[] = [
   {
     id: "food",
     group: "need",
-    text: "ค่าอาหารและเครื่องดื่มต่อเดือน",
-    hint: "รวมกับข้าวที่บ้าน ข้าวกลางวัน กาแฟ และของกินจุกจิก",
-    steps: MEDIUM,
-  },
-  {
-    id: "travel",
-    group: "need",
-    text: "ค่าเดินทางไปทำงานต่อเดือน",
-    hint: "น้ำมัน ค่าโดยสาร ค่าทางด่วน ค่าบำรุงรักษารถ",
-    steps: SMALL,
-  },
-  {
-    id: "rent",
-    group: "need",
-    text: "ค่าเช่าที่พักต่อเดือน",
-    hint: "เฉพาะค่าเช่า — ถ้าผ่อนบ้านอยู่ ไปใส่ที่ข้อค่างวดผ่อนบ้าน",
-    steps: MEDIUM,
-  },
-  {
-    id: "utility",
-    group: "need",
-    text: "ค่าน้ำ ค่าไฟ ค่าแก๊สต่อเดือน",
-    hint: "รวมทั้งบ้าน ไม่ต้องแยกรายคน",
-    steps: SMALL,
-  },
-  {
-    id: "phone",
-    group: "need",
-    text: "ค่าโทรศัพท์และอินเทอร์เน็ตต่อเดือน",
-    hint: "รวมค่าเน็ตบ้าน แพ็กเกจมือถือทุกเครื่องในบ้าน",
-    steps: SMALL,
-  },
-  {
-    id: "study",
-    group: "need",
-    text: "ค่าเล่าเรียนบุตรต่อเดือน",
-    hint: "เฉลี่ยค่าเทอมทั้งปีมาเป็นต่อเดือน รวมค่ารถรับส่งและค่าเรียนพิเศษ",
-    steps: MEDIUM,
-  },
-  {
-    id: "health",
-    group: "need",
-    text: "ค่ารักษาพยาบาลและดูแลสุขภาพต่อเดือน",
-    hint: "ยาประจำตัว ค่าหมอส่วนที่เบิกไม่ได้ วิตามิน",
-    steps: SMALL,
-  },
-  {
-    id: "family",
-    group: "need",
-    text: "เงินที่ให้พ่อแม่หรือคนในครอบครัวต่อเดือน",
-    hint: "เงินที่ส่งให้เป็นประจำทุกเดือน",
-    steps: MEDIUM,
-  },
-  {
-    id: "coopLoan",
-    group: "debt",
-    text: "ค่างวดเงินกู้สหกรณ์ต่อเดือน",
-    hint: "ยอดที่ถูกหักจากเงินเดือนทุกเดือน (สามัญ ฉุกเฉิน พิเศษ รวมกัน)",
-    steps: MEDIUM,
-  },
-  {
-    id: "homeLoan",
-    group: "debt",
-    text: "ค่างวดผ่อนบ้านหรือที่ดินต่อเดือน",
-    hint: "ค่างวดที่ผ่อนกับธนาคารหรือสถาบันการเงินอื่น",
-    steps: MEDIUM,
+    scale: "medium",
+    text: "ท่านต้องจ่ายเงินค่าอาหารของตนเองและผู้ที่ท่านต้องดูแลเฉลี่ยเดือนละเท่าไร",
+    hint: "รวมข้าวที่บ้าน ข้าวกลางวัน น้ำ กาแฟ และของกินจุกจิกทั้งบ้าน",
   },
   {
     id: "carLoan",
     group: "debt",
-    text: "ค่างวดผ่อนรถต่อเดือน",
-    hint: "รถยนต์ รถจักรยานยนต์ รวมทุกคัน",
-    steps: MEDIUM,
+    scale: "medium",
+    text: "ท่านต้องจ่ายเงินค่างวดผ่อนรถยนต์หรือผ่อนจักรยานยนต์เฉลี่ยเดือนละเท่าไร",
+    hint: "รวมทุกคันที่ยังผ่อนอยู่",
   },
   {
-    id: "creditLoan",
+    id: "homeLoan",
     group: "debt",
-    text: "ค่างวดบัตรเครดิตและสินเชื่อส่วนบุคคลต่อเดือน",
-    hint: "ยอดที่จ่ายจริงต่อเดือน รวมบัตรกดเงินสดและสินเชื่อนอกระบบ",
-    steps: MEDIUM,
+    scale: "medium",
+    text: "ท่านต้องจ่ายเงินค่างวดผ่อนบ้านหรือผ่อนคอนโดมิเนียมเฉลี่ยเดือนละเท่าไร",
+    hint: "ค่างวดที่ผ่อนกับธนาคารหรือสถาบันการเงิน",
   },
   {
-    id: "share",
-    group: "save",
-    text: "ค่าหุ้นสหกรณ์ที่ส่งต่อเดือน",
-    hint: "ยอดที่ถูกหักจากเงินเดือนเป็นค่าหุ้น — นี่คือเงินออมของคุณเอง",
-    steps: SMALL,
+    id: "rent",
+    group: "need",
+    scale: "medium",
+    text: "ท่านต้องจ่ายเงินค่าเช่าบ้านหรือค่าเช่าที่อยู่อาศัยเฉลี่ยเดือนละเท่าไร",
+    hint: "เฉพาะค่าเช่า — ถ้าผ่อนอยู่ให้ไปใส่ที่ข้อค่างวดผ่อนบ้าน",
   },
   {
-    id: "deposit",
-    group: "save",
-    text: "เงินที่ฝากออมไว้ต่อเดือน",
-    hint: "ฝากสหกรณ์ ฝากธนาคาร กองทุน หรือออมทองอย่างสม่ำเสมอ",
-    steps: MEDIUM,
+    id: "bus",
+    group: "need",
+    scale: "small",
+    text: "ท่านต้องจ่ายเงินค่ารถโดยสารประจำทางในแต่ละวันเฉลี่ยเดือนละเท่าไร",
+    hint: "รถเมล์ รถตู้ วินมอเตอร์ไซค์ แท็กซี่ รวมทั้งเดือน",
   },
   {
-    id: "insurance",
-    group: "save",
-    text: "เบี้ยประกันชีวิตและประกันสุขภาพต่อเดือน",
-    hint: "เฉลี่ยเบี้ยทั้งปีมาเป็นต่อเดือน",
-    steps: SMALL,
+    id: "fuel",
+    group: "need",
+    scale: "small",
+    text: "ท่านต้องจ่ายเงินค่าน้ำมันเชื้อเพลิงส่วนตัวในแต่ละวันเฉลี่ยเดือนละเท่าไร",
+    hint: "รวมค่าทางด่วนและค่าจอดรถด้วยก็ได้",
+  },
+  {
+    id: "electric",
+    group: "need",
+    scale: "small",
+    text: "ท่านต้องจ่ายเงินค่าไฟฟ้าที่พักอาศัยรายเดือนเฉลี่ยเดือนละเท่าไร",
+    hint: "ดูจากบิลค่าไฟเดือนล่าสุดได้เลย",
+  },
+  {
+    id: "water",
+    group: "need",
+    scale: "small",
+    text: "ท่านต้องจ่ายเงินค่าน้ำประปาที่พักอาศัยรายเดือนเฉลี่ยเดือนละเท่าไร",
+    hint: "ดูจากบิลค่าน้ำเดือนล่าสุดได้เลย",
+  },
+  {
+    id: "phone",
+    group: "need",
+    scale: "small",
+    text: "ท่านต้องจ่ายเงินค่าเครือข่ายโทรศัพท์เคลื่อนที่รายเดือนหรือรายวันเฉลี่ยเดือนละเท่าไร",
+    hint: "รวมทุกเบอร์ในบ้าน และค่าเน็ตบ้านด้วย",
+  },
+  {
+    id: "spouse",
+    group: "need",
+    scale: "medium",
+    text: "ท่านต้องดูแลช่วยเหลือคู่สมรสเฉลี่ยเดือนละเท่าไร",
+    hint: "เงินที่ให้เป็นประจำทุกเดือน",
+  },
+  {
+    id: "child",
+    group: "need",
+    scale: "medium",
+    text: "ท่านต้องดูแลบุตร (ไม่รวมค่าเล่าเรียน) เฉลี่ยเดือนละเท่าไร",
+    hint: "ค่าขนม ค่าเดินทาง ของใช้ของลูก",
+  },
+  {
+    id: "clothes",
+    group: "want",
+    scale: "small",
+    text: "ท่านต้องซื้อเสื้อผ้าหรือเครื่องประดับ เฉลี่ยเดือนละเท่าไร",
+    hint: "เฉลี่ยจากที่ซื้อทั้งปีมาเป็นต่อเดือน",
+  },
+  {
+    id: "hair",
+    group: "want",
+    scale: "small",
+    text: "ท่านต้องตัดผมใช้บริการร้านเสริมสวยหรือออกแบบทรงผม เฉลี่ยเดือนละเท่าไร",
+    hint: "ตัด สระ ทำสี ดัด ยืด รวมกัน",
+  },
+  {
+    id: "cosmetic",
+    group: "want",
+    scale: "small",
+    text: "ท่านต้องซื้อเครื่องสำอาง เฉลี่ยเดือนละเท่าไร",
+    hint: "รวมของบำรุงผิวและของใช้ส่วนตัว",
   },
   {
     id: "social",
     group: "want",
-    text: "ค่าสังสรรค์และงานสังคมต่อเดือน",
-    hint: "งานแต่ง งานบวช ทำบุญ ของขวัญ เลี้ยงสังสรรค์",
-    steps: SMALL,
+    scale: "small",
+    text: "ท่านมีค่าใช้จ่ายสังสรรค์ความสุขส่วนตัว (ค่าเหล้า ค่าบุหรี่ เป็นต้น) เฉลี่ยเดือนละเท่าไร",
+    hint: "รวมค่าเลี้ยงสังสรรค์ ค่าหวย และงานอดิเรก",
   },
   {
-    id: "shopping",
+    id: "ceremony",
     group: "want",
-    text: "ค่าช้อปปิ้งและของใช้ส่วนตัวต่อเดือน",
-    hint: "เสื้อผ้า เครื่องสำอาง ของใช้ในบ้าน สั่งของออนไลน์",
-    steps: SMALL,
+    scale: "small",
+    text: "ท่านมีค่าใช้จ่ายช่วยงาน เช่น ช่วยงานศพ งานแต่ง งานอุปสมบท เป็นต้น เฉลี่ยเดือนละเท่าไร",
+    hint: "เฉลี่ยจากทั้งปีมาเป็นต่อเดือน",
   },
   {
-    id: "leisure",
-    group: "want",
-    text: "ค่าความบันเทิงและท่องเที่ยวต่อเดือน",
-    hint: "ดูหนัง แอปดูหนังฟังเพลง เที่ยว กีฬา งานอดิเรก",
-    steps: SMALL,
+    id: "coopLoan",
+    group: "debt",
+    scale: "medium",
+    text: "ท่านหักเงินเดือนชำระหนี้สหกรณ์ เฉลี่ยเดือนละเท่าไร",
+    hint: "ยอดที่ถูกหักทุกเดือน รวมเงินกู้สามัญ ฉุกเฉิน และพิเศษ",
   },
   {
-    id: "misc",
+    id: "credit",
+    group: "debt",
+    scale: "medium",
+    text: "ท่านต้องชำระหนี้จากบัตรเครดิต เฉลี่ยเดือนละเท่าไร",
+    hint: "ยอดที่จ่ายจริงต่อเดือน รวมบัตรกดเงินสดและสินเชื่อส่วนบุคคล",
+  },
+  {
+    id: "share",
+    group: "save",
+    scale: "small",
+    text: "ท่านต้องส่งค่าหุ้นสหกรณ์ เฉลี่ยเดือนละเท่าไร",
+    hint: "ยอดค่าหุ้นที่ถูกหักจากเงินเดือน — นี่คือเงินออมของท่านเอง",
+  },
+  {
+    id: "saving",
+    group: "save",
+    scale: "medium",
+    text: "ท่านต้องฝากเงินไว้เป็นเงินออม เฉลี่ยเดือนละเท่าไร",
+    hint: "ฝากสหกรณ์ ฝากธนาคาร กองทุน ออมทอง หรือเบี้ยประกันสะสมทรัพย์",
+  },
+  {
+    id: "other",
     group: "want",
-    text: "ค่าใช้จ่ายจิปาถะอื่น ๆ ต่อเดือน",
+    scale: "small",
+    text: "นอกจากที่กล่าวมาท่านมีค่าใช้จ่ายอื่น ๆ เฉลี่ยเดือนละเท่าไร",
     hint: "ของที่นึกไม่ออกว่าไปอยู่ข้อไหน แต่รู้ว่าเสียทุกเดือน",
-    steps: SMALL,
   },
 ];
+
+const GROUPS: CheckupGroup[] = ["need", "debt", "save", "want"];
+const SCALE_KEYS: ScaleKey[] = ["small", "medium", "large"];
+
+/**
+ * อ่านคำถามที่เจ้าหน้าที่แก้ไว้จากฐาน แล้วเติมส่วนที่ขาด/ทิ้งของที่ใช้ไม่ได้
+ *
+ * ⚠️ **อ่านไม่ออกเมื่อไหร่ให้ถอยกลับไปใช้ชุดตั้งต้น ไม่ใช่คืนรายการว่าง**
+ * ไม่งั้นแก้ค่าในฐานพลาดทีเดียว หน้าโปรแกรมจะกลายเป็นหน้าเปล่าทันที
+ */
+export function fillQuestions(raw: unknown): CheckupQuestion[] {
+  if (!Array.isArray(raw)) return DEFAULT_QUESTIONS;
+
+  const seen = new Set<string>();
+  const list: CheckupQuestion[] = [];
+
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    const id = String(row.id ?? "").trim();
+    const text = String(row.text ?? "").trim();
+    // ไม่มีรหัสหรือไม่มีคำถาม = ข้อนั้นใช้ไม่ได้ · รหัสซ้ำ = คำตอบจะทับกันเอง
+    if (!id || !text || seen.has(id)) continue;
+    seen.add(id);
+
+    const group = GROUPS.includes(row.group as CheckupGroup) ? (row.group as CheckupGroup) : "need";
+    const scale = SCALE_KEYS.includes(row.scale as ScaleKey) ? (row.scale as ScaleKey) : "small";
+    list.push({ id, group, scale, text, hint: String(row.hint ?? "").trim() });
+  }
+
+  return list.length > 0 ? list : DEFAULT_QUESTIONS;
+}
 
 export type CheckupAnswers = Record<string, number>;
 
 /** ยอดรวมของกลุ่มหนึ่ง */
-export const groupTotal = (answers: CheckupAnswers, group: CheckupGroup): number =>
-  CHECKUP_QUESTIONS.filter((q) => q.group === group).reduce((sum, q) => sum + (answers[q.id] ?? 0), 0);
+export const groupTotal = (
+  questions: CheckupQuestion[],
+  answers: CheckupAnswers,
+  group: CheckupGroup,
+): number =>
+  questions.filter((q) => q.group === group).reduce((sum, q) => sum + (answers[q.id] ?? 0), 0);
 
 export type CheckupResult = {
-  income: number;
   need: number;
   debt: number;
   save: number;
   want: number;
-  /** รายจ่ายรวมทุกอย่างที่ไหลออกใน 1 เดือน (รวมเงินออมด้วย เพราะเงินออกจากมือเหมือนกัน) */
+  /** รายจ่ายรวมทุกอย่างที่ไหลออกใน 1 เดือน — ตัวเลขหลักที่โปรแกรมนี้ตอบ */
   spend: number;
-  /** รายรับ − รายจ่าย — ติดลบคือใช้เกินตัว */
+  /** รายรับที่กรอกเพิ่มทีหลัง (ไม่ได้อยู่ใน 21 ข้อ) · 0 = ไม่ได้กรอก */
+  income: number;
+  /** รายรับ − รายจ่าย — คิดได้เฉพาะตอนกรอกรายรับ */
   left: number;
-  /** สัดส่วนต่อรายรับ 0-1 · รายรับเป็น 0 จะได้ 0 ทั้งหมด ไม่ใช่ Infinity */
   needRatio: number;
   debtRatio: number;
   saveRatio: number;
   wantRatio: number;
-  /** คะแนนสุขภาพการเงิน 0-100 */
-  score: number;
-  level: { key: "great" | "good" | "fair" | "risk"; label: string; tone: string; summary: string };
+  /** คะแนน 0-100 · null = ยังไม่ได้กรอกรายรับ จึงยังให้คะแนนไม่ได้ */
+  score: number | null;
+  level: { label: string; tone: string; summary: string } | null;
   advice: { title: string; detail: string; href?: string; linkLabel?: string }[];
 };
 
 /** คะแนนย่อยแบบไล่ระดับ — ดีกว่าเกณฑ์ = เต็ม, แย่กว่ามาก = 0, ระหว่างนั้นไล่เป็นเส้นตรง */
 function band(value: number, best: number, worst: number): number {
   if (best < worst) {
-    // ยิ่งน้อยยิ่งดี (ภาระหนี้ รายจ่าย)
     if (value <= best) return 1;
     if (value >= worst) return 0;
     return (worst - value) / (worst - best);
   }
-  // ยิ่งมากยิ่งดี (เงินออม)
   if (value >= best) return 1;
   if (value <= worst) return 0;
   return (value - worst) / (best - worst);
@@ -264,20 +314,24 @@ function band(value: number, best: number, worst: number): number {
 const money = (n: number) => n.toLocaleString("th-TH");
 
 /**
- * คิดผลตรวจจากคำตอบ
+ * คิดผลตรวจ
  *
- * เกณฑ์ที่ใช้ — อิงหลัก 50/30/20 ที่ใช้กันทั่วไป ปรับให้เข้ากับสมาชิกสหกรณ์
- * ที่หนี้ส่วนใหญ่ถูกหักจากเงินเดือนอยู่แล้ว:
- *   ภาระหนี้ ไม่ควรเกิน 35% ของรายรับ (เกิน 45% = เสี่ยง)
- *   เงินออม ควรได้ 20% ขึ้นไป (ต่ำกว่า 5% = ยังไม่มีกันชน)
- *   รายจ่ายจำเป็น ไม่ควรเกิน 50%
+ * คำถาม 21 ข้อถามแต่ "รายจ่าย" ล้วน ผลหลักจึงเป็นยอดรายจ่ายรวมกับสัดส่วนว่าเงินไปทางไหน
+ * ส่วนคะแนนสุขภาพการเงินคิดได้ต่อเมื่อมีรายรับมาเทียบ — หน้าผลจึงมีสเกลรายรับ
+ * ให้เลื่อนเพิ่มทีหลัง **เป็นของแถม ไม่ใช่ข้อบังคับ** (จะข้ามไปเลยก็ยังได้ยอดรายจ่าย)
+ *
+ * เกณฑ์ที่ใช้ — อิงหลัก 50/30/20 ปรับให้เข้ากับสมาชิกสหกรณ์ที่หนี้ส่วนใหญ่
+ * ถูกหักจากเงินเดือนอยู่แล้ว: หนี้ไม่ควรเกิน 35% ของรายรับ · ออมควรได้ 20% ขึ้นไป
  */
-export function checkupResult(answers: CheckupAnswers): CheckupResult {
-  const income = groupTotal(answers, "income");
-  const need = groupTotal(answers, "need");
-  const debt = groupTotal(answers, "debt");
-  const save = groupTotal(answers, "save");
-  const want = groupTotal(answers, "want");
+export function checkupResult(
+  questions: CheckupQuestion[],
+  answers: CheckupAnswers,
+  income = 0,
+): CheckupResult {
+  const need = groupTotal(questions, answers, "need");
+  const debt = groupTotal(questions, answers, "debt");
+  const save = groupTotal(questions, answers, "save");
+  const want = groupTotal(questions, answers, "want");
   const spend = need + debt + save + want;
   const left = income - spend;
 
@@ -287,10 +341,33 @@ export function checkupResult(answers: CheckupAnswers): CheckupResult {
   const saveRatio = share(save);
   const wantRatio = share(want);
 
-  /*
-    ถ่วงน้ำหนักตามสิ่งที่ทำให้เดือดร้อนจริงเรียงจากมากไปน้อย —
-    หนี้ท่วมทำให้เดือดร้อนที่สุด รองมาคือไม่มีเงินเหลือ แล้วค่อยเรื่องออมน้อย
-  */
+  const advice: CheckupResult["advice"] = [];
+
+  if (income <= 0) {
+    return {
+      need,
+      debt,
+      save,
+      want,
+      spend,
+      income: 0,
+      left: 0,
+      needRatio: 0,
+      debtRatio: 0,
+      saveRatio: 0,
+      wantRatio: 0,
+      score: null,
+      level: null,
+      advice: [
+        {
+          title: "อยากรู้ว่าสุขภาพการเงินอยู่ระดับไหน?",
+          detail:
+            "เลื่อนสเกลรายได้ต่อเดือนด้านบนเพิ่มอีกนิดเดียว ระบบจะให้คะแนนและคำแนะนำที่ตรงกับสถานะของท่าน — รายได้ที่กรอกก็ไม่ถูกเก็บเช่นกัน",
+        },
+      ],
+    };
+  }
+
   const score = Math.round(
     100 *
       (0.35 * band(debtRatio, 0.35, 0.6) +
@@ -299,58 +376,38 @@ export function checkupResult(answers: CheckupAnswers): CheckupResult {
         0.1 * band(needRatio, 0.5, 0.75)),
   );
 
-  const level: CheckupResult["level"] =
-    income === 0
+  const level =
+    score >= 80
       ? {
-          key: "fair",
-          label: "ยังประเมินไม่ได้",
-          tone: "text-gray-600",
-          summary: "ยังไม่ได้ใส่รายรับ ลองย้อนกลับไปตอบข้อแรกใหม่อีกครั้ง",
+          label: "แข็งแรงมาก",
+          tone: "text-emerald-700",
+          summary: "รายรับ รายจ่าย และเงินออมสมดุลดี รักษาแบบนี้ไว้",
         }
-      : score >= 80
+      : score >= 65
         ? {
-            key: "great",
-            label: "แข็งแรงมาก",
-            tone: "text-emerald-700",
-            summary: "รายรับ รายจ่าย และเงินออมสมดุลดี รักษาแบบนี้ไว้",
+            label: "แข็งแรงดี",
+            tone: "text-sky-700",
+            summary: "ภาพรวมอยู่ในเกณฑ์ดี มีบางจุดที่ปรับแล้วจะดีขึ้นอีก",
           }
-        : score >= 65
+        : score >= 50
           ? {
-              key: "good",
-              label: "แข็งแรงดี",
-              tone: "text-sky-700",
-              summary: "ภาพรวมอยู่ในเกณฑ์ดี มีบางจุดที่ปรับแล้วจะดีขึ้นอีก",
+              label: "พอไปได้ แต่ต้องระวัง",
+              tone: "text-amber-700",
+              summary: "ยังไม่ถึงกับมีปัญหา แต่ถ้ามีเรื่องด่วนเข้ามาจะสะเทือนทันที",
             }
-          : score >= 50
-            ? {
-                key: "fair",
-                label: "พอไปได้ แต่ต้องระวัง",
-                tone: "text-amber-700",
-                summary: "ยังไม่ถึงกับมีปัญหา แต่ถ้ามีเรื่องด่วนเข้ามาจะสะเทือนทันที",
-              }
-            : {
-                key: "risk",
-                label: "ควรรีบปรับ",
-                tone: "text-rose-700",
-                summary: "รายจ่ายกับภาระหนี้กินรายรับไปมาก ควรวางแผนแก้ตั้งแต่ตอนนี้",
-              };
-
-  const advice: CheckupResult["advice"] = [];
-
-  if (income === 0) {
-    advice.push({
-      title: "ยังไม่ได้ใส่รายรับ",
-      detail: "ผลตรวจคิดจากสัดส่วนต่อรายรับทั้งหมด ถ้ารายรับเป็น 0 จะเทียบอะไรไม่ได้เลย",
-    });
-  }
+          : {
+              label: "ควรรีบปรับ",
+              tone: "text-rose-700",
+              summary: "รายจ่ายกับภาระหนี้กินรายรับไปมาก ควรวางแผนแก้ตั้งแต่ตอนนี้",
+            };
 
   if (left < 0) {
     advice.push({
-      title: `เดือนนี้ใช้เกินตัว ${money(Math.abs(left))} บาท`,
+      title: `เดือนหนึ่งใช้เกินตัว ${money(Math.abs(left))} บาท`,
       detail:
-        "รายจ่ายรวมมากกว่ารายรับ ถ้าเป็นแบบนี้ทุกเดือนแปลว่ากำลังกินเงินเก็บหรือก่อหนี้ใหม่มาโปะ — ลองดูกลุ่มรายจ่ายตามใจก่อน เพราะลดได้เร็วที่สุด",
+        "รายจ่ายรวมมากกว่ารายรับ ถ้าเป็นแบบนี้ทุกเดือนแปลว่ากำลังกินเงินเก็บหรือก่อหนี้ใหม่มาโปะ — ลองดูกลุ่มรายจ่ายส่วนตัวก่อน เพราะลดได้เร็วที่สุด",
     });
-  } else if (income > 0 && left / income < 0.1) {
+  } else if (left / income < 0.1) {
     advice.push({
       title: `เหลือปลายเดือนแค่ ${money(left)} บาท`,
       detail:
@@ -376,7 +433,7 @@ export function checkupResult(answers: CheckupAnswers): CheckupResult {
     });
   }
 
-  if (income > 0 && saveRatio < 0.05) {
+  if (saveRatio < 0.05) {
     advice.push({
       title: "เงินออมยังน้อยกว่า 5% ของรายรับ",
       detail:
@@ -384,7 +441,7 @@ export function checkupResult(answers: CheckupAnswers): CheckupResult {
       href: "/deposits/",
       linkLabel: "ดูอัตราดอกเบี้ยเงินรับฝาก",
     });
-  } else if (income > 0 && saveRatio < 0.2) {
+  } else if (saveRatio < 0.2) {
     advice.push({
       title: `ออมอยู่ ${Math.round(saveRatio * 100)}% ของรายรับ`,
       detail:
@@ -396,7 +453,7 @@ export function checkupResult(answers: CheckupAnswers): CheckupResult {
 
   if (wantRatio > 0.3) {
     advice.push({
-      title: `รายจ่ายตามใจสูงถึง ${Math.round(wantRatio * 100)}% ของรายรับ`,
+      title: `รายจ่ายส่วนตัวสูงถึง ${Math.round(wantRatio * 100)}% ของรายรับ`,
       detail:
         "กลุ่มนี้คือกลุ่มที่ลดได้เร็วที่สุดโดยไม่กระทบชีวิตประจำวันมากนัก ลองเลือกลดสักสองข้อที่รู้สึกว่าจ่ายไปแบบไม่ค่อยได้อะไรกลับมา",
     });
@@ -406,7 +463,7 @@ export function checkupResult(answers: CheckupAnswers): CheckupResult {
     advice.push({
       title: `รายจ่ายจำเป็นกินไป ${Math.round(needRatio * 100)}% ของรายรับ`,
       detail:
-        "สูงกว่าเกณฑ์ 50% ที่ควรเป็น ของกลุ่มนี้ลดยากกว่ากลุ่มอื่นเพราะเป็นของที่ต้องใช้จริง แต่ค่าน้ำค่าไฟและค่าเดินทางมักลดได้ถ้าตั้งใจ",
+        "สูงกว่าเกณฑ์ 50% ที่ควรเป็น ของกลุ่มนี้ลดยากกว่ากลุ่มอื่นเพราะเป็นของที่ต้องใช้จริง แต่ค่าไฟ ค่าน้ำมัน และค่าโทรศัพท์ มักลดได้ถ้าตั้งใจ",
     });
   }
 
@@ -421,8 +478,8 @@ export function checkupResult(answers: CheckupAnswers): CheckupResult {
   }
 
   /*
-    สวัสดิการอยู่ท้ายสุดเสมอ — ไม่ใช่คำแนะนำจากผลตรวจ แต่เป็นของที่สมาชิกมีสิทธิ์อยู่แล้ว
-    และมักไม่รู้ว่ามี ถือเป็นรายรับที่ลืมนับไปในหลายกรณี
+    สวัสดิการอยู่ท้ายสุดเสมอ — ไม่ใช่คำแนะนำจากผลตรวจ แต่เป็นสิทธิ์ที่สมาชิกมีอยู่แล้ว
+    และมักไม่รู้ว่ามี หลายรายการต้องยื่นขอเองถึงจะได้
   */
   advice.push({
     title: "อย่าลืมสิทธิ์ที่มีอยู่แล้ว",
@@ -433,12 +490,12 @@ export function checkupResult(answers: CheckupAnswers): CheckupResult {
   });
 
   return {
-    income,
     need,
     debt,
     save,
     want,
     spend,
+    income,
     left,
     needRatio,
     debtRatio,

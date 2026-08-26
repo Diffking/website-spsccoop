@@ -15,12 +15,14 @@ import {
 } from "lucide-react";
 import { STACKED, fadeSwap } from "@/lib/slideMotion";
 import {
-  CHECKUP_QUESTIONS,
+  GROUP_HINT,
   GROUP_LABEL,
   GROUP_TONE,
+  SCALES,
   checkupResult,
   type CheckupAnswers,
   type CheckupGroup,
+  type CheckupQuestion,
 } from "@/lib/financialCheckup";
 import type { CheckupImages } from "@/lib/programPages";
 
@@ -28,46 +30,52 @@ import type { CheckupImages } from "@/lib/programPages";
  * ตรวจสุขภาพการเงิน — ถามทีละข้อ ตอบด้วยการเลื่อนสเกล แล้วสรุปผลให้
  *
  * ⚠️ **ไม่ส่งคำตอบไปไหนทั้งนั้น** ทุกอย่างอยู่ใน state ของหน้านี้ล้วน ๆ
- * ไม่มี fetch ไม่มี localStorage — ปิดแท็บแล้วหายหมด (ดูเหตุผลใน src/lib/financialCheckup.ts)
+ * ไม่มี fetch ไม่มี localStorage — ปิดแท็บแล้วหายหมด
  *
- * ⚠️ **หน้านี้จงใจไม่มีช่องพิมพ์ตัวเลขเลย** ถ้าวันหลังมีคนขอให้ "พิมพ์เองได้ด้วย"
- * ต้องถามเจ้าของเว็บก่อน — เรื่องนี้ตัดสินใจไปแล้วว่าให้เลื่อนอย่างเดียว
+ * ⚠️ **หน้านี้จงใจไม่มีช่องพิมพ์ตัวเลขเลย** ใครขอให้เพิ่มต้องถามเจ้าของเว็บก่อน
+ *
+ * คำถามส่งเข้ามาจากฝั่งเซิร์ฟเวอร์ (เจ้าหน้าที่แก้เองได้ที่หลังบ้าน) จำนวนข้อจึงไม่ตายตัว
+ * — ห้ามเขียนโค้ดที่อ้างว่ามี 21 ข้อเสมอ
  */
 
 const baht = (n: number) => n.toLocaleString("th-TH");
 
-/** ไอคอนแทนภาพ ตอนที่ข้อนั้นยังไม่ได้ใส่ภาพประกอบ */
-const GROUP_ICON: Record<CheckupGroup, typeof Wallet> = {
-  income: Wallet,
-  need: Coins,
-  debt: Coins,
-  save: Coins,
-  want: Coins,
-};
-
-export default function FinancialCheckup({ images }: { images: CheckupImages }) {
-  /** -1 = หน้าเริ่มต้น · 0..20 = คำถาม · CHECKUP_QUESTIONS.length = หน้าผลตรวจ */
+export default function FinancialCheckup({
+  questions,
+  images,
+}: {
+  questions: CheckupQuestion[];
+  images: CheckupImages;
+}) {
+  /** -1 = หน้าเริ่มต้น · 0..n-1 = คำถาม · n = หน้าผลตรวจ */
   const [at, setAt] = useState(-1);
   const [answers, setAnswers] = useState<CheckupAnswers>({});
+  /** รายรับ — ไม่ได้อยู่ใน 21 ข้อ ถามทีหลังที่หน้าผลเพื่อปลดล็อกคะแนน */
+  const [income, setIncome] = useState(0);
 
-  const total = CHECKUP_QUESTIONS.length;
-  const question = at >= 0 && at < total ? CHECKUP_QUESTIONS[at] : null;
-  const result = useMemo(() => checkupResult(answers), [answers]);
-
-  /** ค่าที่เลือกอยู่ของข้อปัจจุบัน — ยังไม่เคยแตะ = 0 (ขั้นแรกสุดของสเกล) */
-  const value = question ? (answers[question.id] ?? 0) : 0;
-  const stepIndex = question ? Math.max(0, question.steps.indexOf(value)) : 0;
-
-  const setValue = (id: string, next: number) => setAnswers((a) => ({ ...a, [id]: next }));
+  const total = questions.length;
+  const question = at >= 0 && at < total ? questions[at] : null;
+  const result = useMemo(
+    () => checkupResult(questions, answers, income),
+    [questions, answers, income],
+  );
 
   const restart = () => {
     setAnswers({});
+    setIncome(0);
     setAt(-1);
   };
 
+  if (total === 0) {
+    return (
+      <p className="rounded-2xl bg-white p-8 text-center text-gray-500 shadow-sm ring-1 ring-black/5">
+        ยังไม่มีคำถามในโปรแกรมนี้
+      </p>
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-3xl">
-      {/* แถบความคืบหน้า — โผล่เฉพาะตอนกำลังตอบ ไม่กวนหน้าเริ่มต้นกับหน้าผล */}
       {question && (
         <div className="mb-4">
           <div className="mb-2 flex items-baseline justify-between text-sm">
@@ -104,16 +112,21 @@ export default function FinancialCheckup({ images }: { images: CheckupImages }) 
               <QuestionCard
                 image={images[question.id]}
                 question={question}
-                value={value}
-                stepIndex={stepIndex}
-                onPick={(next) => setValue(question.id, next)}
+                value={answers[question.id] ?? 0}
+                onPick={(next) => setAnswers((a) => ({ ...a, [question.id]: next }))}
               />
             </motion.div>
           )}
 
           {at === total && (
             <motion.div key="result" {...fadeSwap(0.35)} style={STACKED}>
-              <Result result={result} onRestart={restart} onBack={() => setAt(total - 1)} />
+              <Result
+                result={result}
+                income={income}
+                onIncome={setIncome}
+                onRestart={restart}
+                onBack={() => setAt(total - 1)}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -145,6 +158,77 @@ export default function FinancialCheckup({ images }: { images: CheckupImages }) 
 }
 
 /* ------------------------------------------------------------------ *
+ * สเกลเลื่อนเลือกจำนวนเงิน — ใช้ทั้งหน้าคำถามและช่องรายรับในหน้าผล
+ * ------------------------------------------------------------------ */
+
+function MoneyScale({
+  steps,
+  value,
+  label,
+  tone,
+  onPick,
+}: {
+  steps: number[];
+  value: number;
+  label: string;
+  tone: string;
+  onPick: (next: number) => void;
+}) {
+  const last = steps.length - 1;
+  // ค่าที่ไม่ตรงขั้นไหนเลย (เช่นของเก่าที่เคยเลือกไว้ตอนสเกลคนละแบบ) ให้ถอยไปขั้นแรก
+  const index = Math.max(0, steps.indexOf(value));
+
+  return (
+    <>
+      {/*
+        เลื่อนด้วย "ลำดับขั้น" ไม่ใช่จำนวนเงินตรง ๆ — ขั้นถี่ตอนเงินน้อย ห่างตอนเงินเยอะ
+        ถ้าผูกกับจำนวนเงินตรง ๆ ช่วงหลักร้อยจะเลื่อนยากมากบนมือถือ
+      */}
+      <input
+        type="range"
+        min={0}
+        max={last}
+        step={1}
+        value={index}
+        onChange={(e) => onPick(steps[Number(e.target.value)] ?? 0)}
+        aria-label={label}
+        aria-valuetext={`${baht(value)} บาทต่อเดือน`}
+        className="money-scale mt-5"
+      />
+      <div className="mt-1 flex justify-between text-xs text-gray-400">
+        <span>ไม่มี</span>
+        <span className="tabular-nums">{baht(steps[last])}+</span>
+      </div>
+
+      {/* ปุ่มลัดสำหรับค่าที่เจอบ่อย — กดทีเดียวจบ ไม่ต้องเลื่อนหาทีละขั้น */}
+      <div className="mt-5 flex flex-wrap justify-center gap-2">
+        {quickPicks(steps).map((amount) => (
+          <button
+            key={amount}
+            type="button"
+            onClick={() => onPick(amount)}
+            className={`rounded-full px-3.5 py-1.5 text-sm font-medium tabular-nums transition ${
+              value === amount ? `${tone} text-white shadow` : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            {amount === 0 ? "ไม่มี" : baht(amount)}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/** ค่าลัด 6 ค่าที่กระจายทั่วสเกล — เอา 0 ไว้ตัวแรกเสมอเพราะเป็นคำตอบที่ใช้บ่อยที่สุด */
+function quickPicks(steps: number[]): number[] {
+  const picks = new Set<number>([0]);
+  for (let i = 1; i <= 5; i += 1) {
+    picks.add(steps[Math.round((steps.length - 1) * (i / 6))] ?? 0);
+  }
+  return [...picks];
+}
+
+/* ------------------------------------------------------------------ *
  * หน้าเริ่มต้น
  * ------------------------------------------------------------------ */
 
@@ -158,8 +242,8 @@ function Intro({ onStart, total }: { onStart: () => void; total: number }) {
         เดือนหนึ่ง เงินของเราไปไหนหมด?
       </h2>
       <p className="mx-auto mt-3 max-w-xl text-gray-600">
-        ตอบคำถาม {total} ข้อ เกี่ยวกับรายรับและรายจ่ายในหนึ่งเดือน
-        แล้วระบบจะสรุปให้ว่าเงินไหลไปทางไหนมากที่สุด และสุขภาพการเงินของคุณอยู่ระดับไหน
+        ตอบคำถาม {total} ข้อ เกี่ยวกับรายจ่ายในหนึ่งเดือน
+        แล้วระบบจะรวมให้ว่าเดือนหนึ่งต้องใช้เงินเท่าไร และเงินไหลไปทางไหนมากที่สุด
       </p>
 
       <ul className="mx-auto mt-6 grid max-w-lg gap-2.5 text-left text-sm text-gray-600">
@@ -199,19 +283,15 @@ function Intro({ onStart, total }: { onStart: () => void; total: number }) {
 function QuestionCard({
   question,
   value,
-  stepIndex,
   image,
   onPick,
 }: {
-  question: (typeof CHECKUP_QUESTIONS)[number];
+  question: CheckupQuestion;
   value: number;
-  stepIndex: number;
   image?: string;
   onPick: (next: number) => void;
 }) {
   const tone = GROUP_TONE[question.group];
-  const Icon = GROUP_ICON[question.group];
-  const last = question.steps.length - 1;
 
   return (
     <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5">
@@ -222,13 +302,15 @@ function QuestionCard({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt="" className="h-full w-full object-cover" />
         ) : (
-          <Icon className={`h-12 w-12 opacity-30 ${tone.text}`} />
+          <Coins className={`h-12 w-12 opacity-30 ${tone.text}`} />
         )}
       </div>
 
       <div className="p-6 md:p-8">
-        <h2 className="text-xl font-bold leading-snug text-gray-800 md:text-2xl">{question.text}</h2>
-        <p className="mt-2 text-sm leading-relaxed text-gray-500">{question.hint}</p>
+        <h2 className="text-lg font-bold leading-snug text-gray-800 md:text-2xl">{question.text}</h2>
+        {question.hint && (
+          <p className="mt-2 text-sm leading-relaxed text-gray-500">{question.hint}</p>
+        )}
 
         {/* ตัวเลขตัวโต — สิ่งเดียวที่ต้องมองตอนเลื่อน */}
         <p className="mt-6 text-center">
@@ -236,55 +318,16 @@ function QuestionCard({
           <span className="ml-2 text-lg font-semibold text-gray-400">บาท / เดือน</span>
         </p>
 
-        {/*
-          สเกลเลื่อน — ขั้นไม่เท่ากัน จึงเลื่อนด้วย "ลำดับขั้น" ไม่ใช่จำนวนเงินตรง ๆ
-          (ถ้าใช้จำนวนเงินเป็นค่าของ input ช่วงเงินน้อยจะเลื่อนยากมากบนมือถือ)
-        */}
-        <input
-          type="range"
-          min={0}
-          max={last}
-          step={1}
-          value={stepIndex}
-          onChange={(e) => onPick(question.steps[Number(e.target.value)] ?? 0)}
-          aria-label={question.text}
-          aria-valuetext={`${baht(value)} บาทต่อเดือน`}
-          className="money-scale mt-5"
+        <MoneyScale
+          steps={SCALES[question.scale]}
+          value={value}
+          label={question.text}
+          tone={tone.bar}
+          onPick={onPick}
         />
-        <div className="mt-1 flex justify-between text-xs text-gray-400">
-          <span>ไม่มี</span>
-          <span className="tabular-nums">{baht(question.steps[last])}+</span>
-        </div>
-
-        {/* ปุ่มลัดสำหรับค่าที่เจอบ่อย — กดทีเดียวจบ ไม่ต้องเลื่อนหาทีละขั้น */}
-        <div className="mt-5 flex flex-wrap justify-center gap-2">
-          {quickPicks(question.steps).map((amount) => (
-            <button
-              key={amount}
-              type="button"
-              onClick={() => onPick(amount)}
-              className={`rounded-full px-3.5 py-1.5 text-sm font-medium tabular-nums transition ${
-                value === amount
-                  ? `${tone.bar} text-white shadow`
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {amount === 0 ? "ไม่มี" : baht(amount)}
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );
-}
-
-/** ค่าลัด 6 ค่าที่กระจายทั่วสเกล — เอา 0 ไว้ตัวแรกเสมอเพราะเป็นคำตอบที่ใช้บ่อยที่สุด */
-function quickPicks(steps: number[]): number[] {
-  const picks = new Set<number>([0]);
-  for (let i = 1; i <= 5; i += 1) {
-    picks.add(steps[Math.round((steps.length - 1) * (i / 6))] ?? 0);
-  }
-  return [...picks];
 }
 
 /* ------------------------------------------------------------------ *
@@ -293,10 +336,14 @@ function quickPicks(steps: number[]): number[] {
 
 function Result({
   result,
+  income,
+  onIncome,
   onRestart,
   onBack,
 }: {
   result: ReturnType<typeof checkupResult>;
+  income: number;
+  onIncome: (next: number) => void;
   onRestart: () => void;
   onBack: () => void;
 }) {
@@ -306,60 +353,39 @@ function Result({
     { group: "save", value: result.save },
     { group: "want", value: result.want },
   ];
-  const widthBase = Math.max(result.spend, result.income, 1);
+  const widthBase = Math.max(result.spend, 1);
 
   return (
     <div className="space-y-4">
-      {/* คะแนนรวม — วงแหวนวาดด้วย conic-gradient ล้วน ไม่ต้องพึ่งไลบรารีกราฟ */}
-      <div className="rounded-3xl bg-white p-7 text-center shadow-sm ring-1 ring-black/5 md:p-9">
-        <p className="text-sm font-semibold text-gray-400">คะแนนสุขภาพการเงินของคุณ</p>
-        <div
-          className="mx-auto mt-4 grid h-40 w-40 place-items-center rounded-full"
-          style={{
-            background: `conic-gradient(currentColor ${result.score * 3.6}deg, #e5e7eb 0deg)`,
-          }}
-        >
-          <span className={`grid h-32 w-32 place-items-center rounded-full bg-white ${result.level.tone}`}>
-            <span className="text-5xl font-extrabold tabular-nums">{result.score}</span>
+      {/* ยอดรายจ่ายรวม — คำตอบหลักที่โปรแกรมนี้มีให้ ต้องเด่นที่สุดในหน้า */}
+      <div className="rounded-3xl bg-gradient-to-b from-white to-brand-50/70 p-7 text-center shadow-sm ring-1 ring-brand-100 md:p-9">
+        <p className="text-sm font-semibold text-gray-500">เดือนหนึ่งท่านต้องใช้เงินทั้งหมด</p>
+        <p className="mt-2">
+          <span className="text-5xl font-extrabold tabular-nums text-brand-800 md:text-6xl">
+            {baht(result.spend)}
           </span>
-        </div>
-        <p className={`mt-4 text-2xl font-bold ${result.level.tone}`}>{result.level.label}</p>
-        <p className="mx-auto mt-1 max-w-md text-sm text-gray-500">{result.level.summary}</p>
-      </div>
-
-      {/* สามตัวเลขที่คนอยากรู้ที่สุด */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        {[
-          { label: "รายรับต่อเดือน", value: result.income, tone: "text-emerald-700" },
-          { label: "รายจ่ายรวมต่อเดือน", value: result.spend, tone: "text-sky-700" },
-          {
-            label: result.left < 0 ? "ใช้เกินตัวเดือนละ" : "เหลือปลายเดือน",
-            value: Math.abs(result.left),
-            tone: result.left < 0 ? "text-rose-700" : "text-brand-700",
-          },
-        ].map((box) => (
-          <div key={box.label} className="rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-black/5">
-            <p className="text-xs text-gray-400">{box.label}</p>
-            <p className={`mt-1 text-2xl font-extrabold tabular-nums ${box.tone}`}>{baht(box.value)}</p>
-            <p className="text-xs text-gray-400">บาท</p>
-          </div>
-        ))}
+          <span className="ml-2 text-lg font-semibold text-gray-400">บาท</span>
+        </p>
+        <p className="mt-1 text-sm text-gray-500">
+          หรือประมาณปีละ{" "}
+          <span className="font-semibold tabular-nums text-gray-700">{baht(result.spend * 12)}</span> บาท
+        </p>
       </div>
 
       {/* เงินไปไหนบ้าง — แท่งเทียบสัดส่วน ทำด้วย CSS ล้วนเหมือนกราฟในหลังบ้าน */}
       <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-black/5 md:p-8">
-        <h3 className="text-base font-bold text-gray-800">เดือนหนึ่ง เงินไปไหนบ้าง</h3>
+        <h3 className="text-base font-bold text-gray-800">เงินไปไหนบ้าง</h3>
         <ul className="mt-4 space-y-3">
           {parts.map((part) => {
             const tone = GROUP_TONE[part.group];
-            const percent = result.income > 0 ? Math.round((part.value / result.income) * 100) : 0;
+            const percent = result.spend > 0 ? Math.round((part.value / result.spend) * 100) : 0;
             return (
               <li key={part.group}>
-                <div className="flex items-baseline justify-between text-sm">
+                <div className="flex items-baseline justify-between gap-3 text-sm">
                   <span className={`font-semibold ${tone.text}`}>{GROUP_LABEL[part.group]}</span>
-                  <span className="tabular-nums text-gray-500">
+                  <span className="shrink-0 tabular-nums text-gray-500">
                     {baht(part.value)} บาท
-                    {result.income > 0 && <span className="ml-1.5 text-gray-400">({percent}%)</span>}
+                    <span className="ml-1.5 text-gray-400">({percent}%)</span>
                   </span>
                 </div>
                 <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-gray-100">
@@ -368,11 +394,74 @@ function Result({
                     style={{ width: `${(part.value / widthBase) * 100}%` }}
                   />
                 </div>
+                <p className="mt-1 text-xs text-gray-400">{GROUP_HINT[part.group]}</p>
               </li>
             );
           })}
         </ul>
       </div>
+
+      {/*
+        รายรับเป็นของแถม ไม่ได้อยู่ใน 21 ข้อ — เลื่อนเพิ่มแล้วถึงจะให้คะแนนได้
+        ไม่เลื่อนก็ยังได้ยอดรายจ่ายรวมไปแล้ว ซึ่งเป็นคำตอบหลักของโปรแกรมนี้
+      */}
+      <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-black/5 md:p-8">
+        <h3 className="text-base font-bold text-gray-800">อยากรู้ว่าพอไหม? ใส่รายได้ต่อเดือนเพิ่ม</h3>
+        <p className="mt-1 text-sm text-gray-500">
+          เลื่อนสเกลใส่รายได้ที่ได้รับจริงต่อเดือน (รวมรายได้เสริม) แล้วระบบจะให้คะแนนสุขภาพการเงิน
+          — จะข้ามไปก็ได้ ไม่บังคับ
+        </p>
+        <p className="mt-5 text-center">
+          <span className="text-4xl font-extrabold tabular-nums text-emerald-700">{baht(income)}</span>
+          <span className="ml-2 text-base font-semibold text-gray-400">บาท / เดือน</span>
+        </p>
+        <MoneyScale
+          steps={SCALES.large}
+          value={income}
+          label="รายได้ต่อเดือน"
+          tone="bg-emerald-500"
+          onPick={onIncome}
+        />
+      </div>
+
+      {/* คะแนน — โผล่เฉพาะตอนใส่รายรับแล้ว */}
+      {result.score !== null && result.level && (
+        <div className="rounded-3xl bg-white p-7 text-center shadow-sm ring-1 ring-black/5 md:p-9">
+          <p className="text-sm font-semibold text-gray-400">คะแนนสุขภาพการเงินของท่าน</p>
+          {/* วงแหวนวาดด้วย conic-gradient ล้วน ไม่ต้องพึ่งไลบรารีกราฟ */}
+          <div
+            className={`mx-auto mt-4 grid h-40 w-40 place-items-center rounded-full ${result.level.tone}`}
+            style={{ background: `conic-gradient(currentColor ${result.score * 3.6}deg, #e5e7eb 0deg)` }}
+          >
+            <span className="grid h-32 w-32 place-items-center rounded-full bg-white">
+              <span className="text-5xl font-extrabold tabular-nums">{result.score}</span>
+            </span>
+          </div>
+          <p className={`mt-4 text-2xl font-bold ${result.level.tone}`}>{result.level.label}</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-gray-500">{result.level.summary}</p>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl bg-gray-50 p-4">
+              <p className="text-xs text-gray-400">รายได้ต่อเดือน</p>
+              <p className="mt-0.5 text-xl font-extrabold tabular-nums text-emerald-700">
+                {baht(result.income)}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-gray-50 p-4">
+              <p className="text-xs text-gray-400">
+                {result.left < 0 ? "ใช้เกินตัวเดือนละ" : "เหลือปลายเดือน"}
+              </p>
+              <p
+                className={`mt-0.5 text-xl font-extrabold tabular-nums ${
+                  result.left < 0 ? "text-rose-700" : "text-brand-700"
+                }`}
+              >
+                {baht(Math.abs(result.left))}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* คำแนะนำ — เรียงจากเรื่องที่ควรทำก่อน */}
       <div className="space-y-3">
