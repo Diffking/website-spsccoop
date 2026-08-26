@@ -16,6 +16,7 @@ import {
 import { uploadWithProgress } from "@/lib/uploadClient";
 import {
   DEFAULT_QUESTIONS,
+  GROUP_HINT,
   GROUP_LABEL,
   GROUP_ORDER,
   GROUP_TONE,
@@ -63,6 +64,14 @@ export default function ProgramsManager({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  /**
+   * หมวดที่กำลังดูอยู่ — "all" = ดูทั้งหมดตามลำดับที่ถามจริง
+   *
+   * เจ้าของเว็บขอไว้ 26 ส.ค. 2026 ว่าอยากเห็นชื่อหมวดในหน้านี้ จะได้แยกง่าย
+   * ⚠️ **ไม่จัดกลุ่มถาวรให้** เพราะลำดับในรายการนี้คือลำดับที่สมาชิกถูกถามจริง
+   * ถ้าเรียงใหม่ตามหมวด คนแก้จะเข้าใจผิดว่าคำถามถูกถามเรียงเป็นหมวด ๆ ซึ่งไม่ใช่
+   */
+  const [only, setOnly] = useState<CheckupGroup | "all">("all");
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
   const dirty = JSON.stringify(questions) !== saved;
@@ -199,12 +208,54 @@ export default function ProgramsManager({
           </button>
         </div>
         <p className="mt-1 text-sm text-gray-600">
-          แก้ข้อความ เพิ่มข้อ ลบข้อ สลับลำดับ และเลือกกลุ่มได้เอง —{" "}
-          <b>กลุ่มมีผลกับกราฟสรุปผลและคำแนะนำ</b> ส่วน <b>ช่วงเงิน</b> คือเพดานของสเกลที่เลื่อนได้ในข้อนั้น
+          แก้ข้อความ เพิ่มข้อ ลบข้อ สลับลำดับ และเลือกหมวดได้เอง —{" "}
+          <b>หมวดมีผลกับกราฟสรุปผลและคำแนะนำ</b> ส่วน <b>ช่วงเงิน</b> คือเพดานของสเกลที่เลื่อนได้ในข้อนั้น
         </p>
+
+        {/*
+          แถบหมวด — กดเพื่อดูเฉพาะหมวดนั้น · ตัวเลขคือจำนวนข้อในหมวด
+          หมวดที่ยังไม่มีคำถามก็ต้องขึ้น (จาง ๆ) ไม่งั้นเจ้าหน้าที่จะไม่รู้ว่ามีหมวดนี้ให้เลือก
+        */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setOnly("all")}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+              only === "all" ? "bg-gray-800 text-white shadow" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            ทั้งหมด <span className="tabular-nums opacity-70">{questions.length}</span>
+          </button>
+          {GROUPS.map((group) => {
+            const tone = GROUP_TONE[group];
+            const n = questions.filter((q) => q.group === group).length;
+            const on = only === group;
+            return (
+              <button
+                key={group}
+                type="button"
+                onClick={() => setOnly(on ? "all" : group)}
+                title={GROUP_HINT[group]}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  on ? `${tone.bar} text-white shadow` : `${tone.bg} ${tone.text} hover:brightness-95`
+                } ${n === 0 && !on ? "opacity-50" : ""}`}
+              >
+                {GROUP_LABEL[group]} <span className="tabular-nums opacity-70">{n}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {only !== "all" && (
+          <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500">
+            กำลังดูเฉพาะหมวด <b>{GROUP_LABEL[only]}</b> — {GROUP_HINT[only]} ·
+            เลขข้อยังเป็นลำดับจริงในแบบสอบถาม · <b>ปุ่มสลับลำดับกดได้ตอนดูทั้งหมด</b>
+          </p>
+        )}
 
         <ul className="mt-4 space-y-3">
           {questions.map((question, i) => {
+            if (only !== "all" && question.group !== only) return null;
             const tone = GROUP_TONE[question.group];
             const url = images[question.id];
             return (
@@ -230,9 +281,16 @@ export default function ProgramsManager({
                     />
 
                     <div className="flex flex-wrap items-center gap-2">
+                      {/* ชื่อหมวดโชว์เป็นป้ายสีด้วย ไม่ใช่เห็นแค่ในช่องเลือก — กวาดตาหาง่ายกว่า */}
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold text-white ${tone.bar}`}
+                      >
+                        {GROUP_LABEL[question.group]}
+                      </span>
                       <select
                         value={question.group}
                         onChange={(e) => patch(question.id, { group: e.target.value as CheckupGroup })}
+                        aria-label="เปลี่ยนหมวด"
                         className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-brand-400"
                       >
                         {GROUPS.map((g) => (
@@ -304,8 +362,8 @@ export default function ProgramsManager({
                   <div className="flex shrink-0 flex-col gap-0.5">
                     <button
                       type="button"
-                      title="เลื่อนขึ้น"
-                      disabled={i === 0}
+                      title={only === "all" ? "เลื่อนขึ้น" : "สลับลำดับได้ตอนดูทั้งหมด"}
+                      disabled={only !== "all" || i === 0}
                       onClick={() => move(i, -1)}
                       className="rounded p-1 text-gray-400 transition hover:bg-white hover:text-gray-700 disabled:opacity-25"
                     >
@@ -313,8 +371,8 @@ export default function ProgramsManager({
                     </button>
                     <button
                       type="button"
-                      title="เลื่อนลง"
-                      disabled={i === questions.length - 1}
+                      title={only === "all" ? "เลื่อนลง" : "สลับลำดับได้ตอนดูทั้งหมด"}
+                      disabled={only !== "all" || i === questions.length - 1}
                       onClick={() => move(i, 1)}
                       className="rounded p-1 text-gray-400 transition hover:bg-white hover:text-gray-700 disabled:opacity-25"
                     >
