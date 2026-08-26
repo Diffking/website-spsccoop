@@ -16,8 +16,24 @@
  * เรื่องเงินในบ้านเป็นข้อมูลอ่อนไหวที่สุดที่เว็บนี้จะแตะได้
  */
 
-/** กลุ่มของคำถาม — คุมทั้งสีบนจอและวิธีคิดผล */
-export type CheckupGroup = "need" | "debt" | "save" | "want";
+/**
+ * หมวดค่าใช้จ่าย — คุมทั้งสีบนจอ ลำดับในกราฟสรุป และวิธีคิดผล
+ *
+ * เจ้าของเว็บกำหนดไว้ 26 ส.ค. 2026 ให้มี 4 หมวดตามลำดับนี้:
+ *   1. ค่าใช้จ่ายจำเป็น · 2. ค่าใช้จ่ายไม่จำเป็น · 3. ค่าใช้จ่ายฉุกเฉิน · 4. ภาระหนี้สิน
+ *
+ * ⚠️ **`emergency` ยังไม่มีคำถามในชุดตั้งต้น** — เจ้าของเว็บบอกว่าจะเพิ่มคำถามเองทีหลัง
+ * หมวดจึงต้องมีรออยู่ก่อน ไม่งั้นตอนเพิ่มคำถามจะไม่มีหมวดให้เลือก
+ * · หมวดที่ไม่มีคำถามเลยจะไม่ขึ้นในกราฟสรุป (ยอดเป็น 0) ไม่ต้องกันเป็นกรณีพิเศษ
+ *
+ * ⚠️ **`save` ไม่ได้อยู่ในสี่หมวดที่สั่งมา แต่ต้องมี** เพราะคำถามข้อ 19-20 ของเจ้าของเว็บเอง
+ * (ค่าหุ้นสหกรณ์ · เงินออม) เป็นเงินที่ยังเป็นของสมาชิก ไม่ใช่ "ค่าใช้จ่าย" ที่เสียไป
+ * และตัวคิดคะแนนใช้สัดส่วนเงินออมด้วย — ย้ายคำถามสองข้อนี้ไปหมวดอื่นได้เองที่หลังบ้าน
+ */
+export type CheckupGroup = "need" | "want" | "emergency" | "debt" | "save";
+
+/** ลำดับที่ใช้แสดงผลทุกที่ — ตามที่เจ้าของเว็บเรียงมา แล้วปิดท้ายด้วยเงินออม */
+export const GROUP_ORDER: CheckupGroup[] = ["need", "want", "emergency", "debt", "save"];
 
 /** ช่วงเงินของสเกล — เลือกได้ต่อข้อ เพราะค่าตัดผมกับค่าผ่อนบ้านคนละสเกลกันคนละโลก */
 export type ScaleKey = "small" | "medium" | "large";
@@ -33,25 +49,28 @@ export type CheckupQuestion = {
 };
 
 export const GROUP_LABEL: Record<CheckupGroup, string> = {
-  need: "รายจ่ายจำเป็น",
-  debt: "ภาระหนี้",
+  need: "ค่าใช้จ่ายจำเป็น",
+  want: "ค่าใช้จ่ายไม่จำเป็น",
+  emergency: "ค่าใช้จ่ายฉุกเฉิน",
+  debt: "ภาระหนี้สิน",
   save: "เงินออม",
-  want: "รายจ่ายส่วนตัว",
 };
 
 export const GROUP_HINT: Record<CheckupGroup, string> = {
   need: "ของที่ไม่จ่ายไม่ได้ — กิน อยู่ เดินทาง ดูแลครอบครัว",
+  want: "ของที่ลดได้ถ้าจำเป็น — ความสวยงาม สังสรรค์ ช่วยงาน",
+  emergency: "เรื่องด่วนที่ไม่ได้เกิดทุกเดือน — เจ็บป่วย ซ่อมของ เหตุไม่คาดฝัน",
   debt: "เงินที่ต้องส่งคืนทุกเดือน — ผ่อน ชำระหนี้ หักเงินเดือน",
   save: "เงินที่เก็บไว้เป็นของตัวเอง — ค่าหุ้น เงินฝาก",
-  want: "ของที่ลดได้ถ้าจำเป็น — ความสวยงาม สังสรรค์ ช่วยงาน",
 };
 
 /** สีประจำกลุ่ม — ต้องเขียนชื่อคลาสเต็ม (Tailwind อ่านจากซอร์สแบบข้อความตรง ๆ) */
 export const GROUP_TONE: Record<CheckupGroup, { text: string; bg: string; ring: string; bar: string }> = {
   need: { text: "text-sky-700", bg: "bg-sky-50", ring: "ring-sky-200", bar: "bg-sky-500" },
+  want: { text: "text-amber-700", bg: "bg-amber-50", ring: "ring-amber-200", bar: "bg-amber-500" },
+  emergency: { text: "text-orange-700", bg: "bg-orange-50", ring: "ring-orange-200", bar: "bg-orange-500" },
   debt: { text: "text-rose-700", bg: "bg-rose-50", ring: "ring-rose-200", bar: "bg-rose-500" },
   save: { text: "text-violet-700", bg: "bg-violet-50", ring: "ring-violet-200", bar: "bg-violet-500" },
-  want: { text: "text-amber-700", bg: "bg-amber-50", ring: "ring-amber-200", bar: "bg-amber-500" },
 };
 
 /** สร้างขั้นสเกล — ขั้นถี่ตอนเงินน้อย ห่างขึ้นตอนเงินเยอะ */
@@ -242,7 +261,7 @@ export const DEFAULT_QUESTIONS: CheckupQuestion[] = [
  */
 export const NET_MIN_RATIO = 0.3;
 
-const GROUPS: CheckupGroup[] = ["need", "debt", "save", "want"];
+const GROUPS = GROUP_ORDER;
 const SCALE_KEYS: ScaleKey[] = ["small", "medium", "large"];
 
 /**
@@ -286,9 +305,10 @@ export const groupTotal = (
 
 export type CheckupResult = {
   need: number;
+  want: number;
+  emergency: number;
   debt: number;
   save: number;
-  want: number;
   /** รายจ่ายรวมทุกอย่างที่ไหลออกใน 1 เดือน — ตัวเลขหลักที่โปรแกรมนี้ตอบ */
   spend: number;
   /** รายรับที่กรอกเพิ่มทีหลัง (ไม่ได้อยู่ใน 21 ข้อ) · 0 = ไม่ได้กรอก */
@@ -344,10 +364,11 @@ export function checkupResult(
   income = 0,
 ): CheckupResult {
   const need = groupTotal(questions, answers, "need");
+  const want = groupTotal(questions, answers, "want");
+  const emergency = groupTotal(questions, answers, "emergency");
   const debt = groupTotal(questions, answers, "debt");
   const save = groupTotal(questions, answers, "save");
-  const want = groupTotal(questions, answers, "want");
-  const spend = need + debt + save + want;
+  const spend = need + want + emergency + debt + save;
   const left = income - spend;
 
   const share = (value: number) => (income > 0 ? value / income : 0);
@@ -361,9 +382,10 @@ export function checkupResult(
   if (income <= 0) {
     return {
       need,
+      want,
+      emergency,
       debt,
       save,
-      want,
       spend,
       income: 0,
       left: 0,
@@ -426,7 +448,7 @@ export function checkupResult(
     advice.push({
       title: `เดือนหนึ่งใช้เกินตัว ${money(Math.abs(left))} บาท`,
       detail:
-        "รายจ่ายรวมมากกว่ารายได้ ถ้าเป็นแบบนี้ทุกเดือนแปลว่ากำลังกินเงินเก็บหรือก่อหนี้ใหม่มาโปะ — ลองดูกลุ่มรายจ่ายส่วนตัวก่อน เพราะลดได้เร็วที่สุด",
+        "รายจ่ายรวมมากกว่ารายได้ ถ้าเป็นแบบนี้ทุกเดือนแปลว่ากำลังกินเงินเก็บหรือก่อหนี้ใหม่มาโปะ — ลองดูหมวดค่าใช้จ่ายไม่จำเป็นก่อน เพราะลดได้เร็วที่สุด",
     });
   }
 
@@ -468,7 +490,7 @@ export function checkupResult(
 
   if (wantRatio > 0.3) {
     advice.push({
-      title: `รายจ่ายส่วนตัวสูงถึง ${Math.round(wantRatio * 100)}% ของรายรับ`,
+      title: `ค่าใช้จ่ายไม่จำเป็นสูงถึง ${Math.round(wantRatio * 100)}% ของรายรับ`,
       detail:
         "กลุ่มนี้คือกลุ่มที่ลดได้เร็วที่สุดโดยไม่กระทบชีวิตประจำวันมากนัก ลองเลือกลดสักสองข้อที่รู้สึกว่าจ่ายไปแบบไม่ค่อยได้อะไรกลับมา",
     });
@@ -476,7 +498,7 @@ export function checkupResult(
 
   if (needRatio > 0.5) {
     advice.push({
-      title: `รายจ่ายจำเป็นกินไป ${Math.round(needRatio * 100)}% ของรายรับ`,
+      title: `ค่าใช้จ่ายจำเป็นกินไป ${Math.round(needRatio * 100)}% ของรายรับ`,
       detail:
         "สูงกว่าเกณฑ์ 50% ที่ควรเป็น ของกลุ่มนี้ลดยากกว่ากลุ่มอื่นเพราะเป็นของที่ต้องใช้จริง แต่ค่าไฟ ค่าน้ำมัน และค่าโทรศัพท์ มักลดได้ถ้าตั้งใจ",
     });
@@ -506,9 +528,10 @@ export function checkupResult(
 
   return {
     need,
+    want,
+    emergency,
     debt,
     save,
-    want,
     spend,
     income,
     left,

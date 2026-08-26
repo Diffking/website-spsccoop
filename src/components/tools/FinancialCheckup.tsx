@@ -18,12 +18,12 @@ import { STACKED, fadeSwap } from "@/lib/slideMotion";
 import {
   GROUP_HINT,
   GROUP_LABEL,
+  GROUP_ORDER,
   GROUP_TONE,
   NET_MIN_RATIO,
   SCALES,
   checkupResult,
   type CheckupAnswers,
-  type CheckupGroup,
   type CheckupQuestion,
 } from "@/lib/financialCheckup";
 import type { CheckupImages } from "@/lib/programPages";
@@ -330,12 +330,19 @@ function QuestionCard({
 
   return (
     <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5">
-      {/* ภาพประกอบของข้อนี้ — ไม่ได้ใส่ก็เป็นแถบสีอ่อนกับไอคอน ความสูงเท่ากันเสมอ การ์ดจึงไม่กระตุก */}
-      <div className={`grid h-36 place-items-center overflow-hidden ${tone.bg} md:h-44`}>
+      {/*
+        ภาพประกอบของข้อนี้ — **ต้องเห็นเต็มใบ ห้ามครอบตัด** (เจ้าของเว็บสั่ง 26 ส.ค. 2026)
+        จึงใช้ object-contain ไม่ใช่ object-cover · ภาพที่อัปมาสัดส่วนไม่เท่ากันทุกใบ
+        ถ้าครอบให้เต็มกรอบจะโดนตัดหัวตัดท้าย ยอมมีขอบว่างข้างภาพดีกว่าเห็นไม่ครบ
+
+        ⚠️ กรอบยังต้องสูงคงที่เหมือนเดิม ไม่งั้นการ์ดกระตุกทุกครั้งที่เปลี่ยนข้อ
+        (ข้อที่ไม่มีภาพก็สูงเท่ากัน)
+      */}
+      <div className={`grid h-52 place-items-center overflow-hidden ${tone.bg} md:h-64`}>
         {image ? (
           // รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" className="h-full w-full object-cover" />
+          <img src={image} alt="" className="h-full w-full object-contain" />
         ) : (
           <Coins className={`h-12 w-12 opacity-30 ${tone.text}`} />
         )}
@@ -394,12 +401,13 @@ function Result({
   onRestart: () => void;
   onBack: () => void;
 }) {
-  const parts: { group: CheckupGroup; value: number }[] = [
-    { group: "need", value: result.need },
-    { group: "debt", value: result.debt },
-    { group: "save", value: result.save },
-    { group: "want", value: result.want },
-  ];
+  /*
+    เรียงตามลำดับหมวดที่เจ้าของเว็บกำหนด (ดู GROUP_ORDER) — หมวดที่ยอดเป็น 0
+    ไม่ต้องขึ้นแท่ง เพราะยังไม่มีคำถามในหมวดนั้น หรือคนตอบไม่มีค่าใช้จ่ายด้านนั้นเลย
+  */
+  const parts = GROUP_ORDER.map((group) => ({ group, value: result[group] })).filter(
+    (part) => part.value > 0,
+  );
   const widthBase = Math.max(result.spend, 1);
 
   return (

@@ -17,6 +17,7 @@ import { uploadWithProgress } from "@/lib/uploadClient";
 import {
   DEFAULT_QUESTIONS,
   GROUP_LABEL,
+  GROUP_ORDER,
   GROUP_TONE,
   SCALE_LABEL,
   type CheckupGroup,
@@ -36,7 +37,8 @@ import { PROGRAM_PAGES, type CheckupImages } from "@/lib/programPages";
  * เพราะกดครั้งเดียวจบและไม่มีอะไรให้พิมพ์ต่อ
  */
 
-const GROUPS: CheckupGroup[] = ["need", "debt", "save", "want"];
+// ลำดับหมวดมาจากตัวกลาง — เพิ่มหมวดใหม่ที่นั่นแล้วช่องเลือกตรงนี้ได้ตามเอง
+const GROUPS = GROUP_ORDER;
 const SCALES: ScaleKey[] = ["small", "medium", "large"];
 
 /** รหัสของข้อใหม่ — ต้องไม่ซ้ำของเดิม ไม่งั้นคำตอบสองข้อจะทับกันเอง */
