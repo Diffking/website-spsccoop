@@ -38,15 +38,15 @@ export const PROGRAM_PAGES: ProgramPage[] = [
     features: [
       "ตอบด้วยการเลื่อนสเกล ไม่ต้องพิมพ์ตัวเลขเลยสักข้อ",
       "ถามทีละข้อ มีแถบบอกว่าเหลืออีกกี่ข้อ",
-      "ใส่ภาพประกอบรายข้อได้จากหลังบ้าน",
+      "แก้คำถาม เพิ่ม/ลบข้อ สลับลำดับ และใส่ภาพประกอบรายข้อได้จากหลังบ้าน",
       "สรุปเป็นคะแนน 0-100 พร้อมคำแนะนำที่โยงไปหน้าเงินกู้ เงินฝาก และสวัสดิการ",
       "ไม่เก็บคำตอบลงฐานเลย ปิดหน้าแล้วหายหมด",
     ],
     settings: [
       {
         href: "/admin/programs",
-        label: "ภาพประกอบคำถาม",
-        hint: "อัปภาพให้แต่ละข้อได้ ไม่ใส่ก็ได้ ระบบจะแสดงเป็นไอคอนแทน",
+        label: "คำถามและภาพประกอบ",
+        hint: "แก้คำถาม เพิ่ม/ลบข้อ สลับลำดับ เลือกกลุ่ม ช่วงเงิน และอัปภาพของแต่ละข้อ",
       },
     ],
   },
@@ -61,3 +61,9 @@ export const PROGRAM_PATHS = PROGRAM_PAGES.map((p) => p.path);
  */
 export type CheckupImages = Record<string, string>;
 export const CHECKUP_IMAGES_KEY = "checkupImages";
+
+/**
+ * ชุดคำถามที่เจ้าหน้าที่แก้เอง — เก็บใน Setting["checkupQuestions"]
+ * ยังไม่เคยแก้ = ใช้ชุดตั้งต้นใน src/lib/financialCheckup.ts
+ */
+export const CHECKUP_QUESTIONS_KEY = "checkupQuestions";

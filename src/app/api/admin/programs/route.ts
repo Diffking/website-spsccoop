@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireWrite } from "@/lib/apiAuth";
 import { saveSetting } from "@/lib/settings";
-import { CHECKUP_IMAGES_KEY } from "@/lib/programPages";
-import { CHECKUP_QUESTIONS } from "@/lib/financialCheckup";
+import { CHECKUP_IMAGES_KEY, CHECKUP_QUESTIONS_KEY } from "@/lib/programPages";
+import { fillQuestions } from "@/lib/financialCheckup";
 import { purgeEverySite } from "@/lib/mirrorPurge";
+import { getSetting } from "@/lib/settings";
+
+/** คำถามชุดที่ใช้อยู่ตอนนี้ — ใช้กรองว่ารหัสภาพที่ส่งมาตรงกับข้อที่มีจริง */
+const currentQuestions = () => getSetting<unknown>(CHECKUP_QUESTIONS_KEY, null);
 
 /**
  * ตั้งค่าของ "หน้าโปรแกรม" — ตอนนี้มีอย่างเดียวคือภาพประกอบคำถามของโปรแกรมตรวจสุขภาพการเงิน
@@ -16,12 +20,33 @@ export async function PUT(request: Request) {
   const auth = await requireWrite("programs");
   if (auth instanceof NextResponse) return auth;
 
-  const body = (await request.json().catch(() => ({}))) as { checkupImages?: Record<string, unknown> };
+  const body = (await request.json().catch(() => ({}))) as {
+    checkupImages?: Record<string, unknown>;
+    checkupQuestions?: unknown;
+  };
+
+  /*
+    คำถามกับภาพส่งมาด้วยกันก็ได้ ส่งมาอย่างเดียวก็ได้
+    ⚠️ ผ่าน fillQuestions ก่อนเสมอ — มันทิ้งข้อที่ไม่มีรหัส/คำถาม และกันรหัสซ้ำ
+    ซึ่งจะทำให้คำตอบของสองข้อทับกันเองตอนคิดเงิน
+  */
+  if (body.checkupQuestions !== undefined) {
+    const questions = fillQuestions(body.checkupQuestions);
+    await saveSetting(CHECKUP_QUESTIONS_KEY, questions);
+  }
+
+  if (body.checkupImages === undefined) {
+    purgeEverySite();
+    return NextResponse.json({ ok: true });
+  }
   if (!body.checkupImages || typeof body.checkupImages !== "object") {
     return NextResponse.json({ error: "ไม่ได้ส่งข้อมูลมา" }, { status: 400 });
   }
 
-  const known = new Set(CHECKUP_QUESTIONS.map((q) => q.id));
+  const current = fillQuestions(
+    body.checkupQuestions !== undefined ? body.checkupQuestions : await currentQuestions(),
+  );
+  const known = new Set(current.map((q) => q.id));
   const clean: Record<string, string> = {};
   for (const [id, url] of Object.entries(body.checkupImages)) {
     if (!known.has(id)) continue;

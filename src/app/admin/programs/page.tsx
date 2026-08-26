@@ -5,7 +5,8 @@ import { currentUser } from "@/lib/auth";
 import { ADMIN_HOME, canArea } from "@/lib/permissions";
 import { getSetting } from "@/lib/settings";
 import { publicSiteUrl } from "@/lib/siteUrl";
-import { CHECKUP_IMAGES_KEY, type CheckupImages } from "@/lib/programPages";
+import { CHECKUP_IMAGES_KEY, CHECKUP_QUESTIONS_KEY, type CheckupImages } from "@/lib/programPages";
+import { fillQuestions } from "@/lib/financialCheckup";
 import ProgramsManager from "@/components/admin/ProgramsManager";
 
 /**
@@ -21,7 +22,10 @@ export default async function AdminProgramsPage() {
   // ไม่ได้ดูแลส่วนนี้ก็ไม่ต้องเห็น — เมนูซ่อนให้แล้ว ตรงนี้กันคนพิมพ์ที่อยู่เข้ามาเอง
   if (!canArea(user, "programs")) redirect(ADMIN_HOME);
 
-  const images = await getSetting<CheckupImages>(CHECKUP_IMAGES_KEY, {});
+  const [images, saved] = await Promise.all([
+    getSetting<CheckupImages>(CHECKUP_IMAGES_KEY, {}),
+    getSetting<unknown>(CHECKUP_QUESTIONS_KEY, null),
+  ]);
 
   return (
     <>
@@ -35,7 +39,11 @@ export default async function AdminProgramsPage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-5">
-        <ProgramsManager initial={images} publicBase={publicSiteUrl()} />
+        <ProgramsManager
+          initialQuestions={fillQuestions(saved)}
+          initialImages={images}
+          publicBase={publicSiteUrl()}
+        />
       </main>
     </>
   );
