@@ -815,6 +815,6 @@ body {
 
 /* หน้าผลตรวจสั่งพิมพ์ได้ — เอาส่วนที่กดไม่ได้บนกระดาษออกให้หมด */
 @media print {
-  header, footer, .money-scale { display: none !important; }
+  header, footer, .money-scale, .no-print { display: none !important; }
   body { background: #fff; }
 }

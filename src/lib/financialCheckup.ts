@@ -236,6 +236,12 @@ export const DEFAULT_QUESTIONS: CheckupQuestion[] = [
   },
 ];
 
+/**
+ * เกณฑ์เงินเดือนคงเหลือสุทธิขั้นต่ำ — อ้างอิงแนวทางแก้ไขปัญหาหนี้สินภาครัฐ
+ * ที่กำหนดให้ผู้มีรายได้ประจำต้องเหลือเงินไม่น้อยกว่า 30% ของรายได้ไว้ดำรงชีพ
+ */
+export const NET_MIN_RATIO = 0.3;
+
 const GROUPS: CheckupGroup[] = ["need", "debt", "save", "want"];
 const SCALE_KEYS: ScaleKey[] = ["small", "medium", "large"];
 
@@ -289,6 +295,15 @@ export type CheckupResult = {
   income: number;
   /** รายรับ − รายจ่าย — คิดได้เฉพาะตอนกรอกรายรับ */
   left: number;
+  /**
+   * เงินเดือนคงเหลือสุทธิ คิดเป็นสัดส่วนของรายได้ (ติดลบได้ถ้าใช้เกินตัว)
+   *
+   * เจ้าของเว็บกำหนดฐานคิดไว้ 26 ส.ค. 2026: **หักรายจ่ายทั้ง 21 ข้อ** ไม่ใช่หักเฉพาะหนี้
+   * — ตัวเลขจึงเป็น "เหลือปลายเดือนจริง ๆ" ซึ่งเข้มกว่าเกณฑ์ราชการที่หักเฉพาะรายการหักหนี้
+   */
+  netRatio: number;
+  /** ผ่านเกณฑ์คงเหลือสุทธิ 30% ไหม · null = ยังไม่ได้กรอกรายรับ จึงยังตัดสินไม่ได้ */
+  passNet: boolean | null;
   needRatio: number;
   debtRatio: number;
   saveRatio: number;
@@ -352,6 +367,8 @@ export function checkupResult(
       spend,
       income: 0,
       left: 0,
+      netRatio: 0,
+      passNet: null,
       needRatio: 0,
       debtRatio: 0,
       saveRatio: 0,
@@ -371,7 +388,7 @@ export function checkupResult(
   const score = Math.round(
     100 *
       (0.35 * band(debtRatio, 0.35, 0.6) +
-        0.3 * band(share(Math.max(left, 0)), 0.1, 0) +
+        0.3 * band(share(left), NET_MIN_RATIO, 0) +
         0.25 * band(saveRatio, 0.2, 0.05) +
         0.1 * band(needRatio, 0.5, 0.75)),
   );
@@ -401,17 +418,15 @@ export function checkupResult(
               summary: "รายจ่ายกับภาระหนี้กินรายรับไปมาก ควรวางแผนแก้ตั้งแต่ตอนนี้",
             };
 
+  /*
+    ไม่ต้องมีคำแนะนำเรื่อง "เงินเหลือปลายเดือน" ตรงนี้แล้ว — การ์ดเกณฑ์คงเหลือสุทธิ 30%
+    บนหน้าผลพูดเรื่องนี้ไปแล้วด้วยข้อความที่เจ้าของเว็บเขียนมาเอง พูดซ้ำจะรกเปล่า ๆ
+  */
   if (left < 0) {
     advice.push({
       title: `เดือนหนึ่งใช้เกินตัว ${money(Math.abs(left))} บาท`,
       detail:
-        "รายจ่ายรวมมากกว่ารายรับ ถ้าเป็นแบบนี้ทุกเดือนแปลว่ากำลังกินเงินเก็บหรือก่อหนี้ใหม่มาโปะ — ลองดูกลุ่มรายจ่ายส่วนตัวก่อน เพราะลดได้เร็วที่สุด",
-    });
-  } else if (left / income < 0.1) {
-    advice.push({
-      title: `เหลือปลายเดือนแค่ ${money(left)} บาท`,
-      detail:
-        "เหลือน้อยกว่า 10% ของรายรับ ถ้ามีเรื่องด่วนสักเรื่อง เช่น รถเสียหรือเจ็บป่วย จะต้องไปหยิบยืมทันที ควรกันไว้ให้ได้อย่างน้อย 10%",
+        "รายจ่ายรวมมากกว่ารายได้ ถ้าเป็นแบบนี้ทุกเดือนแปลว่ากำลังกินเงินเก็บหรือก่อหนี้ใหม่มาโปะ — ลองดูกลุ่มรายจ่ายส่วนตัวก่อน เพราะลดได้เร็วที่สุด",
     });
   }
 
@@ -497,6 +512,8 @@ export function checkupResult(
     spend,
     income,
     left,
+    netRatio: share(left),
+    passNet: share(left) >= NET_MIN_RATIO,
     needRatio,
     debtRatio,
     saveRatio,
