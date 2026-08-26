@@ -22,6 +22,7 @@ import {
   GROUP_LABEL,
   GROUP_ORDER,
   GROUP_TONE,
+  GUIDES,
   NET_MIN_RATIO,
   SCALES,
   checkupResult,
@@ -200,12 +201,15 @@ export default function FinancialCheckup({
 
 function MoneyScale({
   steps,
+  guides,
   value,
   label,
   tone,
   onPick,
 }: {
   steps: number[];
+  /** ปุ่มลัดใต้สเกล — เลขกลม ๆ ที่กำหนดไว้ ไม่ได้หารช่วงสเกลเอา (ดู GUIDES) */
+  guides: number[];
   value: number;
   label: string;
   tone: string;
@@ -237,32 +241,30 @@ function MoneyScale({
         <span className="tabular-nums">{baht(steps[last])}+</span>
       </div>
 
-      {/* ปุ่มลัดสำหรับค่าที่เจอบ่อย — กดทีเดียวจบ ไม่ต้องเลื่อนหาทีละขั้น */}
+      {/*
+        ปุ่มลัดเลขกลม ๆ — กดทีเดียวจบ ไม่ต้องเลื่อนหาทีละขั้น
+        กันไว้ไม่ให้เกินเพดานของสเกล เผื่อวันหลังมีสเกลที่เตี้ยกว่าไกด์ตัวท้าย
+      */}
       <div className="mt-5 flex flex-wrap justify-center gap-2">
-        {quickPicks(steps).map((amount) => (
-          <button
-            key={amount}
-            type="button"
-            onClick={() => onPick(amount)}
-            className={`rounded-full px-3.5 py-1.5 text-sm font-medium tabular-nums transition ${
-              value === amount ? `${tone} text-white shadow` : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            {amount === 0 ? "ไม่มี" : baht(amount)}
-          </button>
-        ))}
+        {guides
+          .filter((amount) => amount <= steps[last])
+          .map((amount) => (
+            <button
+              key={amount}
+              type="button"
+              onClick={() => onPick(amount)}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-medium tabular-nums transition ${
+                value === amount
+                  ? `${tone} text-white shadow`
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {amount === 0 ? "ไม่มี" : baht(amount)}
+            </button>
+          ))}
       </div>
     </>
   );
-}
-
-/** ค่าลัด 6 ค่าที่กระจายทั่วสเกล — เอา 0 ไว้ตัวแรกเสมอเพราะเป็นคำตอบที่ใช้บ่อยที่สุด */
-function quickPicks(steps: number[]): number[] {
-  const picks = new Set<number>([0]);
-  for (let i = 1; i <= 5; i += 1) {
-    picks.add(steps[Math.round((steps.length - 1) * (i / 6))] ?? 0);
-  }
-  return [...picks];
 }
 
 /* ------------------------------------------------------------------ *
@@ -412,6 +414,7 @@ function QuestionCard({
 
         <MoneyScale
           steps={SCALES[question.scale]}
+          guides={GUIDES[question.scale]}
           value={value}
           label={question.text}
           tone={tone.bar}
@@ -534,6 +537,7 @@ function Result({
         </p>
         <MoneyScale
           steps={SCALES.large}
+          guides={GUIDES.large}
           value={income}
           label="รายได้ต่อเดือน"
           tone="bg-emerald-500"
