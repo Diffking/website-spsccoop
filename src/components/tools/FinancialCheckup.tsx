@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Coins,
   Lock,
+  Phone,
   Printer,
   RotateCcw,
   Wallet,
@@ -18,6 +19,7 @@ import {
   GROUP_HINT,
   GROUP_LABEL,
   GROUP_TONE,
+  NET_MIN_RATIO,
   SCALES,
   checkupResult,
   type CheckupAnswers,
@@ -43,28 +45,55 @@ const baht = (n: number) => n.toLocaleString("th-TH");
 export default function FinancialCheckup({
   questions,
   images,
+  contactPhone,
 }: {
   questions: CheckupQuestion[];
   images: CheckupImages;
+  /** เบอร์สหกรณ์ที่โชว์ตอนแนะนำให้ขอคำปรึกษา — แอดมินแก้ได้ที่ หลังบ้าน → ส่วนท้ายเว็บ */
+  contactPhone: string;
 }) {
   /** -1 = หน้าเริ่มต้น · 0..n-1 = คำถาม · n = หน้าผลตรวจ */
   const [at, setAt] = useState(-1);
   const [answers, setAnswers] = useState<CheckupAnswers>({});
   /** รายรับ — ไม่ได้อยู่ใน 21 ข้อ ถามทีหลังที่หน้าผลเพื่อปลดล็อกคะแนน */
   const [income, setIncome] = useState(0);
+  /**
+   * ข้อที่ผู้ใช้กดปิดไม่ให้คิดในหน้าสรุป — เก็บเป็นรหัสข้อ
+   *
+   * เจ้าของเว็บขอไว้ 26 ส.ค. 2026: อยากให้กดเล่นได้ที่หน้าสุดท้ายว่า "ถ้าตัดข้อนี้ออกจะเป็นยังไง"
+   * ⚠️ **ปิดแล้วคำตอบเดิมยังอยู่ครบ** ไม่ได้ล้างเป็น 0 — เปิดกลับมาต้องได้ตัวเลขเดิมทันที
+   */
+  const [off, setOff] = useState<Set<string>>(new Set());
 
   const total = questions.length;
   const question = at >= 0 && at < total ? questions[at] : null;
+
+  /** คำตอบที่เอาไปคิดจริง — ข้อที่ปิดไว้นับเป็น 0 */
+  const counted = useMemo(() => {
+    const out: CheckupAnswers = {};
+    for (const q of questions) out[q.id] = off.has(q.id) ? 0 : (answers[q.id] ?? 0);
+    return out;
+  }, [questions, answers, off]);
+
   const result = useMemo(
-    () => checkupResult(questions, answers, income),
-    [questions, answers, income],
+    () => checkupResult(questions, counted, income),
+    [questions, counted, income],
   );
 
   const restart = () => {
     setAnswers({});
     setIncome(0);
+    setOff(new Set());
     setAt(-1);
   };
+
+  const toggle = (id: string) =>
+    setOff((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   if (total === 0) {
     return (
@@ -123,6 +152,12 @@ export default function FinancialCheckup({
               <Result
                 result={result}
                 income={income}
+                contactPhone={contactPhone}
+                questions={questions}
+                answers={answers}
+                off={off}
+                onToggle={toggle}
+                onCountAll={() => setOff(new Set())}
                 onIncome={setIncome}
                 onRestart={restart}
                 onBack={() => setAt(total - 1)}
@@ -337,12 +372,24 @@ function QuestionCard({
 function Result({
   result,
   income,
+  contactPhone,
+  questions,
+  answers,
+  off,
+  onToggle,
+  onCountAll,
   onIncome,
   onRestart,
   onBack,
 }: {
   result: ReturnType<typeof checkupResult>;
   income: number;
+  contactPhone: string;
+  questions: CheckupQuestion[];
+  answers: CheckupAnswers;
+  off: Set<string>;
+  onToggle: (id: string) => void;
+  onCountAll: () => void;
   onIncome: (next: number) => void;
   onRestart: () => void;
   onBack: () => void;
@@ -371,6 +418,18 @@ function Result({
           <span className="font-semibold tabular-nums text-gray-700">{baht(result.spend * 12)}</span> บาท
         </p>
       </div>
+
+      {/*
+        สวิตช์คิด/ไม่คิดรายข้อ — กดแล้วทุกอย่างข้างล่างคิดใหม่ทันที ไม่มีปุ่มยืนยัน
+        (ยอดรวม · กราฟ · เกณฑ์ 30% · คะแนน · คำแนะนำ อ่านจากผลชุดเดียวกันหมด)
+      */}
+      <ExcludeList
+        questions={questions}
+        answers={answers}
+        off={off}
+        onToggle={onToggle}
+        onCountAll={onCountAll}
+      />
 
       {/* เงินไปไหนบ้าง — แท่งเทียบสัดส่วน ทำด้วย CSS ล้วนเหมือนกราฟในหลังบ้าน */}
       <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-black/5 md:p-8">
@@ -423,6 +482,16 @@ function Result({
           onPick={onIncome}
         />
       </div>
+
+      {/*
+        เกณฑ์คงเหลือสุทธิ 30% — อ้างอิงแนวทางแก้ไขปัญหาหนี้สินภาครัฐ
+        เจ้าของเว็บเขียนข้อความมาเอง 26 ส.ค. 2026 · **ห้ามแก้ถ้อยคำเองโดยไม่ถาม**
+        เพราะเป็นการอ้างอิงเกณฑ์ราชการ ไม่ใช่คำโปรยที่คิดขึ้นเอง
+
+        ฐานคิดคือ "รายได้ − รายจ่ายทั้ง 21 ข้อ" (เจ้าของเว็บเลือกเอง) ซึ่งเข้มกว่าเกณฑ์
+        ราชการที่หักเฉพาะรายการหักหนี้ — จึงบอกฐานคิดไว้ใต้ตัวเลขให้เห็นชัด ๆ
+      */}
+      {result.passNet !== null && <NetRuleCard result={result} contactPhone={contactPhone} />}
 
       {/* คะแนน — โผล่เฉพาะตอนใส่รายรับแล้ว */}
       {result.score !== null && result.level && (
@@ -509,6 +578,213 @@ function Result({
         ผลตรวจนี้เป็นการประเมินเบื้องต้นจากตัวเลขที่กรอกเอง ไม่ใช่คำแนะนำทางการเงินรายบุคคล
         · อยากคุยรายละเอียดติดต่อเจ้าหน้าที่สหกรณ์ได้เลย
       </p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * เกณฑ์เงินเดือนคงเหลือสุทธิ 30%
+ * ------------------------------------------------------------------ */
+
+function NetRuleCard({
+  result,
+  contactPhone,
+}: {
+  result: ReturnType<typeof checkupResult>;
+  contactPhone: string;
+}) {
+  const pass = result.passNet === true;
+  // ปัดลงเสมอ — 29.6% ต้องไม่แสดงเป็น 30% ทั้งที่ยังไม่ผ่านเกณฑ์
+  const percent = Math.floor(result.netRatio * 100);
+  const minPercent = Math.round(NET_MIN_RATIO * 100);
+
+  return (
+    <div
+      className={`rounded-3xl p-6 shadow-sm ring-1 md:p-8 ${
+        pass ? "bg-emerald-50 ring-emerald-200" : "bg-rose-50 ring-rose-200"
+      }`}
+    >
+      <div className="flex items-start gap-4">
+        <span className="text-4xl leading-none" aria-hidden>
+          {pass ? "🟢" : "🔴"}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className={`text-lg font-bold md:text-xl ${pass ? "text-emerald-800" : "text-rose-800"}`}>
+            {pass ? "สภาพคล่องทางการเงินของคุณอยู่ในเกณฑ์ดี" : "เงินเดือนคงเหลือต่ำกว่าเกณฑ์มาตรฐาน"}
+          </h3>
+
+          <p className="mt-2 leading-relaxed text-gray-700">
+            {pass ? (
+              <>
+                คุณมีเงินเดือนคงเหลือสุทธิ{" "}
+                <b className="tabular-nums text-emerald-800">{percent}%</b>{" "}
+                (ไม่น้อยกว่า {minPercent}% ของรายได้ทั้งหมด)
+                ซึ่งเพียงพอต่อการดำรงชีพและมีสภาพคล่องทางการเงินที่ปลอดภัย
+              </>
+            ) : (
+              <>
+                คุณมีเงินเดือนคงเหลือสุทธิเพียง{" "}
+                <b className="tabular-nums text-rose-800">{percent}%</b>{" "}
+                ซึ่งน้อยกว่าเกณฑ์มาตรฐาน {minPercent}% อาจส่งผลกระทบต่อการดำรงชีพ
+              </>
+            )}
+          </p>
+
+          {/* บอกฐานคิดเสมอ — ไม่งั้นสมาชิกเอา % นี้ไปเทียบกับที่หน่วยงานคิดให้แล้วงงว่าทำไมไม่ตรง */}
+          <p className="mt-2 text-xs text-gray-500">
+            คิดจาก รายได้ {baht(result.income)} บาท − รายจ่ายที่ตอบไว้ทั้งหมด {baht(result.spend)} บาท
+            = คงเหลือ {baht(result.left)} บาท
+          </p>
+
+          {!pass && (
+            <div className="mt-4 space-y-3 border-t border-rose-200 pt-4">
+              <div>
+                <p className="text-sm font-bold text-rose-900">คำแนะนำเบื้องต้น</p>
+                <p className="mt-1 text-sm leading-relaxed text-gray-700">
+                  ควรลดภาระค่าใช้จ่ายที่ไม่จำเป็น หรือปรับโครงสร้างหนี้
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-rose-900">ขอคำปรึกษา</p>
+                <p className="mt-1 text-sm leading-relaxed text-gray-700">
+                  แนะนำติดต่อ <b>เจ้าหน้าที่สหกรณ์</b>{" "}
+                  เพื่อรับคำแนะนำและวางแผนแก้ไขปัญหาหนี้สินร่วมกัน
+                </p>
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  {contactPhone && (
+                    <a
+                      href={`tel:${contactPhone.replace(/[^0-9+]/g, "")}`}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-rose-700"
+                    >
+                      <Phone className="h-4 w-4" /> โทร {contactPhone}
+                    </a>
+                  )}
+                  <Link
+                    href="/about/contact/"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-700 ring-1 ring-rose-200 transition hover:bg-rose-100"
+                  >
+                    ช่องทางติดต่อทั้งหมด <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * เลือกว่าจะคิดข้อไหนบ้าง — กดเล่นได้ที่หน้าสรุป
+ * ------------------------------------------------------------------ */
+
+function ExcludeList({
+  questions,
+  answers,
+  off,
+  onToggle,
+  onCountAll,
+}: {
+  questions: CheckupQuestion[];
+  answers: CheckupAnswers;
+  off: Set<string>;
+  onToggle: (id: string) => void;
+  onCountAll: () => void;
+}) {
+  /*
+    ข้อที่ตอบ 0 ไม่มีผลกับยอดรวมอยู่แล้ว กดเปิดปิดก็ไม่เกิดอะไร — ซ่อนไว้ท้ายรายการ
+    ดีกว่าเอามาปนกับข้อที่มีตัวเลข เพราะ 21 แถวยาวเกินกว่าจะกวาดตาหาเจอ
+  */
+  const filled = questions.filter((q) => (answers[q.id] ?? 0) > 0);
+  const empty = questions.length - filled.length;
+
+  // ตัดออกไปแล้วประหยัดได้เท่าไร — ตัวเลขที่คนกดเล่นอยากเห็นที่สุด
+  const cut = filled
+    .filter((q) => off.has(q.id))
+    .reduce((sum, q) => sum + (answers[q.id] ?? 0), 0);
+
+  if (filled.length === 0) return null;
+
+  return (
+    <div className="no-print rounded-3xl bg-white p-6 shadow-sm ring-1 ring-black/5 md:p-8">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="text-base font-bold text-gray-800">ลองตัดออกดูสิ ว่าจะเหลือเท่าไร</h3>
+        {cut > 0 && (
+          <button
+            type="button"
+            onClick={onCountAll}
+            className="text-xs font-medium text-gray-400 transition hover:text-brand-700"
+          >
+            คิดทุกข้อเหมือนเดิม
+          </button>
+        )}
+      </div>
+      <p className="mt-1 text-sm text-gray-500">
+        กดสวิตช์ปิดข้อไหนก็ได้ แล้วทุกอย่างข้างล่างจะคิดใหม่ให้ทันที — คำตอบเดิมไม่หาย
+        กดเปิดกลับได้ตลอด
+      </p>
+
+      {cut > 0 && (
+        <p className="mt-3 rounded-xl bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
+          ตัดออก {off.size} ข้อ ประหยัดได้เดือนละ{" "}
+          <b className="tabular-nums">{baht(cut)}</b> บาท · ปีละ{" "}
+          <b className="tabular-nums">{baht(cut * 12)}</b> บาท
+        </p>
+      )}
+
+      <ul className="mt-4 divide-y divide-gray-100">
+        {filled.map((question) => {
+          const tone = GROUP_TONE[question.group];
+          const skipped = off.has(question.id);
+          return (
+            <li key={question.id}>
+              {/*
+                ทั้งแถวเป็นปุ่มเดียว — นิ้วบนมือถือกดตรงไหนของแถวก็ได้ ไม่ต้องเล็งที่สวิตช์
+                (สวิตช์กว้าง 44px ซึ่งเล็กเกินกว่าจะเป็นเป้ากดเดี่ยว ๆ)
+              */}
+              <button
+                type="button"
+                onClick={() => onToggle(question.id)}
+                aria-pressed={!skipped}
+                className="flex w-full items-center gap-3 py-2.5 text-left transition hover:bg-gray-50"
+              >
+                {/* สวิตช์ — สีตามกลุ่มตอนเปิด สีเทาตอนปิด */}
+                <span
+                  aria-hidden
+                  className={`relative h-6 w-11 shrink-0 rounded-full transition ${
+                    skipped ? "bg-gray-300" : tone.bar
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                      skipped ? "left-0.5" : "left-[1.375rem]"
+                    }`}
+                  />
+                </span>
+
+                <span className={`min-w-0 flex-1 text-sm ${skipped ? "text-gray-400 line-through" : "text-gray-700"}`}>
+                  {question.text}
+                </span>
+
+                <span
+                  className={`shrink-0 text-sm font-semibold tabular-nums ${
+                    skipped ? "text-gray-300 line-through" : tone.text
+                  }`}
+                >
+                  {baht(answers[question.id] ?? 0)}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      {empty > 0 && (
+        <p className="mt-3 text-xs text-gray-400">
+          อีก {empty} ข้อที่ตอบไว้ว่าไม่มี ไม่ได้เอามาคิดอยู่แล้ว จึงไม่ต้องแสดงตรงนี้
+        </p>
+      )}
     </div>
   );
 }

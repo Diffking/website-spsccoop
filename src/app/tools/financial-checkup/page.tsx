@@ -6,7 +6,7 @@ import PageTracker from "@/components/site/PageTracker";
 import BackToTop from "@/components/ui/BackToTop";
 import FinancialCheckup from "@/components/tools/FinancialCheckup";
 import { pageMetadata } from "@/lib/seo";
-import { getSetting } from "@/lib/settings";
+import { getSetting, getSiteInfo } from "@/lib/settings";
 import { CHECKUP_IMAGES_KEY, CHECKUP_QUESTIONS_KEY, type CheckupImages } from "@/lib/programPages";
 import { fillQuestions } from "@/lib/financialCheckup";
 
@@ -24,9 +24,11 @@ export const dynamic = "force-dynamic";
 export const generateMetadata = () => pageMetadata("/tools/financial-checkup");
 
 export default async function FinancialCheckupPage() {
-  const [images, saved] = await Promise.all([
+  const [images, saved, site] = await Promise.all([
     getSetting<CheckupImages>(CHECKUP_IMAGES_KEY, {}),
     getSetting<unknown>(CHECKUP_QUESTIONS_KEY, null),
+    // เบอร์สหกรณ์ที่โชว์ตอนแนะนำให้ขอคำปรึกษา — แอดมินแก้ได้ที่ หลังบ้าน → ส่วนท้ายเว็บ
+    getSiteInfo(),
   ]);
   // ยังไม่เคยแก้จากหลังบ้าน = ใช้ชุดตั้งต้น · อ่านไม่ออกก็ถอยกลับชุดตั้งต้นเหมือนกัน
   const questions = fillQuestions(saved);
@@ -54,7 +56,11 @@ export default async function FinancialCheckupPage() {
             >
               <ArrowLeft className="h-4 w-4" /> กลับหน้าแรก
             </Link>
-            <FinancialCheckup questions={questions} images={images} />
+            <FinancialCheckup
+              questions={questions}
+              images={images}
+              contactPhone={site.phone ?? ""}
+            />
           </div>
         </section>
       </main>
