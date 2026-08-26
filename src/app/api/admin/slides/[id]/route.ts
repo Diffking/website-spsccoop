@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireWrite } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
 import { isEventType } from "@/lib/homeItems";
-import { parseDay } from "../route";
+import { parseDay, requeueSlides } from "../route";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 
 type Params = { params: Promise<{ id: string }> };
@@ -83,6 +83,16 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   const item = await db.slide.update({ where: { id }, data });
+
+  /*
+    แก้วันหยุดเผยแพร่เมื่อไหร่ คิวแสดงผลจัดใหม่เองทันที (ดู src/lib/slideQueue.ts)
+    หน้านี้บันทึกให้เองทันทีที่คลิกออกจากช่อง ตัวจัดคิวจึงทำงานตอนนั้นเอง ไม่มีปุ่มบันทึกแยก
+
+    ⚠️ เช็คเฉพาะช่องวัน — แก้หัวข้อ/คำอธิบาย/สลับซ่อน-แสดง ไม่ต้องจัดคิวใหม่
+    ไม่งั้นลำดับที่เจ้าหน้าที่จัดเองด้วยปุ่มขึ้น/ลงจะโดนรีเซ็ตทุกครั้งที่พิมพ์อะไรก็ตาม
+  */
+  if (body.startsAt !== undefined || body.endsAt !== undefined) await requeueSlides();
+
   // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
   purgeEverySite();
   return NextResponse.json({ item });

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
+  CalendarClock,
   CalendarDays,
   Check,
   ChevronDown,
@@ -11,7 +12,10 @@ import {
   Eye,
   EyeOff,
   ImagePlus,
+  // Infinity ชนกับ Infinity ของ JS ต้องเปลี่ยนชื่อ ไม่งั้นมันจะบังค่าจริงทั้งไฟล์
+  Infinity as InfinityIcon,
   Link2,
+  ListOrdered,
   Loader2,
   Settings2,
   Sparkles,
@@ -21,6 +25,7 @@ import AssetImage from "@/components/admin/AssetImage";
 import RichText from "@/components/admin/RichText";
 import ThaiDatePicker from "@/components/admin/ThaiDatePicker";
 import UploadProgress from "@/components/admin/UploadProgress";
+import { alreadyQueued, hasEnd, queuedIds } from "@/lib/slideQueue";
 import { uploadWithProgress, type UploadPhase } from "@/lib/uploadClient";
 
 /**
@@ -233,6 +238,115 @@ export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; a
   let live = 0;
   const positions = list.map((slide) => (isLive(slide) ? ++live : null));
 
+  /*
+    สองกลุ่มตามที่เจ้าของเว็บสั่งไว้ 25 ส.ค. 2026 — **มีวันหยุดเผยแพร่มาก่อนเสมอ**
+    เก็บ index เดิมติดไปด้วย เพราะปุ่มขึ้น/ลงกับเลขลำดับยังอ้างจากลำดับจริงทั้งชุด
+  */
+  const numbered = list.map((slide, i) => ({ slide, i }));
+  const withEnd = numbered.filter(({ slide }) => hasEnd(slide.endsAt));
+  const withoutEnd = numbered.filter(({ slide }) => !hasEnd(slide.endsAt));
+  // คิวตรงกับกฎอยู่แล้วหรือยัง — ตรงอยู่ก็ไม่ต้องโชว์ปุ่มให้รกหน้าจอ
+  const queued = alreadyQueued(list);
+
+  /** จัดคิวใหม่ทั้งชุด — ใช้ตอนที่เพิ่งกดขึ้น/ลงเองจนคิวเพี้ยน อยากดึงกลับมาตามวัน */
+  async function requeue() {
+    setBusy("row");
+    setStatus(null);
+    const response = await fetch("/api/admin/slides/", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order: queuedIds(list) }),
+    });
+    setBusy(null);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setStatus({ kind: "error", text: data.error ?? "จัดคิวไม่สำเร็จ" });
+      return;
+    }
+    setStatus({ kind: "ok", text: "จัดคิวใหม่แล้ว — ตัวที่ใกล้หมดเขตขึ้นก่อน" });
+    router.refresh();
+  }
+
+  /** สไลด์หนึ่งใบพร้อมปุ่มจัดการ — แยกมาเป็นฟังก์ชันเพราะตอนนี้วาดสองกลุ่ม ไม่ใช่ก้อนเดียวอีกต่อไป */
+  const slideRow = (slide: SlideRow, i: number) => (
+      <motion.div
+        key={slide.id}
+        layout
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, height: 0 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+        className="edit-block"
+      >
+        <SlideCard
+          slide={slide}
+          position={positions[i]}
+          onChange={(body) => patch(slide.id, body)}
+        />
+
+        {/* ปุ่มจัดการ — โผล่ตอนเอาเมาส์ชี้ที่สไลด์ เหมือน EditUI ของหน้าเนื้อหา */}
+        <div className="edit-tools">
+          <button
+            type="button"
+            title="เลื่อนขึ้น"
+            disabled={busy !== null || i === 0}
+            onClick={() => patch(slide.id, { move: "up" })}
+            className="rounded p-1 transition hover:bg-white/15 disabled:opacity-25"
+          >
+            <ChevronUp className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            title="เลื่อนลง"
+            disabled={busy !== null || i === list.length - 1}
+            onClick={() => patch(slide.id, { move: "down" })}
+            className="rounded p-1 transition hover:bg-white/15 disabled:opacity-25"
+          >
+            <ChevronDown className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            title={slide.published ? "ซ่อนจากหน้าเว็บ" : "แสดงบนหน้าเว็บ"}
+            disabled={busy !== null}
+            onClick={() => patch(slide.id, { published: !slide.published })}
+            className="rounded p-1 transition hover:bg-white/15"
+          >
+            {slide.published ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+          </button>
+          <button
+            type="button"
+            title="ลิงก์ วันที่ และปฏิทิน"
+            onClick={() => setOpenId(openId === slide.id ? null : slide.id)}
+            className={`rounded p-1 transition hover:bg-white/15 ${
+              openId === slide.id ? "bg-white/20" : ""
+            }`}
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            title="ลบสไลด์นี้"
+            disabled={busy !== null}
+            onClick={() => {
+              if (confirm(`ลบสไลด์ “${slide.title}” ถาวร?`))
+                void row(slide.id, { method: "DELETE" });
+            }}
+            className="rounded p-1 transition hover:bg-red-500 hover:text-white"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {openId === slide.id && (
+          <SlideSettings
+            slide={slide}
+            onChange={(body) => patch(slide.id, body)}
+            onReplaceImage={(url) => patch(slide.id, { imageUrl: url })}
+          />
+        )}
+      </motion.div>
+  );
+
   return (
     <section className="space-y-3">
       <input
@@ -257,6 +371,22 @@ export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; a
         ไม่ต้องหาปุ่มบันทึก
       </p>
 
+      {/*
+        คิวจัดให้เองทุกครั้งที่แก้วันแล้วบันทึก — ปุ่มนี้จึงโผล่เฉพาะตอนที่คิวเพี้ยน
+        ส่วนใหญ่เกิดจากเพิ่งกดปุ่มขึ้น/ลงเอง หรือข้อมูลเก่าที่มีมาก่อนจะมีตัวจัดคิว
+      */}
+      {!queued && list.length > 1 && (
+        <button
+          type="button"
+          onClick={() => void requeue()}
+          disabled={busy !== null}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 ring-1 ring-amber-200 transition hover:bg-amber-100 disabled:opacity-60"
+        >
+          <ListOrdered className="h-3.5 w-3.5" />
+          ลำดับตอนนี้ยังไม่ตรงกับคิว — กดเพื่อจัดใหม่ตามวันหยุดเผยแพร่
+        </button>
+      )}
+
       {status && (
         <p
           className={`rounded-lg px-3 py-2 text-sm ${
@@ -275,85 +405,30 @@ export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; a
         </p>
       )}
 
+      {/*
+        หัวกลุ่ม — บอกเจ้าหน้าที่ว่าทำไมสไลด์ถึงเรียงอย่างนี้ ไม่งั้นจะนึกว่าลำดับที่จัดไว้เองหาย
+        เขียนจำนวนต่อท้ายด้วย จะได้รู้ว่ากลุ่มไหนมีกี่ใบโดยไม่ต้องนับเอง
+      */}
+      {withEnd.length > 0 && (
+        <p className="flex items-center gap-2 pt-1 text-xs font-semibold text-brand-800">
+          <CalendarClock className="h-3.5 w-3.5" />
+          มีวันหยุดเผยแพร่ · เรียงวันที่ใกล้ถึงก่อน
+          <span className="font-normal text-gray-400">{withEnd.length} รายการ</span>
+        </p>
+      )}
       <AnimatePresence initial={false}>
-        {list.map((slide, i) => (
-          <motion.div
-            key={slide.id}
-            layout
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            className="edit-block"
-          >
-            <SlideCard
-              slide={slide}
-              position={positions[i]}
-              onChange={(body) => patch(slide.id, body)}
-            />
+        {withEnd.map(({ slide, i }) => slideRow(slide, i))}
+      </AnimatePresence>
 
-            {/* ปุ่มจัดการ — โผล่ตอนเอาเมาส์ชี้ที่สไลด์ เหมือน EditUI ของหน้าเนื้อหา */}
-            <div className="edit-tools">
-              <button
-                type="button"
-                title="เลื่อนขึ้น"
-                disabled={busy !== null || i === 0}
-                onClick={() => patch(slide.id, { move: "up" })}
-                className="rounded p-1 transition hover:bg-white/15 disabled:opacity-25"
-              >
-                <ChevronUp className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                title="เลื่อนลง"
-                disabled={busy !== null || i === list.length - 1}
-                onClick={() => patch(slide.id, { move: "down" })}
-                className="rounded p-1 transition hover:bg-white/15 disabled:opacity-25"
-              >
-                <ChevronDown className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                title={slide.published ? "ซ่อนจากหน้าเว็บ" : "แสดงบนหน้าเว็บ"}
-                disabled={busy !== null}
-                onClick={() => patch(slide.id, { published: !slide.published })}
-                className="rounded p-1 transition hover:bg-white/15"
-              >
-                {slide.published ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-              </button>
-              <button
-                type="button"
-                title="ลิงก์ วันที่ และปฏิทิน"
-                onClick={() => setOpenId(openId === slide.id ? null : slide.id)}
-                className={`rounded p-1 transition hover:bg-white/15 ${
-                  openId === slide.id ? "bg-white/20" : ""
-                }`}
-              >
-                <Settings2 className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                title="ลบสไลด์นี้"
-                disabled={busy !== null}
-                onClick={() => {
-                  if (confirm(`ลบสไลด์ “${slide.title}” ถาวร?`))
-                    void row(slide.id, { method: "DELETE" });
-                }}
-                className="rounded p-1 transition hover:bg-red-500 hover:text-white"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-
-            {openId === slide.id && (
-              <SlideSettings
-                slide={slide}
-                onChange={(body) => patch(slide.id, body)}
-                onReplaceImage={(url) => patch(slide.id, { imageUrl: url })}
-              />
-            )}
-          </motion.div>
-        ))}
+      {withoutEnd.length > 0 && (
+        <p className="flex items-center gap-2 pt-3 text-xs font-semibold text-gray-500">
+          <InfinityIcon className="h-3.5 w-3.5" />
+          ไม่มีวันหยุดเผยแพร่ — แสดงไปเรื่อย ๆ
+          <span className="font-normal text-gray-400">{withoutEnd.length} รายการ</span>
+        </p>
+      )}
+      <AnimatePresence initial={false}>
+        {withoutEnd.map(({ slide, i }) => slideRow(slide, i))}
       </AnimatePresence>
 
       {/* เพิ่มสไลด์ — อัปรูปแล้วได้สไลด์เลย ไม่ต้องกรอกฟอร์มก่อน */}
