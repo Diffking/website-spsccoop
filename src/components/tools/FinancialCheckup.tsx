@@ -357,19 +357,25 @@ function QuestionCard({
         กดที่ภาพแล้วขยายเต็มจอได้อีกชั้น สำหรับใบที่มีตัวหนังสือเยอะ
       */}
       <div
-        className={`relative grid h-[38vh] max-h-[420px] min-h-[190px] place-items-center overflow-hidden ${tone.bg}`}
+        className={`relative grid h-[42vh] max-h-[400px] min-h-[210px] place-items-center overflow-hidden ${tone.bg}`}
       >
         {image ? (
           <>
+            {/*
+              ⚠️ **ภาพต้องกว้างตามสัดส่วนจริง (`w-auto`) ไม่ใช่ `w-full`**
+              ของเดิมใส่ `w-full h-full` ทำให้กล่องของภาพกว้างเต็มการ์ด (เกือบ 1,000px)
+              ทั้งที่ไฟล์จริงกว้างแค่ 600px — ภาพเลยถูกดันให้เต็มความกว้าง แล้วหัวท้ายหาย
+              · `w-auto` ทำให้กล่องเท่าสัดส่วนภาพพอดี เห็นครบใบ ไม่มีแถบดำข้าง ๆ ด้วย
+            */}
             <button
               type="button"
               onClick={() => setZoom(true)}
               title="กดเพื่อดูภาพเต็มจอ"
-              className="h-full w-full cursor-zoom-in"
+              className="h-full cursor-zoom-in"
             >
               {/* รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image} alt="" className="h-full w-full object-contain" />
+              <img src={image} alt="" className="h-full w-auto max-w-full object-contain" />
             </button>
             <span
               aria-hidden
