@@ -15,9 +15,11 @@ export default async function Page() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
       <h1 className="mb-1 text-xl font-bold text-gray-800">บริการของเรา</h1>
-      <p className="mb-5 text-sm text-gray-500">แถวไอคอนบริการกลางหน้าแรก</p>
+      <p className="mb-5 text-sm text-gray-500">
+        แถวไอคอนบริการกลางหน้าแรก — ใส่รูปโลโก้แทนไอคอนก็ได้ (ใส่รูปแล้วรูปจะมาก่อนไอคอนเสมอ)
+      </p>
 
-      <HomeItemsManager grouped section="services" items={items} fields={["icon", "href"]} titleLabel="ชื่อบริการ" />
+      <HomeItemsManager grouped section="services" items={items} fields={["icon", "imageUrl", "href"]} titleLabel="ชื่อบริการ" />
     </main>
   );
 }

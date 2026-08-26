@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireWrite } from "@/lib/apiAuth";
 import { saveSetting } from "@/lib/settings";
-import { CHECKUP_IMAGES_KEY, CHECKUP_LOGO_KEY, CHECKUP_QUESTIONS_KEY } from "@/lib/programPages";
+import {
+  CHECKUP_IMAGES_KEY,
+  CHECKUP_INTRO_KEY,
+  CHECKUP_LOGO_KEY,
+  CHECKUP_QUESTIONS_KEY,
+  fillIntro,
+} from "@/lib/programPages";
 import { fillQuestions } from "@/lib/financialCheckup";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 import { getSetting } from "@/lib/settings";
@@ -24,7 +30,13 @@ export async function PUT(request: Request) {
     checkupImages?: Record<string, unknown>;
     checkupQuestions?: unknown;
     checkupLogo?: unknown;
+    checkupIntro?: unknown;
   };
+
+  // ข้อความหน้าแรก — ผ่าน fillIntro ก่อนเสมอ ช่องไหนว่างจะถอยกลับไปใช้ของตั้งต้นให้เอง
+  if (body.checkupIntro !== undefined) {
+    await saveSetting(CHECKUP_INTRO_KEY, fillIntro(body.checkupIntro));
+  }
 
   /*
     โลโก้ — รับเฉพาะที่อยู่รูปในเว็บนี้ (`/uploads/…`) กันคนฝังที่อยู่รูปจากเว็บอื่นมาโผล่ในหน้าเรา

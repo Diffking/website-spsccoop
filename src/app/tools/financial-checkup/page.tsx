@@ -7,8 +7,10 @@ import { pageMetadata } from "@/lib/seo";
 import { getSetting, getSiteInfo } from "@/lib/settings";
 import {
   CHECKUP_IMAGES_KEY,
+  CHECKUP_INTRO_KEY,
   CHECKUP_LOGO_KEY,
   CHECKUP_QUESTIONS_KEY,
+  fillIntro,
   type CheckupImages,
 } from "@/lib/programPages";
 import { fillQuestions } from "@/lib/financialCheckup";
@@ -33,10 +35,11 @@ export const dynamic = "force-dynamic";
 export const generateMetadata = () => pageMetadata("/tools/financial-checkup");
 
 export default async function FinancialCheckupPage() {
-  const [images, saved, logo, site] = await Promise.all([
+  const [images, saved, logo, intro, site] = await Promise.all([
     getSetting<CheckupImages>(CHECKUP_IMAGES_KEY, {}),
     getSetting<unknown>(CHECKUP_QUESTIONS_KEY, null),
     getSetting<string>(CHECKUP_LOGO_KEY, ""),
+    getSetting<unknown>(CHECKUP_INTRO_KEY, null),
     // เบอร์สหกรณ์ที่โชว์ตอนแนะนำให้ขอคำปรึกษา — แอดมินแก้ได้ที่ หลังบ้าน → ส่วนท้ายเว็บ
     getSiteInfo(),
   ]);
@@ -70,6 +73,7 @@ export default async function FinancialCheckupPage() {
             questions={questions}
             images={images}
             logo={logo}
+            intro={fillIntro(intro)}
             contactPhone={site.phone ?? ""}
           />
         </div>

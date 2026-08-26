@@ -68,6 +68,65 @@ export const CHECKUP_IMAGES_KEY = "checkupImages";
  */
 export const CHECKUP_QUESTIONS_KEY = "checkupQuestions";
 
+/**
+ * ข้อความหน้าแรกของโปรแกรม — เจ้าหน้าที่แก้เองได้ที่ หลังบ้าน → หน้าโปรแกรม
+ *
+ * ⚠️ **`{จำนวนข้อ}` เป็นคำแทนที่** ระบบเปลี่ยนให้เป็นจำนวนคำถามจริงตอนแสดงผล
+ * ห้ามพิมพ์เลขตายตัวลงไป ไม่งั้นวันที่เพิ่ม/ลบคำถาม หน้าแรกจะบอกเลขผิดโดยไม่มีใครรู้
+ */
+export type CheckupIntro = {
+  heading: string;
+  /** ย่อหน้าแรก */
+  lead: string;
+  /** ย่อหน้าที่สอง — เว้นว่างได้ */
+  detail: string;
+  /** บรรทัดวิธีใช้ในกรอบสีอ่อน */
+  tips: string[];
+};
+
+export const CHECKUP_INTRO_KEY = "checkupIntro";
+export const COUNT_TOKEN = "{จำนวนข้อ}";
+
+/** ถ้อยคำตั้งต้น — เจ้าของเว็บเขียนมาเอง 26 ส.ค. 2026 (ปรับเป็นภาษาทางการตามที่สั่ง) */
+export const DEFAULT_INTRO: CheckupIntro = {
+  heading: "ท่านเคยสังเกตหรือไม่ว่า เงินในกระเป๋าเริ่ม “มีอาการผิดปกติ” ใช้ไม่นานก็หมด",
+  lead: `ขอเชิญท่านร่วม “คัดกรองค่าใช้จ่าย” ประจำเดือน ผ่านคำถาม ${COUNT_TOKEN} ข้อ เปรียบเสมือนการวินิจฉัยเพื่อค้นหาจุดที่เงินไหลออกมากที่สุด`,
+  detail:
+    "เมื่อทราบว่า “จุดใดบอบช้ำ” หรือ “จุดใดรั่วไหล” สหกรณ์จะได้ร่วมวางแผนดูแลสุขภาพการเงินของท่าน ให้กลับมาแข็งแรงและฟื้นตัวได้เร็วขึ้น",
+  tips: [
+    "ตอบโดยเลื่อนแถบเลือกจำนวนเงิน ไม่ต้องพิมพ์ตัวเลข",
+    "ใช้เวลาประมาณ 3 นาที ย้อนกลับไปแก้ไขคำตอบเดิมได้ตลอด",
+    "ประมาณเป็นตัวเลขกลม ๆ ได้ ไม่จำเป็นต้องละเอียดถึงหลักบาท",
+  ],
+};
+
+/**
+ * อ่านข้อความที่แก้ไว้จากฐาน แล้วเติมส่วนที่ขาด
+ * ⚠️ ช่องไหนว่างหรืออ่านไม่ออก ให้ถอยกลับไปใช้ของตั้งต้น ไม่ใช่ปล่อยหน้าโล่ง
+ */
+export function fillIntro(raw: unknown): CheckupIntro {
+  const row = (raw ?? {}) as Record<string, unknown>;
+  const text = (value: unknown, fallback: string) => {
+    const clean = String(value ?? "").trim();
+    return clean || fallback;
+  };
+  const tips = Array.isArray(row.tips)
+    ? row.tips.map((t) => String(t ?? "").trim()).filter(Boolean)
+    : [];
+
+  return {
+    heading: text(row.heading, DEFAULT_INTRO.heading),
+    lead: text(row.lead, DEFAULT_INTRO.lead),
+    // ย่อหน้าที่สองเว้นว่างได้จริง ๆ จึงไม่ถอยกลับไปใช้ของตั้งต้น
+    detail: String(row.detail ?? DEFAULT_INTRO.detail).trim(),
+    tips: tips.length > 0 ? tips : DEFAULT_INTRO.tips,
+  };
+}
+
+/** ใส่จำนวนคำถามจริงแทนคำแทนที่ */
+export const withCount = (text: string, total: number) =>
+  text.split(COUNT_TOKEN).join(String(total));
+
 /** โลโก้ของโปรแกรม — เก็บที่อยู่รูปไว้ใน Setting · ไม่ได้ตั้ง = ใช้ไอคอนกระเป๋าเงินเหมือนเดิม */
 export const CHECKUP_LOGO_KEY = "checkupLogo";
 
