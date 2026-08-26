@@ -273,79 +273,101 @@ function MoneyScale({
 
 function Intro({ onStart, total, logo }: { onStart: () => void; total: number; logo: string }) {
   return (
-    <div className="rounded-3xl bg-gradient-to-b from-white to-brand-50/70 p-7 text-center shadow-sm ring-1 ring-brand-100 md:p-10">
-      {/*
-        โลโก้โปรแกรม — อัปได้ที่ หลังบ้าน → หน้าโปรแกรม · ยังไม่ได้อัป = ไอคอนกระเป๋าเงินเหมือนเดิม
-        กรอบสี่เหลี่ยมจัตุรัสขนาดคงที่ ไม่ว่าโลโก้จะสัดส่วนไหนก็ไม่ดันหน้าให้ขยับ
-      */}
-      {logo ? (
-        // รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={logo}
-          alt="โลโก้โปรแกรมคัดกรองค่าใช้จ่าย"
-          className="mx-auto h-28 w-28 rounded-2xl object-contain shadow-lg shadow-brand-600/15 md:h-32 md:w-32"
-        />
-      ) : (
-        <p className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/25">
-          <Wallet className="h-8 w-8" />
-        </p>
-      )}
-      {/*
-        ⚠️ **ถ้อยคำหน้าเริ่มต้นเจ้าของเว็บเขียนมาเอง (26 ส.ค. 2026) ห้ามแก้เองโดยไม่ถาม**
-        ตั้งใจใช้ภาษาแบบหมอคุยกับคนไข้ให้เข้ากับชื่อโปรแกรม "ตรวจสุขภาพการเงิน"
+    /*
+      จัดหน้าใหม่ 26 ส.ค. 2026 — เจ้าของเว็บทักว่า "ดูเกะกะไปหมด"
 
-        จำนวนข้อดึงจาก {total} ไม่ได้พิมพ์เลขตายตัว — เจ้าหน้าที่เพิ่ม/ลบคำถามได้ที่หลังบ้าน
-        ถ้าพิมพ์ "22" ทิ้งไว้ วันที่เพิ่มเป็น 23 ข้อ หน้าแรกจะบอกเลขผิดโดยไม่มีใครรู้
-      */}
-      <h2 className="mx-auto mt-5 max-w-2xl text-xl font-bold leading-snug text-brand-900 md:text-2xl">
-        เคยรู้สึกมั้ยครับว่าเงินในกระเป๋าเราเริ่ม &lsquo;มีอาการแปลกๆ&rsquo; แป๊บๆ ก็หมด?
-      </h2>
-      <p className="mx-auto mt-3 max-w-xl leading-relaxed text-gray-600">
-        มาลอง &lsquo;คัดกรองค่าใช้จ่าย&rsquo; ประจำเดือนไปด้วยกันผ่าน {total} คำถามง่ายๆ
-        เหมือนการวินิจฉัยเพื่อหาจุดที่เงินเราไหลออกมากที่สุด
-      </p>
-      <p className="mx-auto mt-2.5 max-w-xl leading-relaxed text-gray-600">
-        เมื่อรู้ว่า &lsquo;จุดไหนช้ำ&rsquo; หรือ &lsquo;ตรงไหนรั่ว&rsquo;
-        เราจะได้ช่วยกันวางแผนดูแลสุขภาพการเงินของคุณให้กลับมาร่างกายแข็งแรงและฟื้นตัวได้ไวขึ้นครับ
-      </p>
+      ⚠️ **ห้ามจัดทุกอย่างให้อยู่กึ่งกลางหมดทั้งหน้า** ของเดิมทั้งหัวข้อ ย่อหน้า และรายการ
+      ถูกจัดกึ่งกลาง ตาเลยไม่รู้จะเริ่มกวาดจากตรงไหน และย่อหน้าไทยที่จัดกึ่งกลาง
+      ขอบซ้ายจะฟันหลอทุกบรรทัด อ่านยากกว่าที่คิดมาก
+      · ตอนนี้เหลือกึ่งกลางเฉพาะ "หัวเรื่อง" กับ "ปุ่ม" ที่เหลือชิดซ้ายทั้งหมด
+    */
+    <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5">
+      {/* หัวเรื่อง — พื้นไล่สีอ่อน แยกให้เห็นชัดว่าเป็นคนละชั้นกับเนื้อหาที่ต้องอ่าน */}
+      <div className="border-b border-brand-100 bg-gradient-to-b from-brand-50/80 to-white px-6 py-8 text-center md:px-10">
+        {/*
+          โลโก้โปรแกรม — อัปได้ที่ หลังบ้าน → หน้าโปรแกรม · ยังไม่ได้อัป = ไอคอนกระเป๋าเงินเหมือนเดิม
+          กรอบสี่เหลี่ยมจัตุรัสขนาดคงที่ ไม่ว่าโลโก้จะสัดส่วนไหนก็ไม่ดันหน้าให้ขยับ
+        */}
+        {logo ? (
+          // รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logo}
+            alt="โลโก้โปรแกรมคัดกรองค่าใช้จ่าย"
+            className="mx-auto h-24 w-24 rounded-2xl object-contain shadow-md md:h-28 md:w-28"
+          />
+        ) : (
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/25">
+            <Wallet className="h-7 w-7" />
+          </span>
+        )}
 
-      <ul className="mx-auto mt-6 grid max-w-lg gap-2.5 text-left text-sm text-gray-600">
-        {[
-          "ตอบด้วยการเลื่อนสเกล ไม่ต้องพิมพ์ตัวเลข",
-          "ใช้เวลาประมาณ 3 นาที ย้อนกลับไปแก้ข้อเดิมได้ตลอด",
-          "ตัวเลขกลม ๆ พอ ไม่ต้องเป๊ะถึงหลักบาท",
-        ].map((line) => (
-          <li key={line} className="flex items-start gap-2">
-            <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
-            {line}
-          </li>
-        ))}
-      </ul>
+        {/*
+          ⚠️ **ถ้อยคำเจ้าของเว็บเขียนมาเอง ห้ามแก้เองโดยไม่ถาม** (ปรับให้เป็นทางการขึ้น
+          ตามที่สั่ง 26 ส.ค. 2026 · ใช้ "ท่าน" ให้ตรงกับคำถามทั้ง 22 ข้อ)
 
-      <button
-        type="button"
-        onClick={onStart}
-        className="mt-7 inline-flex items-center gap-2 rounded-full bg-brand-600 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-brand-600/25 transition hover:bg-brand-700"
-      >
-        เริ่มตรวจ <ArrowRight className="h-5 w-5" />
-      </button>
+          จำนวนข้อดึงจาก {total} ไม่ได้พิมพ์เลขตายตัว — เจ้าหน้าที่เพิ่ม/ลบคำถามได้ที่หลังบ้าน
+          ถ้าพิมพ์ "22" ทิ้งไว้ วันที่เพิ่มเป็น 23 ข้อ หน้าแรกจะบอกเลขผิดโดยไม่มีใครรู้
 
-      {/*
-        บอกเรื่องความเป็นส่วนตัวตั้งแต่ก่อนเริ่ม — คนไม่กล้าตอบเรื่องเงินถ้าไม่รู้ว่าข้อมูลไปไหน
-        ⚠️ ถ้อยคำเจ้าของเว็บเขียนมาเอง (26 ส.ค. 2026) ห้ามแก้เองโดยไม่ถาม
-        · ใช้อิโมจิกุญแจตามที่เขียนมา ไม่ใช่ไอคอนของไลบรารี
-        · ข้อความนี้เป็นจริงตามที่เขียน — โปรแกรมไม่มี fetch ไม่มี localStorage
+          text-balance = ให้เบราว์เซอร์เกลี่ยคำแต่ละบรรทัดให้ยาวใกล้กัน
+          กันคำโดดบรรทัดสุดท้ายอย่าง "ก็ หมด?" ที่เจ้าของเว็บเห็นแล้วสะดุดตา
+        */}
+        <h2 className="mx-auto mt-5 max-w-xl text-balance text-xl font-bold leading-snug text-brand-900 md:text-2xl">
+          ท่านเคยสังเกตหรือไม่ว่า เงินในกระเป๋าเริ่ม &ldquo;มีอาการผิดปกติ&rdquo; ใช้ไม่นานก็หมด
+        </h2>
+      </div>
+
+      {/* เนื้อหาที่ต้องอ่าน — ชิดซ้าย คุมความกว้างบรรทัดไม่ให้ยาวเกินสายตา */}
+      <div className="px-6 py-7 md:px-10">
+        <div className="mx-auto max-w-xl space-y-3 text-[15px] leading-loose text-gray-600">
+          <p>
+            ขอเชิญท่านร่วม &ldquo;คัดกรองค่าใช้จ่าย&rdquo; ประจำเดือน ผ่านคำถาม {total} ข้อ
+            เปรียบเสมือนการวินิจฉัยเพื่อค้นหาจุดที่เงินไหลออกมากที่สุด
+          </p>
+          <p>
+            เมื่อทราบว่า &ldquo;จุดใดบอบช้ำ&rdquo; หรือ &ldquo;จุดใดรั่วไหล&rdquo;
+            สหกรณ์จะได้ร่วมวางแผนดูแลสุขภาพการเงินของท่าน ให้กลับมาแข็งแรงและฟื้นตัวได้เร็วขึ้น
+          </p>
+        </div>
+
+        {/* วิธีใช้ 3 ข้อ — ใส่กรอบสีอ่อนแยกออกจากย่อหน้า จะได้ไม่กลืนกันเป็นพืดเดียว */}
+        <ul className="mx-auto mt-6 max-w-xl space-y-2.5 rounded-2xl bg-gray-50 p-5 text-sm text-gray-600">
+          {[
+            "ตอบโดยเลื่อนแถบเลือกจำนวนเงิน ไม่ต้องพิมพ์ตัวเลข",
+            "ใช้เวลาประมาณ 3 นาที ย้อนกลับไปแก้ไขคำตอบเดิมได้ตลอด",
+            "ประมาณเป็นตัวเลขกลม ๆ ได้ ไม่จำเป็นต้องละเอียดถึงหลักบาท",
+          ].map((line) => (
+            <li key={line} className="flex items-start gap-2.5">
+              <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
+              <span className="min-w-0">{line}</span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-7 text-center">
+          <button
+            type="button"
+            onClick={onStart}
+            className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-brand-600/25 transition hover:bg-brand-700"
+          >
+            เริ่มตรวจ <ArrowRight className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/*
+          ท้ายหน้า — ความเป็นส่วนตัวกับเครดิต อยู่ในกรอบเดียวกันใต้เส้นคั่น
+          จะได้อ่านเป็นก้อนเดียว ไม่ใช่ข้อความเล็ก ๆ ลอยกระจัดกระจาย
+
+          ⚠️ ข้อความความเป็นส่วนตัวเป็นจริงตามที่เขียน — โปรแกรมไม่มี fetch ไม่มี localStorage
           **ใครจะเพิ่มการเก็บคำตอบต้องแก้ข้อความนี้ก่อน** ไม่งั้นกลายเป็นโกหกสมาชิก
-      */}
-      <p className="mt-5 text-xs text-gray-400">
-        🔒 สบายใจได้ 100% คำตอบของคุณเป็นความลับและไม่ถูกจัดเก็บไว้ในระบบใดๆ
-      </p>
-
-      {/* เครดิตผู้พัฒนากับเวอร์ชัน — เจ้าของเว็บสั่งให้ใส่ 26 ส.ค. 2026 (ดู CHECKUP_VERSION) */}
-      <p className="mt-4 border-t border-brand-100 pt-4 text-xs text-gray-400">
-        {CHECKUP_CREDIT} · เวอร์ชัน {CHECKUP_VERSION}
-      </p>
+        */}
+        <div className="mx-auto mt-7 max-w-xl space-y-1 border-t border-gray-100 pt-5 text-center text-xs text-gray-400">
+          <p>🔒 คำตอบของท่านเป็นความลับ และไม่ถูกจัดเก็บไว้ในระบบใด ๆ</p>
+          <p>
+            {CHECKUP_CREDIT} · เวอร์ชัน {CHECKUP_VERSION}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
