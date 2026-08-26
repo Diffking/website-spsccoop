@@ -25,7 +25,7 @@ import {
   type CheckupQuestion,
   type ScaleKey,
 } from "@/lib/financialCheckup";
-import { PROGRAM_PAGES, type CheckupImages } from "@/lib/programPages";
+import { CHECKUP_CREDIT, CHECKUP_VERSION, PROGRAM_PAGES, type CheckupImages } from "@/lib/programPages";
 
 /**
  * หน้าโปรแกรมในหลังบ้าน — ดูที่อยู่ของแต่ละโปรแกรม และแก้ของในโปรแกรมนั้น
@@ -52,14 +52,17 @@ const newId = (taken: Set<string>) => {
 export default function ProgramsManager({
   initialQuestions,
   initialImages,
+  initialLogo,
   publicBase,
 }: {
   initialQuestions: CheckupQuestion[];
   initialImages: CheckupImages;
+  initialLogo: string;
   publicBase: string;
 }) {
   const [questions, setQuestions] = useState<CheckupQuestion[]>(initialQuestions);
   const [images, setImages] = useState<CheckupImages>(initialImages);
+  const [logo, setLogo] = useState(initialLogo);
   const [saved, setSaved] = useState(() => JSON.stringify(initialQuestions));
   const [busyId, setBusyId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -107,6 +110,27 @@ export default function ProgramsManager({
     if (await send({ checkupImages: next, checkupQuestions: questions })) {
       setSaved(JSON.stringify(questions));
       setStatus({ kind: "ok", text: "บันทึกภาพแล้ว" });
+    }
+  }
+
+  /** โลโก้บันทึกให้เองทันทีเหมือนภาพประกอบ — กดครั้งเดียวจบ ไม่มีอะไรให้พิมพ์ต่อ */
+  async function uploadLogo(file: File) {
+    setBusyId("__logo");
+    setStatus(null);
+    const form = new FormData();
+    form.append("file", file);
+    form.append("folder", "brand");
+    // โลโก้เป็นจัตุรัส 600px พอสำหรับกรอบ 128px บนจอความละเอียดสูง
+    form.append("maxEdge", "600");
+    const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", form, () => {});
+    setBusyId(null);
+    if (!result.ok) {
+      setStatus({ kind: "error", text: result.error });
+      return;
+    }
+    setLogo(result.data.url);
+    if (await send({ checkupLogo: result.data.url })) {
+      setStatus({ kind: "ok", text: "บันทึกโลโก้แล้ว" });
     }
   }
 
@@ -190,6 +214,66 @@ export default function ProgramsManager({
           </p>
         </section>
       ))}
+
+      {/* โลโก้โปรแกรม */}
+      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+        <h2 className="text-lg font-bold text-gray-800">โลโก้โปรแกรม</h2>
+        <p className="mt-1 text-sm text-gray-600">
+          ขึ้นที่หน้าแรกของโปรแกรมก่อนกดเริ่มตรวจ — ไม่ใส่ก็ได้ ระบบจะใช้ไอคอนกระเป๋าเงินแทน
+        </p>
+
+        <div className="mt-4 flex items-center gap-4">
+          <div className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-2xl bg-gray-50 ring-1 ring-gray-200">
+            {logo ? (
+              // รูปมาจากหลังบ้าน ไม่รู้ขนาดล่วงหน้า จึงใช้ <img> ธรรมดา
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logo} alt="" className="h-full w-full object-contain" />
+            ) : (
+              <ImagePlus className="h-6 w-6 text-gray-300" />
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="cursor-pointer rounded-lg bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100">
+              {busyId === "__logo" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : logo ? (
+                "เปลี่ยนโลโก้"
+              ) : (
+                "อัปโลโก้"
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void uploadLogo(file);
+                }}
+              />
+            </label>
+            {logo && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLogo("");
+                  void send({ checkupLogo: "" });
+                }}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition hover:bg-red-50 hover:text-red-600"
+              >
+                เอาโลโก้ออก
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* เครดิตกับเวอร์ชันอยู่ในโค้ด แก้ที่นี่ไม่ได้ — บอกไว้ให้รู้ว่าหน้าเว็บโชว์อะไรอยู่ */}
+        <p className="mt-4 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500">
+          ท้ายหน้าโปรแกรมแสดงว่า <b>{CHECKUP_CREDIT}</b> · เวอร์ชัน <b>{CHECKUP_VERSION}</b>{" "}
+          — สองอย่างนี้กำหนดไว้ในโค้ด แก้จากหน้านี้ไม่ได้ (เวอร์ชันต้องตรงกับโค้ดจริงเสมอ)
+        </p>
+      </section>
 
       {/* คำถาม */}
       <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">

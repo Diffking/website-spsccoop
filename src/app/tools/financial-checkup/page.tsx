@@ -5,7 +5,12 @@ import BackToTop from "@/components/ui/BackToTop";
 import FinancialCheckup from "@/components/tools/FinancialCheckup";
 import { pageMetadata } from "@/lib/seo";
 import { getSetting, getSiteInfo } from "@/lib/settings";
-import { CHECKUP_IMAGES_KEY, CHECKUP_QUESTIONS_KEY, type CheckupImages } from "@/lib/programPages";
+import {
+  CHECKUP_IMAGES_KEY,
+  CHECKUP_LOGO_KEY,
+  CHECKUP_QUESTIONS_KEY,
+  type CheckupImages,
+} from "@/lib/programPages";
 import { fillQuestions } from "@/lib/financialCheckup";
 
 /**
@@ -28,9 +33,10 @@ export const dynamic = "force-dynamic";
 export const generateMetadata = () => pageMetadata("/tools/financial-checkup");
 
 export default async function FinancialCheckupPage() {
-  const [images, saved, site] = await Promise.all([
+  const [images, saved, logo, site] = await Promise.all([
     getSetting<CheckupImages>(CHECKUP_IMAGES_KEY, {}),
     getSetting<unknown>(CHECKUP_QUESTIONS_KEY, null),
+    getSetting<string>(CHECKUP_LOGO_KEY, ""),
     // เบอร์สหกรณ์ที่โชว์ตอนแนะนำให้ขอคำปรึกษา — แอดมินแก้ได้ที่ หลังบ้าน → ส่วนท้ายเว็บ
     getSiteInfo(),
   ]);
@@ -60,7 +66,12 @@ export default async function FinancialCheckupPage() {
             <h1 className="text-sm font-semibold text-brand-800">ตรวจสุขภาพการเงิน</h1>
           </div>
 
-          <FinancialCheckup questions={questions} images={images} contactPhone={site.phone ?? ""} />
+          <FinancialCheckup
+            questions={questions}
+            images={images}
+            logo={logo}
+            contactPhone={site.phone ?? ""}
+          />
         </div>
       </main>
       <BackToTop />
