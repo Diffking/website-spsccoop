@@ -44,7 +44,11 @@ import {
   type RateRow,
 } from "@/lib/interestCalc";
 import { fadeSwap, STACKED } from "@/lib/slideMotion";
-import { INTEREST_CREDIT, INTEREST_VERSION } from "@/lib/programPages";
+import {
+  INTEREST_CREDIT,
+  INTEREST_VERSION,
+  type InterestIntro,
+} from "@/lib/programPages";
 
 /**
  * โปรแกรมคำนวณดอกเบี้ย — เดินทีละขั้น 3 ขั้น (เจ้าของเว็บสั่งไว้ 28 ส.ค. 2026)
@@ -157,6 +161,7 @@ const WORDS: Record<
 export default function InterestCalculator({
   loanRates,
   depositRates,
+  intro,
   contactPhone,
   lineId,
 }: {
@@ -168,6 +173,8 @@ export default function InterestCalculator({
   loanRates: RateRow[];
   /** อัตราดอกเบี้ยเงินรับฝาก — ชุดเดียวกับที่ขึ้นการ์ดหน้าแรก กรองมาแล้วเหมือนกัน */
   depositRates: RateRow[];
+  /** คำอธิบายว่าโปรแกรมนี้มีไว้ทำอะไร — เจ้าหน้าที่แก้ได้ที่ หลังบ้าน → หน้าโปรแกรม */
+  intro: InterestIntro;
   /** เบอร์สหกรณ์ — แอดมินแก้ได้ที่ หลังบ้าน → ส่วนท้ายเว็บ (ห้ามฝังเบอร์ไว้ในโค้ด) */
   contactPhone: string;
   /** ไอดีไลน์ของสหกรณ์ — มาจากที่เดียวกัน เว้นว่าง = ไม่แสดงบรรทัดไลน์ */
@@ -665,6 +672,40 @@ export default function InterestCalculator({
                     )}
                   </div>
                 </div>
+              </section>
+
+              {/*
+                คำอธิบายว่าโปรแกรมนี้มีไว้ทำอะไร — เจ้าของเว็บสั่งใส่ 28 ส.ค. 2026
+                ⚠️ **วางไว้ใต้เครื่องคิดเลข ไม่ใช่ขวางก่อนใช้งาน** คนที่มาเพื่อคิดเลขอย่างเดียว
+                ต้องได้กรอกทันที ส่วนคนที่อยากรู้ว่ามีไว้ทำอะไรก็เลื่อนลงมาอ่านได้
+                (ต่างจากโปรแกรมตรวจสุขภาพการเงินที่มีหน้าเปิดก่อนเริ่ม เพราะอันนั้นต้องตอบ 21 ข้อรวด)
+                ⚠️ ขึ้นเฉพาะขั้นที่ 1 — ขั้นที่ 2/3 คนกำลังดูตัวเลขของตัวเองอยู่ อย่าเอาบทความไปแทรก
+              */}
+              <section className="mt-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 md:p-7">
+                <h2 className="text-lg font-bold text-brand-900 md:text-xl">{intro.heading}</h2>
+                <p className="mt-2 text-base font-medium leading-relaxed text-gray-700">
+                  {intro.lead}
+                </p>
+
+                {intro.paragraphs.map((text) => (
+                  <p key={text} className="mt-3 text-base leading-relaxed text-gray-600">
+                    {text}
+                  </p>
+                ))}
+
+                {intro.tips.length > 0 && (
+                  <div className="mt-5 rounded-2xl bg-brand-50/70 px-4 py-4 ring-1 ring-brand-100">
+                    <p className="text-sm font-semibold text-brand-900">ลองฝึกดูแบบนี้</p>
+                    <ul className="mt-2 space-y-2">
+                      {intro.tips.map((tip) => (
+                        <li key={tip} className="flex items-start gap-2.5 text-sm text-brand-900/90">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
+                          <span className="leading-relaxed">{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </section>
             </motion.div>
           )}

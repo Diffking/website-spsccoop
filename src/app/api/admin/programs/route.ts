@@ -7,7 +7,9 @@ import {
   CHECKUP_LOGO_KEY,
   CHECKUP_QUESTIONS_KEY,
   INTEREST_DEPOSIT_HIDDEN_KEY,
+  INTEREST_INTRO_KEY,
   INTEREST_RATES_HIDDEN_KEY,
+  fillInterestIntro,
   fillIntro,
 } from "@/lib/programPages";
 import { readHiddenRates } from "@/lib/interestCalc";
@@ -36,6 +38,7 @@ export async function PUT(request: Request) {
     checkupIntro?: unknown;
     interestRatesHidden?: unknown;
     interestDepositHidden?: unknown;
+    interestIntro?: unknown;
   };
 
   /*
@@ -48,6 +51,12 @@ export async function PUT(request: Request) {
   }
   if (body.interestDepositHidden !== undefined) {
     await saveSetting(INTEREST_DEPOSIT_HIDDEN_KEY, readHiddenRates(body.interestDepositHidden));
+  }
+
+  // คำอธิบายของโปรแกรมคำนวณดอกเบี้ย — ผ่าน fillInterestIntro ก่อนเสมอ
+  // ช่องไหนว่างจะถอยกลับไปใช้ถ้อยคำตั้งต้นให้เอง หน้าเว็บจึงไม่มีทางโล่ง
+  if (body.interestIntro !== undefined) {
+    await saveSetting(INTEREST_INTRO_KEY, fillInterestIntro(body.interestIntro));
   }
 
   // ข้อความหน้าแรก — ผ่าน fillIntro ก่อนเสมอ ช่องไหนว่างจะถอยกลับไปใช้ของตั้งต้นให้เอง

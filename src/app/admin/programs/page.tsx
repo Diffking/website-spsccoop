@@ -11,7 +11,9 @@ import {
   CHECKUP_LOGO_KEY,
   CHECKUP_QUESTIONS_KEY,
   INTEREST_DEPOSIT_HIDDEN_KEY,
+  INTEREST_INTRO_KEY,
   INTEREST_RATES_HIDDEN_KEY,
+  fillInterestIntro,
   fillIntro,
   type CheckupImages,
 } from "@/lib/programPages";
@@ -32,7 +34,8 @@ export default async function AdminProgramsPage() {
   // ไม่ได้ดูแลส่วนนี้ก็ไม่ต้องเห็น — เมนูซ่อนให้แล้ว ตรงนี้กันคนพิมพ์ที่อยู่เข้ามาเอง
   if (!canArea(user, "programs")) redirect(ADMIN_HOME);
 
-  const [images, saved, logo, intro, rates, hiddenLoan, hiddenDeposit] = await Promise.all([
+  const [images, saved, logo, intro, rates, hiddenLoan, hiddenDeposit, interestIntro] =
+    await Promise.all([
     getSetting<CheckupImages>(CHECKUP_IMAGES_KEY, {}),
     getSetting<unknown>(CHECKUP_QUESTIONS_KEY, null),
     getSetting<string>(CHECKUP_LOGO_KEY, ""),
@@ -41,6 +44,7 @@ export default async function AdminProgramsPage() {
     getRates(),
     getSetting<unknown>(INTEREST_RATES_HIDDEN_KEY, []),
     getSetting<unknown>(INTEREST_DEPOSIT_HIDDEN_KEY, []),
+    getSetting<unknown>(INTEREST_INTRO_KEY, null),
   ]);
 
   return (
@@ -64,6 +68,7 @@ export default async function AdminProgramsPage() {
           depositRates={rates.deposit ?? []}
           initialHiddenLoan={readHiddenRates(hiddenLoan)}
           initialHiddenDeposit={readHiddenRates(hiddenDeposit)}
+          initialInterestIntro={fillInterestIntro(interestIntro)}
           publicBase={publicSiteUrl()}
         />
       </main>
