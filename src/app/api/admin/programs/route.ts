@@ -6,6 +6,7 @@ import {
   CHECKUP_INTRO_KEY,
   CHECKUP_LOGO_KEY,
   CHECKUP_QUESTIONS_KEY,
+  INTEREST_DEPOSIT_HIDDEN_KEY,
   INTEREST_RATES_HIDDEN_KEY,
   fillIntro,
 } from "@/lib/programPages";
@@ -34,15 +35,19 @@ export async function PUT(request: Request) {
     checkupLogo?: unknown;
     checkupIntro?: unknown;
     interestRatesHidden?: unknown;
+    interestDepositHidden?: unknown;
   };
 
   /*
-    อัตราดอกเบี้ยเงินกู้ที่ "ไม่ต้องขึ้น" เป็นปุ่มลัดในโปรแกรมคำนวณดอกเบี้ย
+    อัตราที่ "ไม่ต้องขึ้น" เป็นปุ่มลัดในโปรแกรมคำนวณดอกเบี้ย — เงินกู้กับเงินรับฝากคนละคีย์
     ⚠️ ผ่าน readHiddenRates ก่อนเสมอ — มันตัดค่าว่าง ตัดตัวซ้ำ และรับเฉพาะรายการข้อความ
     ส่งลิสต์ว่างมา = ให้ขึ้นทุกประเภท (ไม่ได้แปลว่า "ไม่เปลี่ยนอะไร")
   */
   if (body.interestRatesHidden !== undefined) {
     await saveSetting(INTEREST_RATES_HIDDEN_KEY, readHiddenRates(body.interestRatesHidden));
+  }
+  if (body.interestDepositHidden !== undefined) {
+    await saveSetting(INTEREST_DEPOSIT_HIDDEN_KEY, readHiddenRates(body.interestDepositHidden));
   }
 
   // ข้อความหน้าแรก — ผ่าน fillIntro ก่อนเสมอ ช่องไหนว่างจะถอยกลับไปใช้ของตั้งต้นให้เอง

@@ -10,6 +10,7 @@ import {
   CHECKUP_INTRO_KEY,
   CHECKUP_LOGO_KEY,
   CHECKUP_QUESTIONS_KEY,
+  INTEREST_DEPOSIT_HIDDEN_KEY,
   INTEREST_RATES_HIDDEN_KEY,
   fillIntro,
   type CheckupImages,
@@ -31,7 +32,7 @@ export default async function AdminProgramsPage() {
   // ไม่ได้ดูแลส่วนนี้ก็ไม่ต้องเห็น — เมนูซ่อนให้แล้ว ตรงนี้กันคนพิมพ์ที่อยู่เข้ามาเอง
   if (!canArea(user, "programs")) redirect(ADMIN_HOME);
 
-  const [images, saved, logo, intro, rates, hidden] = await Promise.all([
+  const [images, saved, logo, intro, rates, hiddenLoan, hiddenDeposit] = await Promise.all([
     getSetting<CheckupImages>(CHECKUP_IMAGES_KEY, {}),
     getSetting<unknown>(CHECKUP_QUESTIONS_KEY, null),
     getSetting<string>(CHECKUP_LOGO_KEY, ""),
@@ -39,6 +40,7 @@ export default async function AdminProgramsPage() {
     // อัตราดอกเบี้ยเงินกู้ตัวจริง — หน้านี้ไม่ได้แก้ตัวเลข แค่ติ๊กว่าประเภทไหนให้ขึ้นในโปรแกรม
     getRates(),
     getSetting<unknown>(INTEREST_RATES_HIDDEN_KEY, []),
+    getSetting<unknown>(INTEREST_DEPOSIT_HIDDEN_KEY, []),
   ]);
 
   return (
@@ -59,7 +61,9 @@ export default async function AdminProgramsPage() {
           initialLogo={logo}
           initialIntro={fillIntro(intro)}
           loanRates={rates.loan ?? []}
-          initialHiddenRates={readHiddenRates(hidden)}
+          depositRates={rates.deposit ?? []}
+          initialHiddenLoan={readHiddenRates(hiddenLoan)}
+          initialHiddenDeposit={readHiddenRates(hiddenDeposit)}
           publicBase={publicSiteUrl()}
         />
       </main>
