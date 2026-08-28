@@ -15,6 +15,7 @@ import {
   Info,
   Percent,
   Phone,
+  PiggyBank,
   Printer,
   RotateCcw,
   Wallet,
@@ -39,7 +40,8 @@ import {
   todayISO,
   touchesLeapYear,
   type DayBasis,
-  type LoanRateRow,
+  type RateKind,
+  type RateRow,
 } from "@/lib/interestCalc";
 import { fadeSwap, STACKED } from "@/lib/slideMotion";
 import { INTEREST_CREDIT, INTEREST_VERSION } from "@/lib/programPages";
@@ -71,41 +73,109 @@ import { INTEREST_CREDIT, INTEREST_VERSION } from "@/lib/programPages";
 /** ชื่อขั้นที่โชว์บนแถบบอกขั้น — แก้ที่นี่ที่เดียว ทั้งแถบบนและหัวการ์ดใช้ชุดนี้ */
 const STEPS = [
   { no: 1, label: "กรอกตัวเลข", hint: "เงินต้น อัตราดอกเบี้ย และจำนวนวัน" },
-  { no: 2, label: "ผลคำนวณ", hint: "ดอกเบี้ยที่ต้องจ่ายและวิธีคิด" },
+  { no: 2, label: "ผลคำนวณ", hint: "ดอกเบี้ยที่ได้และวิธีคิด" },
   { no: 3, label: "สรุป", hint: "เก็บไว้ทานกับใบเสร็จหรือสั่งพิมพ์" },
 ] as const;
 
+/**
+ * ถ้อยคำของสองฝั่ง — **สูตรคิดเลขเหมือนกันเป๊ะ ต่างกันแค่คำที่อ่านและคำเตือนท้ายผล**
+ *
+ * ⚠️ **ห้ามใช้คำของฝั่งเงินกู้กับเงินฝากปนกัน** สมาชิกอ่านแล้วเข้าใจกลับด้านได้ทันที
+ * ("ดอกเบี้ยที่ต้องจ่าย" ในหน้าเงินฝากคือเข้าใจผิดว่าฝากเงินแล้วต้องเสียดอกเบี้ย)
+ * เพิ่มข้อความใหม่ในหน้านี้ต้องมาเพิ่มทั้งสองฝั่งที่นี่เสมอ ไม่ใช่เขียนตรง ๆ ใน JSX
+ */
+const WORDS: Record<
+  RateKind,
+  {
+    tab: string;
+    title: string;
+    lead: string;
+    formula: string;
+    principal: string;
+    principalHint: string;
+    rateHint: string;
+    endLabel: string;
+    result: string;
+    perDayHint: string;
+    total: string;
+    totalHint: string;
+    compare: string;
+  }
+> = {
+  loan: {
+    tab: "เงินกู้",
+    title: "คำนวณดอกเบี้ยเงินกู้ (ร้อยละต่อปี)",
+    lead: "กรอกสามช่อง แล้วกดปุ่มด้านล่างเพื่อดูผล",
+    formula: "ดอกเบี้ยที่ต้องจ่าย =",
+    principal: "เงินต้นคงค้าง",
+    principalHint: "ยอดหนี้ที่ยังไม่ได้ชำระ ณ วันที่เริ่มคิดดอกเบี้ย",
+    rateHint: "ดูได้จากสัญญาเงินกู้ หรือกดเลือกจากอัตราของสหกรณ์",
+    endLabel: "วันที่ชำระ",
+    result: "ดอกเบี้ยที่ต้องจ่าย",
+    perDayHint: "ชำระเร็วขึ้น 1 วัน ประหยัดได้เท่านี้",
+    total: "เงินต้น + ดอกเบี้ย",
+    totalHint: "ยอดรวมถ้าปิดหนี้ทั้งก้อนในวันที่ชำระ",
+    compare: "ถ้าเงินต้นและอัตราเท่าเดิม แต่ทิ้งไว้นานขึ้น",
+  },
+  deposit: {
+    tab: "เงินรับฝาก",
+    title: "คำนวณดอกเบี้ยเงินรับฝาก (ร้อยละต่อปี)",
+    lead: "กรอกสามช่อง แล้วกดปุ่มด้านล่างเพื่อดูผล",
+    formula: "ดอกเบี้ยที่จะได้รับ =",
+    principal: "เงินที่ฝาก",
+    principalHint: "ยอดเงินฝากคงเหลือ ณ วันที่เริ่มคิดดอกเบี้ย",
+    rateHint: "กดเลือกจากอัตราเงินรับฝากของสหกรณ์ หรือดูจากสมุดคู่ฝาก",
+    endLabel: "วันที่ถอน",
+    result: "ดอกเบี้ยที่จะได้รับ",
+    perDayHint: "ฝากต่ออีก 1 วัน ได้เพิ่มเท่านี้",
+    total: "เงินฝาก + ดอกเบี้ย",
+    totalHint: "ยอดรวมถ้าถอนทั้งก้อนในวันที่ถอน",
+    compare: "ถ้าเงินฝากและอัตราเท่าเดิม แต่ฝากไว้นานขึ้น",
+  },
+};
+
 export default function InterestCalculator({
   loanRates,
+  depositRates,
   contactPhone,
   lineId,
 }: {
   /**
-   * อัตราดอกเบี้ยเงินกู้ที่ให้ขึ้นเป็นปุ่มลัด — เจ้าหน้าที่ตั้งตัวเลขที่ หลังบ้าน → อัตราดอกเบี้ย
+   * อัตราดอกเบี้ยที่ให้ขึ้นเป็นปุ่มลัด — เจ้าหน้าที่ตั้งตัวเลขที่ หลังบ้าน → อัตราดอกเบี้ย
    * แล้วเลือกว่าประเภทไหนให้ขึ้นในโปรแกรมนี้ที่ หลังบ้าน → หน้าโปรแกรม
-   * (หน้าเว็บกรองมาให้แล้วด้วย visibleLoanRates — ที่นี่ไม่ต้องกรองซ้ำ)
+   * (หน้าเว็บกรองมาให้แล้วด้วย visibleRates — ที่นี่ไม่ต้องกรองซ้ำ)
    */
-  loanRates: LoanRateRow[];
+  loanRates: RateRow[];
+  /** อัตราดอกเบี้ยเงินรับฝาก — ชุดเดียวกับที่ขึ้นการ์ดหน้าแรก กรองมาแล้วเหมือนกัน */
+  depositRates: RateRow[];
   /** เบอร์สหกรณ์ — แอดมินแก้ได้ที่ หลังบ้าน → ส่วนท้ายเว็บ (ห้ามฝังเบอร์ไว้ในโค้ด) */
   contactPhone: string;
   /** ไอดีไลน์ของสหกรณ์ — มาจากที่เดียวกัน เว้นว่าง = ไม่แสดงบรรทัดไลน์ */
   lineId: string;
 }) {
-  /* ปุ่มลัดอัตราดอกเบี้ย — เอาเฉพาะรายการที่อ่านเป็นตัวเลขได้ และตัดตัวซ้ำออก */
-  const rateChips = useMemo(() => {
-    const seen = new Set<number>();
-    return loanRates
-      .map((row) => ({ label: row.label, rate: readRateText(row.rate) }))
-      .filter((row) => {
-        if (row.rate <= 0 || seen.has(row.rate)) return false;
-        seen.add(row.rate);
-        return true;
-      });
-  }, [loanRates]);
+  /* ปุ่มลัดอัตราดอกเบี้ยทั้งสองฝั่ง — เอาเฉพาะรายการที่อ่านเป็นตัวเลขได้ และตัดตัวซ้ำออก */
+  const chipsOf = useMemo(() => {
+    const build = (rows: RateRow[]) => {
+      const seen = new Set<number>();
+      return rows
+        .map((row) => ({ label: row.label, rate: readRateText(row.rate) }))
+        .filter((row) => {
+          if (row.rate <= 0 || seen.has(row.rate)) return false;
+          seen.add(row.rate);
+          return true;
+        });
+    };
+    return { loan: build(loanRates), deposit: build(depositRates) };
+  }, [loanRates, depositRates]);
+
+  /** คิดฝั่งไหนอยู่ — เงินกู้ที่ต้องจ่าย หรือเงินรับฝากที่จะได้รับ */
+  const [kind, setKind] = useState<RateKind>("loan");
+  const rateChips = chipsOf[kind];
+  const words = WORDS[kind];
 
   const [principalText, setPrincipalText] = useState(String(SAMPLE_PRINCIPAL));
   // ตั้งต้นด้วยอัตราจริงของสหกรณ์ถ้ามี — ไม่มีค่อยใช้เลขในตัวอย่างของใบประชาสัมพันธ์
-  const [rateText, setRateText] = useState(() => String(rateChips[0]?.rate ?? SAMPLE_RATE));
+  const [rateText, setRateText] = useState(() => String(chipsOf.loan[0]?.rate ?? SAMPLE_RATE));
   const [daysText, setDaysText] = useState(String(SAMPLE_DAYS));
   const [basis, setBasis] = useState<DayBasis>(365);
 
@@ -145,7 +215,7 @@ export default function InterestCalculator({
 
   /** ยังขาดอะไรบ้าง — บอกเป็นชื่อช่อง ไม่ใช่ "กรอกไม่ครบ" ลอย ๆ ที่หาไม่เจอว่าช่องไหน */
   const missing = [
-    principal > 0 ? "" : "เงินต้นคงค้าง",
+    principal > 0 ? "" : words.principal,
     rate > 0 ? "" : "อัตราดอกเบี้ย",
     badRange ? "" : days > 0 ? "" : "จำนวนวันที่คิดดอกเบี้ย",
   ].filter(Boolean);
@@ -153,8 +223,20 @@ export default function InterestCalculator({
   /** ช่วงที่เลือกคร่อมปีอธิกสุรทิน — เตือนว่าจะใช้ตัวหาร 366 ก็ได้ */
   const leapHint = mode === "dates" && !badRange && basis === 365 && touchesLeapYear(from, to);
 
-  /** ชื่อประเภทเงินกู้ที่ตรงกับอัตราที่กรอก — เอาไปเขียนในใบสรุปให้รู้ว่าคิดของอะไร */
+  /** ชื่อประเภทที่ตรงกับอัตราที่กรอก — เอาไปเขียนในใบสรุปให้รู้ว่าคิดของอะไร */
   const rateName = rateChips.find((row) => row.rate === rate)?.label ?? "";
+
+  /**
+   * สลับฝั่งเงินกู้ ↔ เงินรับฝาก — **ต้องเปลี่ยนอัตราให้ตามฝั่งใหม่ด้วย**
+   * ไม่งั้นจะค้างอัตราเงินกู้ 5-6% ไว้ในหน้าเงินฝากซึ่งเป็นตัวเลขที่เป็นไปไม่ได้
+   * (เปลี่ยนตรงนี้ในตัวจัดการปุ่ม ไม่ใช่ใน useEffect — ดูกฎ set-state-in-effect ใน AGENTS.md)
+   */
+  const switchKind = (next: RateKind) => {
+    if (next === kind) return;
+    setKind(next);
+    setRateText(String(chipsOf[next][0]?.rate ?? (next === "loan" ? SAMPLE_RATE : "")));
+    setStep(1);
+  };
 
   const reset = () => {
     setPrincipalText(String(SAMPLE_PRINCIPAL));
@@ -183,17 +265,43 @@ export default function InterestCalculator({
               {/* ---------------- ขั้นที่ 1 กรอกตัวเลข ---------------- */}
               <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5">
                 <div className="border-b border-brand-100 bg-gradient-to-b from-brand-50/80 to-white px-5 py-5 md:px-8">
+                  {/*
+                    สลับฝั่งก่อนเป็นอย่างแรก — วางไว้เหนือหัวข้อ เพราะมันเปลี่ยนความหมาย
+                    ของทุกช่องที่อยู่ใต้ลงไป ถ้าไปวางท้ายฟอร์มคนจะกรอกเสร็จแล้วค่อยเห็น
+                  */}
+                  <div className="no-print mb-4 inline-flex rounded-full bg-white p-1 text-sm ring-1 ring-brand-100">
+                    {(["loan", "deposit"] as const).map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => switchKind(value)}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 font-semibold transition ${
+                          kind === value
+                            ? "bg-brand-600 text-white shadow"
+                            : "text-gray-500 hover:text-brand-700"
+                        }`}
+                      >
+                        {value === "loan" ? (
+                          <Coins className="h-4 w-4" />
+                        ) : (
+                          <PiggyBank className="h-4 w-4" />
+                        )}
+                        {WORDS[value].tab}
+                      </button>
+                    ))}
+                  </div>
+
                   <div className="flex items-center gap-3">
                     <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/25">
-                      <Coins className="h-6 w-6" />
+                      {kind === "loan" ? (
+                        <Coins className="h-6 w-6" />
+                      ) : (
+                        <PiggyBank className="h-6 w-6" />
+                      )}
                     </span>
                     <div className="min-w-0">
-                      <h2 className="text-lg font-bold text-brand-900 md:text-xl">
-                        คำนวณดอกเบี้ยเงินกู้ (ร้อยละต่อปี)
-                      </h2>
-                      <p className="text-sm text-gray-600">
-                        กรอกสามช่อง แล้วกดปุ่มด้านล่างเพื่อดูผล
-                      </p>
+                      <h2 className="text-lg font-bold text-brand-900 md:text-xl">{words.title}</h2>
+                      <p className="text-sm text-gray-600">{words.lead}</p>
                     </div>
                   </div>
 
@@ -203,8 +311,8 @@ export default function InterestCalculator({
                   */}
                   <div className="mt-4 overflow-x-auto rounded-2xl bg-brand-900 px-4 py-3 text-white">
                     <div className="flex min-w-max items-center gap-2 text-sm md:text-base">
-                      <span className="font-semibold">ดอกเบี้ยที่ต้องจ่าย =</span>
-                      <span>เงินต้นคงค้าง</span>
+                      <span className="font-semibold">{words.formula}</span>
+                      <span>{words.principal}</span>
                       <span className="text-brand-200">×</span>
                       <Fraction top="อัตราดอกเบี้ย" bottom="100" />
                       <span className="text-brand-200">×</span>
@@ -217,8 +325,8 @@ export default function InterestCalculator({
                   {/* เงินต้นคงค้าง */}
                   <Field
                     id="principal"
-                    label="เงินต้นคงค้าง"
-                    hint="ยอดหนี้ที่ยังไม่ได้ชำระ ณ วันที่เริ่มคิดดอกเบี้ย"
+                    label={words.principal}
+                    hint={words.principalHint}
                     icon={<Wallet className="h-4 w-4" />}
                     unit="บาท"
                     value={principalText}
@@ -235,7 +343,7 @@ export default function InterestCalculator({
                   <Field
                     id="rate"
                     label="อัตราดอกเบี้ย (ร้อยละต่อปี)"
-                    hint="ดูได้จากสัญญาเงินกู้ หรือกดเลือกจากอัตราของสหกรณ์"
+                    hint={words.rateHint}
                     icon={<Percent className="h-4 w-4" />}
                     unit="% ต่อปี"
                     value={rateText}
@@ -308,13 +416,13 @@ export default function InterestCalculator({
                             value={from}
                             onChange={setFrom}
                           />
-                          <DateBox id="to" label="วันที่ชำระ" value={to} onChange={setTo} />
+                          <DateBox id="to" label={words.endLabel} value={to} onChange={setTo} />
                         </div>
                         <p
                           className={`mt-2 text-sm ${badRange ? "font-medium text-red-600" : "text-gray-500"}`}
                         >
                           {badRange
-                            ? "วันที่ชำระต้องไม่อยู่ก่อนวันที่เริ่มคิดดอกเบี้ย — กรอกสลับกันอยู่หรือเปล่า"
+                            ? `${words.endLabel}ต้องไม่อยู่ก่อนวันที่เริ่มคิดดอกเบี้ย — กรอกสลับกันอยู่หรือเปล่า`
                             : `${thaiDate(from)} ถึง ${thaiDate(to)} นับได้ ${plain(days)} วัน`}
                         </p>
                       </>
@@ -390,7 +498,7 @@ export default function InterestCalculator({
               {/* ---------------- ขั้นที่ 2 ผลคำนวณ ---------------- */}
               <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5">
                 <div className="px-5 py-6 md:px-8">
-                  <p className="text-sm font-medium text-gray-500">ดอกเบี้ยที่ต้องจ่าย</p>
+                  <p className="text-sm font-medium text-gray-500">{words.result}</p>
                   <p className="mt-1 text-4xl font-bold tabular-nums text-brand-700 md:text-5xl">
                     {money(result.interest)}{" "}
                     <span className="text-2xl font-semibold text-brand-600 md:text-3xl">บาท</span>
@@ -419,28 +527,28 @@ export default function InterestCalculator({
                     <Tile
                       label="ดอกเบี้ยวันละ"
                       value={`${money(result.perDay)} บาท`}
-                      hint="ชำระเร็วขึ้น 1 วัน ประหยัดได้เท่านี้"
+                      hint={words.perDayHint}
                     />
                     <Tile
-                      label="เงินต้น + ดอกเบี้ย"
+                      label={words.total}
                       value={`${money(result.total)} บาท`}
-                      hint="ยอดรวมถ้าปิดหนี้ทั้งก้อนในวันที่ชำระ"
+                      hint={words.totalHint}
                       strong
                     />
                   </div>
 
                   {/* ตารางเทียบ — ตอบคำถามที่ตามมาเสมอว่า "แล้วถ้าปล่อยไว้อีกล่ะ" */}
                   <div className="mt-5">
-                    <p className="text-sm font-semibold text-gray-700">
-                      ถ้าเงินต้นและอัตราเท่าเดิม แต่ทิ้งไว้นานขึ้น
-                    </p>
+                    <p className="text-sm font-semibold text-gray-700">{words.compare}</p>
                     <div className="mt-2 overflow-x-auto">
                       <table className="w-full min-w-[22rem] text-sm">
                         <thead>
                           <tr className="border-b border-gray-200 text-left text-gray-500">
                             <th className="py-2 font-medium">จำนวนวัน</th>
                             <th className="py-2 text-right font-medium">ดอกเบี้ย (บาท)</th>
-                            <th className="py-2 text-right font-medium">รวมกับเงินต้น (บาท)</th>
+                            <th className="py-2 text-right font-medium">
+                              {kind === "loan" ? "รวมกับเงินต้น (บาท)" : "รวมกับเงินฝาก (บาท)"}
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
@@ -465,7 +573,7 @@ export default function InterestCalculator({
                   </div>
                 </div>
 
-                <LegalNote over={result.overLegal} rate={rate} />
+                <FootNote kind={kind} over={result.overLegal} rate={rate} />
               </section>
             </motion.div>
           )}
@@ -485,7 +593,7 @@ export default function InterestCalculator({
                           สรุปผลการคำนวณ
                         </h2>
                         <p className="text-sm text-gray-600">
-                          คำนวณเมื่อ {thaiDate(printedAt)} · สั่งพิมพ์เก็บไว้ทานกับใบเสร็จได้
+                          {words.tab} · คำนวณเมื่อ {thaiDate(printedAt)} · สั่งพิมพ์เก็บไว้ได้
                         </p>
                       </div>
                     </div>
@@ -494,7 +602,7 @@ export default function InterestCalculator({
                   <div className="px-5 py-6 md:px-8">
                     <p className="text-sm font-semibold text-gray-700">ตัวเลขที่ใช้คำนวณ</p>
                     <dl className="mt-2 divide-y divide-gray-100 rounded-2xl bg-gray-50 px-4 ring-1 ring-gray-100">
-                      <Row label="เงินต้นคงค้าง" value={`${plain(principal)} บาท`} />
+                      <Row label={words.principal} value={`${plain(principal)} บาท`} />
                       <Row
                         label="อัตราดอกเบี้ย"
                         value={`${rate}% ต่อปี`}
@@ -512,7 +620,7 @@ export default function InterestCalculator({
 
                     <p className="mt-5 text-sm font-semibold text-gray-700">ผลที่คำนวณได้</p>
                     <div className="mt-2 rounded-2xl bg-brand-50 px-5 py-4 ring-1 ring-brand-100">
-                      <p className="text-sm font-medium text-brand-700">ดอกเบี้ยที่ต้องจ่าย</p>
+                      <p className="text-sm font-medium text-brand-700">{words.result}</p>
                       <p className="mt-0.5 text-3xl font-bold tabular-nums text-brand-800 md:text-4xl">
                         {money(result.interest)}{" "}
                         <span className="text-xl font-semibold md:text-2xl">บาท</span>
@@ -538,18 +646,18 @@ export default function InterestCalculator({
                       <Tile
                         label="ดอกเบี้ยวันละ"
                         value={`${money(result.perDay)} บาท`}
-                        hint="ชำระเร็วขึ้น 1 วัน ประหยัดได้เท่านี้"
+                        hint={words.perDayHint}
                       />
                       <Tile
-                        label="เงินต้น + ดอกเบี้ย"
+                        label={words.total}
                         value={`${money(result.total)} บาท`}
-                        hint="ยอดรวมถ้าปิดหนี้ทั้งก้อนในวันที่ชำระ"
+                        hint={words.totalHint}
                         strong
                       />
                     </div>
                   </div>
 
-                  <LegalNote over={result.overLegal} rate={rate} />
+                  <FootNote kind={kind} over={result.overLegal} rate={rate} />
                 </section>
 
                 {/* ปุ่มพิมพ์/เริ่มใหม่ อยู่ในขั้นสรุปเท่านั้น — สองขั้นแรกยังไม่มีอะไรให้พิมพ์ */}
@@ -711,8 +819,30 @@ function Stepper({
   );
 }
 
-/** คำเตือนเรื่องเพดานดอกเบี้ยตามกฎหมาย — มาจากใบประชาสัมพันธ์ของสหกรณ์ (ใช้ทั้งขั้น 2 และ 3) */
-function LegalNote({ over, rate }: { over: boolean; rate: number }) {
+/**
+ * หมายเหตุท้ายผล — **คนละเรื่องกันคนละฝั่ง** ใช้ทั้งขั้นที่ 2 และขั้นที่ 3
+ *
+ * ⚠️ **เพดานร้อยละ 15 ต่อปีเป็นกฎหมายของ "เงินกู้" เท่านั้น** เอาไปขึ้นในฝั่งเงินรับฝาก
+ * คือผิดบริบทเต็ม ๆ (เงินฝากไม่มีเพดานแบบนั้น และอัตราจริงแค่ 1-4%)
+ * ฝั่งเงินรับฝากจึงบอกข้อจำกัดของการคำนวณแทน ซึ่งเป็นสิ่งที่สมาชิกต้องรู้จริง ๆ
+ */
+function FootNote({ kind, over, rate }: { kind: RateKind; over: boolean; rate: number }) {
+  if (kind === "deposit") {
+    return (
+      <div className="border-t border-gray-100 bg-gray-50 px-5 py-4 text-sm text-gray-600 md:px-8">
+        <p className="flex items-start gap-2">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+          <span>
+            ดอกเบี้ยเงินรับฝากคิดจาก<b>ยอดคงเหลือรายวัน</b> — ถ้ามีฝากเพิ่มหรือถอนระหว่างช่วงที่คำนวณ
+            ยอดจริงจะไม่ตรงกับที่คิดได้ตรงนี้ · และคิดแบบ<b>ไม่ทบต้น</b>
+            ถ้าช่วงที่คำนวณคร่อมรอบจ่ายดอกเบี้ยของสหกรณ์ ของจริงจะได้มากกว่านี้เล็กน้อย ·
+            ยอดที่ได้รับจริงให้ยึดตามที่สหกรณ์แจ้ง
+          </span>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`border-t px-5 py-4 text-sm md:px-8 ${
