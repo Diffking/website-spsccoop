@@ -68,6 +68,20 @@ import { INTEREST_CREDIT, INTEREST_VERSION } from "@/lib/programPages";
  * ของเครื่องผู้ใช้เอง (คนกดเป็นคนเลือกปลายทาง) ไม่ได้ยิงข้อความไปที่ไหนเอง
  */
 
+/**
+ * ข้อย่อยของขั้นที่ 1 — **ถามทีละข้อ ไม่กองมาพร้อมกันทั้งสามข้อ**
+ * (เจ้าของเว็บสั่ง 28 ส.ค. 2026 หลังเห็นของจริงที่ขึ้นครบสามข้อในจอเดียวแล้วรู้สึกแน่น)
+ * หลักเดียวกับโปรแกรมตรวจสุขภาพการเงินที่ถามทีละข้อ
+ */
+type SubStep = 1 | 2 | 3;
+
+/** ชื่อสั้นของข้อย่อย — ใช้ทั้งบนหลอดความคืบหน้าและข้อความ "ยังต้องกรอก" */
+const ASK_TITLE: Record<SubStep, string> = {
+  1: "เงินต้น",
+  2: "อัตราดอกเบี้ย",
+  3: "ระยะเวลา",
+};
+
 /** ชื่อขั้นที่โชว์บนแถบบอกขั้น — แก้ที่นี่ที่เดียว ทั้งแถบบนและหัวการ์ดใช้ชุดนี้ */
 const STEPS = [
   { no: 1, label: "กรอกตัวเลข", hint: "เงินต้น · ดอกเบี้ย · ระยะเวลา" },
@@ -194,6 +208,8 @@ export default function InterestCalculator({
 
   /** ขั้นที่กดค้างไว้ — ขั้นที่ "เห็นจริง" คือ view ด้านล่าง ซึ่งกันขั้นที่ยังไปไม่ได้ออกให้เอง */
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  /** ข้อย่อยของขั้นที่ 1 ที่กำลังถามอยู่ — ถามทีละข้อ */
+  const [sub, setSub] = useState<SubStep>(1);
 
   // วันที่ออกใบสรุป — ล็อกไว้ตอนเปิดหน้า ไม่ให้เปลี่ยนเองกลางคันตอนข้ามเที่ยงคืน
   const [printedAt] = useState(() => todayISO());
@@ -232,15 +248,24 @@ export default function InterestCalculator({
    */
   const view: 1 | 2 | 3 = canGo ? step : 1;
 
-  /** ยังขาดข้อไหน — บอกเป็นชื่อข้อที่เห็นบนจอ ไม่ใช่ "กรอกไม่ครบ" ลอย ๆ ที่หาไม่เจอว่าตรงไหน */
-  const missing = [
-    principal > 0 ? "" : words.principal,
-    rate > 0 ? "" : "อัตราดอกเบี้ย",
-    badRange ? "" : days > 0 ? "" : "ระยะเวลา",
-  ].filter(Boolean);
+  /** ข้อย่อยที่กำลังถามอยู่ตอบครบแล้วหรือยัง — ปุ่ม "ถัดไป" กดได้ก็ต่อเมื่อข้อนี้ผ่าน */
+  const subReady =
+    sub === 1 ? principal > 0 : sub === 2 ? rate > 0 : days > 0 && !badRange;
 
   /** ชื่อประเภทที่ตรงกับอัตราที่เลือก — เอาไปเขียนในใบสรุปให้รู้ว่าคิดของอะไร */
   const rateName = rateCards.find((row) => row.rate === rate)?.label ?? "";
+
+  /**
+   * ข้อที่ตอบไปแล้วและไม่ใช่ข้อที่กำลังถามอยู่ — เอาไปทำก้อนสรุปท้ายการ์ด
+   * กดก้อนไหนก็กลับไปแก้ข้อนั้นได้ ไม่ต้องกดถอยทีละข้อ
+   */
+  const answered: { no: SubStep; label: string; value: string }[] = [
+    { no: 1 as SubStep, label: "เงินต้น", value: `${plain(principal)} บาท`, ok: principal > 0 },
+    { no: 2 as SubStep, label: "ดอกเบี้ย", value: `${rate}% ต่อปี`, ok: rate > 0 },
+    { no: 3 as SubStep, label: "ระยะเวลา", value: `${plain(days)} วัน`, ok: days > 0 && !badRange },
+  ]
+    .filter((item) => item.ok && item.no !== sub)
+    .map(({ no, label, value }) => ({ no, label, value }));
 
   /**
    * สลับฝั่งเงินกู้ ↔ เงินรับฝาก — **ต้องเปลี่ยนอัตราให้ตามฝั่งใหม่ด้วย**
@@ -253,6 +278,7 @@ export default function InterestCalculator({
     setRateText(String(chipsOf[next][0]?.rate ?? (next === "loan" ? SAMPLE_RATE : "")));
     setRateMode(chipsOf[next].length > 0 ? "pick" : "type");
     setStep(1);
+    setSub(1);
   };
 
   const reset = () => {
@@ -265,6 +291,7 @@ export default function InterestCalculator({
     setFrom(todayISO());
     setTo(todayISO());
     setStep(1);
+    setSub(1);
   };
 
   /** ข้อความที่ส่งให้ลูกหลานอ่าน — สรุปครบในข้อความเดียว ไม่ต้องเปิดเว็บตามก็เข้าใจ */
@@ -319,8 +346,28 @@ export default function InterestCalculator({
                   </div>
                 </div>
 
-                <div className="space-y-7 px-5 py-6 md:px-8">
-                  {/* ---- ข้อ 1 เงินต้น ---- */}
+                {/* หลอดบอกว่าอยู่ข้อไหนใน 3 ข้อ — ข้อย่อยถามทีละข้อ ไม่กองมาพร้อมกัน */}
+                <div className="px-5 pt-5 md:px-8">
+                  <div className="flex items-baseline justify-between text-sm">
+                    <span className="font-semibold text-brand-700">ข้อ {sub} จาก 3</span>
+                    <span className="text-gray-400">{ASK_TITLE[sub]}</span>
+                  </div>
+                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-gray-100">
+                    <div
+                      className="h-full rounded-full bg-brand-500 transition-all duration-300"
+                      style={{ width: `${(sub / 3) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/*
+                  ข้อย่อยทั้งสามวางซ้อนในช่องกริดเดียวกันแล้วจางสลับ (หลักเดียวกับขั้นใหญ่)
+                  ⚠️ ห้าม mode="wait" — จะมีวูบว่างหนึ่งจังหวะทุกครั้งที่กดข้อถัดไป
+                */}
+                <div className="grid px-5 py-6 md:px-8">
+                  <AnimatePresence initial={false}>
+                    {sub === 1 && (
+                      <motion.div key="ask1" {...fadeSwap(0.3)} style={STACKED}>
                   <Ask no={1} title={`ระบุ${words.principal}`} hint={words.principalHint}>
                     <div className="relative mt-3">
                       {/*
@@ -348,8 +395,11 @@ export default function InterestCalculator({
                       onPick={(next) => setPrincipalText(String(next))}
                     />
                   </Ask>
+                      </motion.div>
+                    )}
 
-                  {/* ---- ข้อ 2 อัตราดอกเบี้ย ---- */}
+                    {sub === 2 && (
+                      <motion.div key="ask2" {...fadeSwap(0.3)} style={STACKED}>
                   <Ask no={2} title={words.rateStep} hint={words.rateHint}>
                     {rateCards.length > 0 && (
                       <div className="no-print mt-3 flex rounded-full bg-gray-100 p-1 text-sm">
@@ -425,8 +475,11 @@ export default function InterestCalculator({
                       />
                     )}
                   </Ask>
+                      </motion.div>
+                    )}
 
-                  {/* ---- ข้อ 3 ระยะเวลา ---- */}
+                    {sub === 3 && (
+                      <motion.div key="ask3" {...fadeSwap(0.3)} style={STACKED}>
                   <Ask no={3} title={words.daysStep} hint="กดปุ่มสำเร็จรูป หรือเลือกวันจากปฏิทินก็ได้">
                     <div className="no-print mt-3 flex flex-wrap gap-2">
                       {DAY_CHIPS.map((chip) => {
@@ -540,35 +593,77 @@ export default function InterestCalculator({
                       )}
                     </div>
                   </details>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                {/* ปุ่มไปขั้นที่ 2 + แถบสรุปสิ่งที่เลือกไว้ ให้ตรวจก่อนกด */}
+                {/* ปุ่มเดินหน้า/ถอยหลังของข้อย่อย + สิ่งที่ตอบไปแล้ว */}
                 <div className="no-print border-t border-gray-100 bg-gray-50/70 px-5 py-5 md:px-8">
+                  {/*
+                    สิ่งที่ตอบไปแล้ว — กดก้อนไหนก็กระโดดกลับไปแก้ข้อนั้นได้ทันที
+                    ⚠️ **ต้องมี** เพราะถามทีละข้อแล้วข้อก่อนหน้าหายไปจากจอ ถ้าไม่โชว์ค้างไว้
+                    สมาชิกจะจำไม่ได้ว่าเมื่อกี้ตอบอะไรไป ต้องกดถอยกลับไปดูทีละข้อ
+                  */}
+                  {answered.length > 0 && (
+                    <div className="mb-3 flex flex-wrap justify-center gap-2">
+                      {answered.map((item) => (
+                        <button
+                          key={item.no}
+                          type="button"
+                          onClick={() => setSub(item.no)}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm text-gray-600 ring-1 ring-gray-200 transition hover:ring-brand-300"
+                        >
+                          <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          {item.label} <b className="tabular-nums text-gray-800">{item.value}</b>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   <button
                     type="button"
-                    disabled={!canGo}
-                    onClick={() => setStep(2)}
+                    disabled={sub === 3 ? !canGo : !subReady}
+                    onClick={() => (sub === 3 ? setStep(2) : setSub((sub + 1) as SubStep))}
                     className={`flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-lg font-bold shadow transition ${
-                      canGo
+                      (sub === 3 ? canGo : subReady)
                         ? "bg-brand-600 text-white hover:bg-brand-700"
                         : "cursor-not-allowed bg-gray-200 text-gray-400 shadow-none"
                     }`}
                   >
-                    ดูผลคำนวณ <ArrowRight className="h-5 w-5" />
+                    {sub === 3 ? "ดูผลคำนวณ" : "ถัดไป"} <ArrowRight className="h-5 w-5" />
                   </button>
 
-                  {canGo ? (
-                    <p className="mt-3 text-center text-sm text-gray-600">
-                      กำลังคิดจาก <b className="tabular-nums text-gray-800">{plain(principal)} บาท</b>{" "}
-                      · ร้อยละ <b className="tabular-nums text-gray-800">{rate}</b> ต่อปี ·{" "}
-                      <b className="tabular-nums text-gray-800">{plain(days)} วัน</b>
-                      {rateName && <span className="block text-xs text-gray-400">({rateName})</span>}
-                    </p>
-                  ) : (
-                    <p className="mt-3 text-center text-sm text-gray-500">
-                      ยังต้องกรอก: <b className="text-gray-700">{missing.join(" · ") || "แก้วันที่ให้ถูกต้อง"}</b>
-                    </p>
-                  )}
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    {sub > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => setSub((sub - 1) as SubStep)}
+                        className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+                      >
+                        <ArrowLeft className="h-4 w-4" /> ข้อก่อนหน้า
+                      </button>
+                    ) : (
+                      <span />
+                    )}
+
+                    {subReady ? (
+                      sub === 3 && canGo ? (
+                        <p className="text-right text-sm text-gray-500">
+                          กำลังคิดจาก{" "}
+                          <b className="tabular-nums text-gray-800">{plain(principal)} บาท</b> · ร้อยละ{" "}
+                          <b className="tabular-nums text-gray-800">{rate}</b> ต่อปี ·{" "}
+                          <b className="tabular-nums text-gray-800">{plain(days)} วัน</b>
+                        </p>
+                      ) : (
+                        <span />
+                      )
+                    ) : (
+                      <p className="text-right text-sm text-gray-500">
+                        ยังต้องกรอก: <b className="text-gray-700">{ASK_TITLE[sub]}</b>
+                      </p>
+                    )}
+                  </div>
                 </div>
               </section>
             </motion.div>
@@ -837,7 +932,14 @@ export default function InterestCalculator({
         <div className="no-print flex items-center justify-between gap-3">
           <button
             type="button"
-            onClick={() => setStep(view === 3 ? 2 : 1)}
+            onClick={() => {
+              // ย้อนกลับมาแก้ตัวเลข = เริ่มถามใหม่ตั้งแต่ข้อ 1 (กดก้อนสรุปข้ามไปข้ออื่นได้อยู่แล้ว)
+              if (view === 3) setStep(2);
+              else {
+                setStep(1);
+                setSub(1);
+              }
+            }}
             className="inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
           >
             <ArrowLeft className="h-4 w-4" />
