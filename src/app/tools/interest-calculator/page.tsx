@@ -4,7 +4,9 @@ import PageTracker from "@/components/site/PageTracker";
 import BackToTop from "@/components/ui/BackToTop";
 import InterestCalculator from "@/components/tools/InterestCalculator";
 import { pageMetadata } from "@/lib/seo";
-import { getRates, getSiteInfo } from "@/lib/settings";
+import { getRates, getSetting, getSiteInfo } from "@/lib/settings";
+import { readHiddenRates, visibleLoanRates } from "@/lib/interestCalc";
+import { INTEREST_RATES_HIDDEN_KEY } from "@/lib/programPages";
 
 /**
  * โปรแกรมคำนวณดอกเบี้ย — โปรแกรมตัวที่สองของ "หน้าโปรแกรม" (ดู src/lib/programPages.ts)
@@ -24,11 +26,13 @@ export const dynamic = "force-dynamic";
 export const generateMetadata = () => pageMetadata("/tools/interest-calculator");
 
 export default async function InterestCalculatorPage() {
-  const [rates, site] = await Promise.all([
+  const [rates, site, hidden] = await Promise.all([
     // อัตราดอกเบี้ยเงินกู้จริง — เอาไปทำปุ่มลัด สมาชิกจะได้ไม่ต้องเปิดอีกหน้ามาดูว่ากี่เปอร์เซ็นต์
     getRates(),
     // เบอร์กับไลน์ของสหกรณ์ — แอดมินแก้ได้ที่ หลังบ้าน → ส่วนท้ายเว็บ (ห้ามฝังไว้ในโค้ด)
     getSiteInfo(),
+    // ประเภทเงินกู้ที่เจ้าหน้าที่ติ๊กไว้ว่า "ไม่ต้องขึ้น" ในโปรแกรมนี้ (หลังบ้าน → หน้าโปรแกรม)
+    getSetting<unknown>(INTEREST_RATES_HIDDEN_KEY, []),
   ]);
 
   return (
@@ -50,7 +54,7 @@ export default async function InterestCalculatorPage() {
           </div>
 
           <InterestCalculator
-            loanRates={rates.loan ?? []}
+            loanRates={visibleLoanRates(rates.loan ?? [], readHiddenRates(hidden))}
             contactPhone={site.phone ?? ""}
             lineId={site.lineId ?? ""}
           />
