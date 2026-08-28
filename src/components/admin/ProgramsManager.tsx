@@ -34,11 +34,13 @@ import {
   type CheckupImages,
   type CheckupIntro,
 } from "@/lib/programPages";
+import type { LoanRateRow } from "@/lib/interestCalc";
 
 /**
  * หน้าโปรแกรมในหลังบ้าน — ดูที่อยู่ของแต่ละโปรแกรม และแก้ของในโปรแกรมนั้น
  *
- * ตอนนี้มีโปรแกรมเดียว (ตรวจสุขภาพการเงิน) แก้ได้ทั้ง **คำถาม กลุ่ม ช่วงเงิน และภาพประกอบ**
+ * ตอนนี้มีสองโปรแกรม — **ตรวจสุขภาพการเงิน** แก้ได้ทั้งคำถาม กลุ่ม ช่วงเงิน และภาพประกอบ ·
+ * **คำนวณดอกเบี้ย** เลือกได้ว่าให้ขึ้นปุ่มลัดอัตราดอกเบี้ยเงินกู้ประเภทไหนบ้าง
  * — เพิ่มโปรแกรมใหม่ต้องไปต่อท้ายใน src/lib/programPages.ts
  *
  * ⚠️ **หน้านี้ต้องกดบันทึกเอง** (ต่างจากหน้าสไลด์ที่บันทึกให้ทันที) เพราะแก้ข้อความยาว ๆ
@@ -62,12 +64,18 @@ export default function ProgramsManager({
   initialImages,
   initialLogo,
   initialIntro,
+  loanRates,
+  initialHiddenRates,
   publicBase,
 }: {
   initialQuestions: CheckupQuestion[];
   initialImages: CheckupImages;
   initialLogo: string;
   initialIntro: CheckupIntro;
+  /** อัตราดอกเบี้ยเงินกู้ทั้งหมดที่ตั้งไว้ที่ หลังบ้าน → อัตราดอกเบี้ย (หน้านี้ไม่ได้แก้ตัวเลข) */
+  loanRates: LoanRateRow[];
+  /** ประเภทที่ติ๊กไว้ว่าไม่ต้องขึ้นในโปรแกรมคำนวณดอกเบี้ย — ว่าง = ขึ้นทั้งหมด */
+  initialHiddenRates: string[];
   publicBase: string;
 }) {
   const [questions, setQuestions] = useState<CheckupQuestion[]>(initialQuestions);
@@ -87,10 +95,22 @@ export default function ProgramsManager({
    * ถ้าเรียงใหม่ตามหมวด คนแก้จะเข้าใจผิดว่าคำถามถูกถามเรียงเป็นหมวด ๆ ซึ่งไม่ใช่
    */
   const [only, setOnly] = useState<CheckupGroup | "all">("all");
+  /** ประเภทเงินกู้ที่ติ๊กไว้ว่าไม่ต้องขึ้นในโปรแกรมคำนวณดอกเบี้ย (เก็บเป็นชื่อรายการ) */
+  const [hiddenRates, setHiddenRates] = useState<string[]>(initialHiddenRates);
+  const [savedRates, setSavedRates] = useState(() => JSON.stringify(initialHiddenRates));
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
   const dirty = JSON.stringify(questions) !== saved;
   const introDirty = JSON.stringify(intro) !== savedIntro;
+  const ratesDirty = JSON.stringify(hiddenRates) !== savedRates;
+
+  /** ประเภทที่จะขึ้นจริงในโปรแกรม — เอาไว้บอกจำนวนบนหัวข้อ */
+  const shownRates = loanRates.filter((row) => !hiddenRates.includes(row.label.trim()));
+
+  const toggleRate = (name: string) =>
+    setHiddenRates((list) =>
+      list.includes(name) ? list.filter((item) => item !== name) : [...list, name],
+    );
 
   async function send(body: Record<string, unknown>): Promise<boolean> {
     const response = await fetch("/api/admin/programs/", {
@@ -124,6 +144,20 @@ export default function ProgramsManager({
       setSaved(JSON.stringify(questions));
       setStatus({ kind: "ok", text: "บันทึกภาพแล้ว" });
     }
+  }
+
+  /** รายการอัตราที่ติ๊กไว้ — ต้องกดบันทึกเอง (ติ๊กหลายอันรวดเดียวแล้วค่อยบันทึกทีเดียว) */
+  async function saveRates() {
+    setSaving(true);
+    setStatus(null);
+    const ok = await send({ interestRatesHidden: hiddenRates });
+    setSaving(false);
+    if (!ok) return;
+    setSavedRates(JSON.stringify(hiddenRates));
+    setStatus({
+      kind: "ok",
+      text: `บันทึกแล้ว — โปรแกรมคำนวณดอกเบี้ยจะขึ้นปุ่มลัด ${shownRates.length} ประเภท`,
+    });
   }
 
   async function saveIntro() {
@@ -238,11 +272,99 @@ export default function ProgramsManager({
         </section>
       ))}
 
+      {/* ---------------- ของโปรแกรมคำนวณดอกเบี้ยอย่างเดียว ---------------- */}
+      <h2 className="border-t border-gray-200 pt-5 text-sm font-semibold text-gray-500">
+        ตั้งค่าเฉพาะของโปรแกรมคำนวณดอกเบี้ย
+      </h2>
+
+      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-bold text-gray-800">อัตราดอกเบี้ยที่ให้ขึ้นเป็นปุ่มลัด</h2>
+          <span className="text-xs text-gray-400">
+            ขึ้น {shownRates.length} จาก {loanRates.length} ประเภท
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-gray-600">
+          ในขั้นที่ 1 ของโปรแกรม สมาชิกกดปุ่มเลือกอัตราได้เลยไม่ต้องพิมพ์เอง —
+          ติ๊กไว้ว่าประเภทไหนควรขึ้น ประเภทไหนไม่ต้องขึ้น
+          <br />
+          <b>ตัวเลขอัตราแก้ที่นี่ไม่ได้</b> ต้องไปแก้ที่ <b>หลังบ้าน → อัตราดอกเบี้ย</b>{" "}
+          หน้านี้เลือกได้แค่ว่าจะให้ขึ้นหรือไม่ขึ้น
+        </p>
+
+        {loanRates.length === 0 ? (
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            ยังไม่มีอัตราดอกเบี้ยเงินกู้ในระบบ — ไปเพิ่มที่ หลังบ้าน → อัตราดอกเบี้ย ก่อน
+            แล้วรายการจะมาขึ้นที่นี่เอง
+          </p>
+        ) : (
+          <>
+            <ul className="mt-3 divide-y divide-gray-100 rounded-xl ring-1 ring-gray-200">
+              {loanRates.map((row, index) => {
+                const name = row.label.trim();
+                const on = !hiddenRates.includes(name);
+                return (
+                  <li key={`${name}-${index}`}>
+                    <label className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition hover:bg-gray-50">
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() => toggleRate(name)}
+                        className="h-4 w-4 shrink-0 accent-brand-600"
+                      />
+                      <span className="min-w-0 flex-1 truncate text-sm text-gray-700">
+                        {name || <span className="text-gray-400">(ไม่ได้ตั้งชื่อรายการ)</span>}
+                      </span>
+                      <span className="shrink-0 text-sm font-semibold tabular-nums text-gray-800">
+                        {row.rate}%
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={!ratesDirty || saving}
+                onClick={saveRates}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition ${
+                  ratesDirty && !saving
+                    ? "bg-brand-600 hover:bg-brand-700"
+                    : "cursor-not-allowed bg-gray-300"
+                }`}
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                บันทึกรายการที่เลือก
+              </button>
+              <button
+                type="button"
+                onClick={() => setHiddenRates([])}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-gray-500 transition hover:bg-gray-100"
+              >
+                เลือกทั้งหมด
+              </button>
+              {ratesDirty && <span className="text-xs text-amber-700">ยังไม่ได้บันทึก</span>}
+            </div>
+
+            {/*
+              เตือนเรื่องที่มองไม่เห็นจากหน้าจอ — เก็บเป็น "ชื่อรายการ" ไม่ใช่ลำดับ
+              เปลี่ยนชื่อที่หน้าอัตราดอกเบี้ยเมื่อไหร่ การติ๊กปิดจะหลุด แล้วรายการนั้นกลับมาขึ้นเอง
+            */}
+            <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500">
+              เพิ่มเงินกู้ประเภทใหม่ที่หน้าอัตราดอกเบี้ย จะขึ้นในโปรแกรมเองทันทีโดยไม่ต้องมาติ๊กซ้ำ ·
+              แต่ถ้า <b>เปลี่ยนชื่อรายการที่ติ๊กปิดไว้</b> รายการนั้นจะกลับมาขึ้นอีก
+              ต้องมาติ๊กปิดใหม่
+            </p>
+          </>
+        )}
+      </section>
+
       {/*
         ตั้งแต่บรรทัดนี้ลงไปเป็นของ "ตรวจสุขภาพการเงิน" อย่างเดียว
-        — ตั้งแต่มีโปรแกรมที่สอง (คำนวณดอกเบี้ย) ต้องบอกให้ชัด ไม่งั้นเจ้าหน้าที่จะนึกว่า
+        — มีโปรแกรมมากกว่าหนึ่งตัวแล้ว ต้องบอกให้ชัด ไม่งั้นเจ้าหน้าที่จะนึกว่า
         โลโก้กับคำถามข้างล่างนี้เป็นของทุกโปรแกรมรวมกัน
-        · โปรแกรมคำนวณดอกเบี้ยไม่มีอะไรต้องตั้ง (ใช้อัตราดอกเบี้ยกับเบอร์ติดต่อของเว็บอยู่แล้ว)
       */}
       <h2 className="border-t border-gray-200 pt-5 text-sm font-semibold text-gray-500">
         ตั้งค่าเฉพาะของโปรแกรมตรวจสุขภาพการเงิน
