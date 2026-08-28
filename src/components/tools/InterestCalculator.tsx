@@ -726,6 +726,42 @@ export default function InterestCalculator({
                         ปีนี้ใช้ตัวหาร {basis} วัน
                       </span>
                     </p>
+
+                    {/*
+                      สูตรเต็มแบบในใบประชาสัมพันธ์ — เจ้าของเว็บขอให้มีในหน้าสรุป 28 ส.ค. 2026
+                      ⚠️ **อยู่ได้เฉพาะขั้นที่ 3 เท่านั้น** ขั้นที่ 1-2 ห้ามมี (สั่งไว้วันเดียวกัน)
+                      เขียนสองบรรทัด: บรรทัดบนเป็นสูตรกลาง บรรทัดล่างแทนตัวเลขจริงลงไป
+                      คนที่ถือใบประชาสัมพันธ์อยู่จะจับคู่ได้ทันทีว่าโปรแกรมคิดแบบเดียวกัน
+                    */}
+                    <div className="mt-5 rounded-2xl bg-brand-50/70 px-4 py-4 ring-1 ring-brand-100">
+                      <p className="text-sm font-semibold text-brand-900">สูตรที่ใช้คำนวณ</p>
+
+                      {/* เลื่อนแนวนอนได้บนมือถือ ห้ามตัดบรรทัดกลางสูตร ไม่งั้นอ่านไม่รู้เรื่อง */}
+                      <div className="mt-2 overflow-x-auto">
+                        <div className="flex min-w-max items-center gap-2 text-sm text-brand-900 md:text-base">
+                          <span className="font-semibold">{words.result} =</span>
+                          <span>{words.principal}</span>
+                          <span className="text-brand-400">×</span>
+                          <Fraction top="อัตราดอกเบี้ย" bottom="100" />
+                          <span className="text-brand-400">×</span>
+                          <Fraction top="จำนวนวัน" bottom={`${basis} (วัน)`} />
+                        </div>
+                      </div>
+
+                      <div className="mt-3 overflow-x-auto border-t border-brand-100 pt-3">
+                        <div className="flex min-w-max items-center gap-2 text-sm text-gray-700 md:text-base">
+                          <span className="tabular-nums">{plain(principal)}</span>
+                          <span className="text-gray-400">×</span>
+                          <Fraction top={String(rate)} bottom="100" />
+                          <span className="text-gray-400">×</span>
+                          <Fraction top={plain(days)} bottom={String(basis)} />
+                          <span className="text-gray-400">=</span>
+                          <span className="font-bold tabular-nums text-brand-700">
+                            {money(result.interest)} บาท
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* ---- ตารางสรุปตัวเลขที่ใช้ ---- */}
@@ -1133,6 +1169,22 @@ function FootNote({ kind, over, rate }: { kind: RateKind; over: boolean; rate: n
         </span>
       </p>
     </div>
+  );
+}
+
+/**
+ * เศษส่วนแบบในใบประชาสัมพันธ์ — ตัวเศษอยู่บน ตัวส่วนอยู่ล่าง มีเส้นคั่นกลาง
+ * เขียนเป็น a/b บรรทัดเดียวก็ได้ แต่คนที่จับคู่กับใบประชาสัมพันธ์จะอ่านยากกว่ามาก
+ *
+ * ⚠️ **ใช้ได้เฉพาะในขั้นที่ 3 (หน้าสรุป)** ขั้นที่ 1-2 ห้ามมีสูตร (เจ้าของเว็บสั่ง 28 ส.ค. 2026)
+ */
+function Fraction({ top, bottom }: { top: string; bottom: string }) {
+  return (
+    <span className="inline-flex flex-col items-center leading-tight">
+      <span className="px-1.5 tabular-nums">{top}</span>
+      <span className="my-0.5 h-px w-full self-stretch bg-current opacity-50" />
+      <span className="px-1.5 tabular-nums">{bottom}</span>
+    </span>
   );
 }
 
