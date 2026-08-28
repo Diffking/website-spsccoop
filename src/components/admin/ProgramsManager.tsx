@@ -29,10 +29,12 @@ import {
   CHECKUP_CREDIT,
   CHECKUP_VERSION,
   COUNT_TOKEN,
+  DEFAULT_INTEREST_INTRO,
   DEFAULT_INTRO,
   PROGRAM_PAGES,
   type CheckupImages,
   type CheckupIntro,
+  type InterestIntro,
 } from "@/lib/programPages";
 import type { RateRow } from "@/lib/interestCalc";
 
@@ -72,6 +74,7 @@ export default function ProgramsManager({
   depositRates,
   initialHiddenLoan,
   initialHiddenDeposit,
+  initialInterestIntro,
   publicBase,
 }: {
   initialQuestions: CheckupQuestion[];
@@ -84,6 +87,8 @@ export default function ProgramsManager({
   /** ประเภทที่ติ๊กไว้ว่าไม่ต้องขึ้นในโปรแกรมคำนวณดอกเบี้ย — ว่าง = ขึ้นทั้งหมด */
   initialHiddenLoan: string[];
   initialHiddenDeposit: string[];
+  /** คำอธิบายว่าโปรแกรมคำนวณดอกเบี้ยมีไว้ทำอะไร — ขึ้นใต้เครื่องคิดเลข */
+  initialInterestIntro: InterestIntro;
   publicBase: string;
 }) {
   const [questions, setQuestions] = useState<CheckupQuestion[]>(initialQuestions);
@@ -108,12 +113,18 @@ export default function ProgramsManager({
   const [savedLoan, setSavedLoan] = useState(() => JSON.stringify(initialHiddenLoan));
   const [hiddenDeposit, setHiddenDeposit] = useState<string[]>(initialHiddenDeposit);
   const [savedDeposit, setSavedDeposit] = useState(() => JSON.stringify(initialHiddenDeposit));
+  /** บทความใต้เครื่องคิดเลขของโปรแกรมคำนวณดอกเบี้ย */
+  const [rateIntro, setRateIntro] = useState<InterestIntro>(initialInterestIntro);
+  const [savedRateIntro, setSavedRateIntro] = useState(() =>
+    JSON.stringify(initialInterestIntro),
+  );
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
   const dirty = JSON.stringify(questions) !== saved;
   const introDirty = JSON.stringify(intro) !== savedIntro;
   const loanDirty = JSON.stringify(hiddenLoan) !== savedLoan;
   const depositDirty = JSON.stringify(hiddenDeposit) !== savedDeposit;
+  const rateIntroDirty = JSON.stringify(rateIntro) !== savedRateIntro;
 
   async function send(body: Record<string, unknown>): Promise<boolean> {
     const response = await fetch("/api/admin/programs/", {
@@ -170,6 +181,17 @@ export default function ProgramsManager({
       kind: "ok",
       text: `บันทึกแล้ว — ฝั่ง${loan ? "เงินกู้" : "เงินรับฝาก"}จะขึ้นปุ่มลัด ${shown} ประเภท`,
     });
+  }
+
+  /** บทความของโปรแกรมคำนวณดอกเบี้ย — กดบันทึกเอง เหมือนข้อความยาว ๆ ที่อื่นในหน้านี้ */
+  async function saveRateIntro() {
+    setSaving(true);
+    setStatus(null);
+    const ok = await send({ interestIntro: rateIntro });
+    setSaving(false);
+    if (!ok) return;
+    setSavedRateIntro(JSON.stringify(rateIntro));
+    setStatus({ kind: "ok", text: "บันทึกคำอธิบายโปรแกรมคำนวณดอกเบี้ยแล้ว" });
   }
 
   async function saveIntro() {
@@ -312,6 +334,137 @@ export default function ProgramsManager({
         onAll={() => setHiddenDeposit([])}
         onSave={() => void saveRates("deposit")}
       />
+
+      {/* บทความใต้เครื่องคิดเลข — บอกสมาชิกว่าโปรแกรมนี้มีไว้ทำอะไร */}
+      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-bold text-gray-800">คำอธิบายว่าโปรแกรมนี้มีไว้ทำอะไร</h2>
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm("ดึงข้อความชุดตั้งต้นกลับมาทับของที่แก้ไว้?"))
+                setRateIntro(DEFAULT_INTEREST_INTRO);
+            }}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400 transition hover:text-gray-700"
+          >
+            <RotateCcw className="h-3.5 w-3.5" /> ใช้ข้อความชุดตั้งต้น
+          </button>
+        </div>
+        <p className="mt-1 text-sm text-gray-600">
+          ขึ้นเป็นบทความ<b>ใต้เครื่องคิดเลข</b>ในขั้นที่ 1 — บอกว่านี่คือสื่อการเรียนรู้ให้สมาชิก
+          ได้ฝึกคิดเอง ไม่ใช่ระบบแจ้งยอดหนี้จริง · <b>พิมพ์เป็นข้อความล้วน</b> ใส่แท็ก HTML
+          ลงไปจะโผล่เป็นตัวหนังสือให้สมาชิกเห็น
+        </p>
+
+        <label className="mt-4 block text-sm font-medium text-gray-700">
+          หัวเรื่อง
+          <input
+            value={rateIntro.heading}
+            onChange={(e) => setRateIntro({ ...rateIntro, heading: e.target.value })}
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+          />
+        </label>
+
+        <label className="mt-3 block text-sm font-medium text-gray-700">
+          ย่อหน้านำ <span className="font-normal text-gray-400">(ตัวหนากว่าย่อหน้าอื่น)</span>
+          <textarea
+            value={rateIntro.lead}
+            onChange={(e) => setRateIntro({ ...rateIntro, lead: e.target.value })}
+            rows={3}
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+          />
+        </label>
+
+        <p className="mt-4 text-sm font-medium text-gray-700">เนื้อหา (ย่อหน้าละหนึ่งช่อง)</p>
+        <ul className="mt-1.5 space-y-2">
+          {rateIntro.paragraphs.map((text, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <textarea
+                value={text}
+                rows={3}
+                onChange={(e) =>
+                  setRateIntro({
+                    ...rateIntro,
+                    paragraphs: rateIntro.paragraphs.map((t, n) =>
+                      n === i ? e.target.value : t,
+                    ),
+                  })
+                }
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+              />
+              <button
+                type="button"
+                title="ลบย่อหน้านี้"
+                onClick={() =>
+                  setRateIntro({
+                    ...rateIntro,
+                    paragraphs: rateIntro.paragraphs.filter((_, n) => n !== i),
+                  })
+                }
+                className="mt-1 shrink-0 rounded p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          onClick={() =>
+            setRateIntro({ ...rateIntro, paragraphs: [...rateIntro.paragraphs, ""] })
+          }
+          className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 transition hover:text-brand-800"
+        >
+          <Plus className="h-3.5 w-3.5" /> เพิ่มย่อหน้า
+        </button>
+
+        <p className="mt-4 text-sm font-medium text-gray-700">บรรทัด “ลองฝึกดูแบบนี้” (กรอบสีฟ้าอ่อน)</p>
+        <ul className="mt-1.5 space-y-2">
+          {rateIntro.tips.map((tip, i) => (
+            <li key={i} className="flex items-center gap-2">
+              <input
+                value={tip}
+                onChange={(e) =>
+                  setRateIntro({
+                    ...rateIntro,
+                    tips: rateIntro.tips.map((t, n) => (n === i ? e.target.value : t)),
+                  })
+                }
+                className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-brand-400"
+              />
+              <button
+                type="button"
+                title="ลบบรรทัดนี้"
+                onClick={() =>
+                  setRateIntro({ ...rateIntro, tips: rateIntro.tips.filter((_, n) => n !== i) })
+                }
+                className="shrink-0 rounded p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          onClick={() => setRateIntro({ ...rateIntro, tips: [...rateIntro.tips, ""] })}
+          className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 transition hover:text-brand-800"
+        >
+          <Plus className="h-3.5 w-3.5" /> เพิ่มบรรทัด
+        </button>
+
+        {rateIntroDirty && (
+          <button
+            type="button"
+            onClick={() => void saveRateIntro()}
+            disabled={saving}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-brand-700 disabled:opacity-60"
+          >
+            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            บันทึกคำอธิบาย
+          </button>
+        )}
+      </section>
 
       {/*
         ตั้งแต่บรรทัดนี้ลงไปเป็นของ "ตรวจสุขภาพการเงิน" อย่างเดียว

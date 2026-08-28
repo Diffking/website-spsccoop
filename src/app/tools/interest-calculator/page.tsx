@@ -6,7 +6,12 @@ import InterestCalculator from "@/components/tools/InterestCalculator";
 import { pageMetadata } from "@/lib/seo";
 import { getRates, getSetting, getSiteInfo } from "@/lib/settings";
 import { readHiddenRates, visibleRates } from "@/lib/interestCalc";
-import { INTEREST_DEPOSIT_HIDDEN_KEY, INTEREST_RATES_HIDDEN_KEY } from "@/lib/programPages";
+import {
+  INTEREST_DEPOSIT_HIDDEN_KEY,
+  INTEREST_INTRO_KEY,
+  INTEREST_RATES_HIDDEN_KEY,
+  fillInterestIntro,
+} from "@/lib/programPages";
 
 /**
  * โปรแกรมคำนวณดอกเบี้ย — โปรแกรมตัวที่สองของ "หน้าโปรแกรม" (ดู src/lib/programPages.ts)
@@ -26,7 +31,7 @@ export const dynamic = "force-dynamic";
 export const generateMetadata = () => pageMetadata("/tools/interest-calculator");
 
 export default async function InterestCalculatorPage() {
-  const [rates, site, hiddenLoan, hiddenDeposit] = await Promise.all([
+  const [rates, site, hiddenLoan, hiddenDeposit, intro] = await Promise.all([
     // อัตราดอกเบี้ยเงินกู้จริง — เอาไปทำปุ่มลัด สมาชิกจะได้ไม่ต้องเปิดอีกหน้ามาดูว่ากี่เปอร์เซ็นต์
     getRates(),
     // เบอร์กับไลน์ของสหกรณ์ — แอดมินแก้ได้ที่ หลังบ้าน → ส่วนท้ายเว็บ (ห้ามฝังไว้ในโค้ด)
@@ -35,6 +40,8 @@ export default async function InterestCalculatorPage() {
     // เก็บแยกสองคีย์ เพราะเงินกู้กับเงินรับฝากเป็นคนละตารางและซ่อนคนละรายการกัน
     getSetting<unknown>(INTEREST_RATES_HIDDEN_KEY, []),
     getSetting<unknown>(INTEREST_DEPOSIT_HIDDEN_KEY, []),
+    // คำอธิบายว่าโปรแกรมนี้มีไว้ทำอะไร — ยังไม่เคยแก้ = ใช้ถ้อยคำตั้งต้นในโค้ด
+    getSetting<unknown>(INTEREST_INTRO_KEY, null),
   ]);
 
   return (
@@ -53,11 +60,14 @@ export default async function InterestCalculatorPage() {
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <h1 className="text-sm font-semibold text-brand-800">คำนวณดอกเบี้ย</h1>
+            {/* บอกตั้งแต่แถบบนว่านี่คือสื่อการเรียนรู้ ไม่ใช่ระบบแจ้งยอดหนี้จริงของสมาชิก */}
+            <span className="hidden text-xs text-gray-400 sm:inline">· สื่อการเรียนรู้เรื่องดอกเบี้ย</span>
           </div>
 
           <InterestCalculator
             loanRates={visibleRates(rates.loan ?? [], readHiddenRates(hiddenLoan))}
             depositRates={visibleRates(rates.deposit ?? [], readHiddenRates(hiddenDeposit))}
+            intro={fillInterestIntro(intro)}
             contactPhone={site.phone ?? ""}
             lineId={site.lineId ?? ""}
           />
