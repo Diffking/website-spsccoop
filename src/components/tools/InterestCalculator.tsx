@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import {
   AlertTriangle,
+  BookOpen,
   ArrowLeft,
   ArrowRight,
   CalendarDays,
@@ -218,6 +219,17 @@ export default function InterestCalculator({
   /** ข้อย่อยของขั้นที่ 1 ที่กำลังถามอยู่ — ถามทีละข้อ */
   const [sub, setSub] = useState<SubStep>(1);
 
+  /**
+   * ผ่านหน้าวัตถุประสงค์มาแล้วหรือยัง — **หน้าด่านแรกก่อนใช้งาน**
+   * แบบเดียวกับโปรแกรมตรวจสุขภาพการเงิน (เจ้าของเว็บสั่ง 28 ส.ค. 2026)
+   *
+   * ⚠️ **ไม่จำว่าใครเคยอ่านแล้ว ตั้งใจ** — หน้านี้ไม่แตะ localStorage เลยสักที่
+   * (หลักเดียวกับที่ไม่เก็บตัวเลขหนี้สินของสมาชิก) เปิดหน้าใหม่ก็ได้อ่านอีกรอบ
+   * ซึ่งตรงกับเจตนาว่าเป็น "สื่อการเรียนรู้" ที่ควรได้อ่านทุกครั้งก่อนคิดเลข
+   * · เจ้าหน้าที่ปิดหน้านี้ทั้งระบบได้ที่ หลังบ้าน → หน้าโปรแกรม (`gate`)
+   */
+  const [started, setStarted] = useState(!intro.gate);
+
   // วันที่ออกใบสรุป — ล็อกไว้ตอนเปิดหน้า ไม่ให้เปลี่ยนเองกลางคันตอนข้ามเที่ยงคืน
   const [printedAt] = useState(() => todayISO());
 
@@ -312,7 +324,8 @@ export default function InterestCalculator({
   return (
     <div className="mx-auto w-full max-w-5xl space-y-4">
       {/* ---------------- แถบบอกขั้น ---------------- */}
-      <Stepper current={view} canGo={canGo} onPick={setStep} />
+      {/* ยังไม่กดเริ่ม = ยังไม่ต้องเห็นแถบขั้นตอน หน้าวัตถุประสงค์ควรมีอย่างเดียวให้อ่าน */}
+      {started && <Stepper current={view} canGo={canGo} onPick={setStep} />}
 
       {/*
         ทุกขั้นวางไว้ในช่องกริดเดียวกัน (STACKED) แล้วจางสลับ — ห้ามใส่ mode="wait"
@@ -320,7 +333,13 @@ export default function InterestCalculator({
       */}
       <div className="grid">
         <AnimatePresence initial={false}>
-          {view === 1 && (
+          {!started && (
+            <motion.div key="gate" {...fadeSwap(0.35)} style={STACKED}>
+              <IntroScreen intro={intro} onStart={() => setStarted(true)} />
+            </motion.div>
+          )}
+
+          {started && view === 1 && (
             <motion.div key="step1" {...fadeSwap(0.35)} style={STACKED}>
               {/* ---------------- ขั้นที่ 1 กรอกตัวเลข 3 ข้อย่อย ---------------- */}
               <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5">
@@ -675,42 +694,27 @@ export default function InterestCalculator({
               </section>
 
               {/*
-                คำอธิบายว่าโปรแกรมนี้มีไว้ทำอะไร — เจ้าของเว็บสั่งใส่ 28 ส.ค. 2026
-                ⚠️ **วางไว้ใต้เครื่องคิดเลข ไม่ใช่ขวางก่อนใช้งาน** คนที่มาเพื่อคิดเลขอย่างเดียว
-                ต้องได้กรอกทันที ส่วนคนที่อยากรู้ว่ามีไว้ทำอะไรก็เลื่อนลงมาอ่านได้
-                (ต่างจากโปรแกรมตรวจสุขภาพการเงินที่มีหน้าเปิดก่อนเริ่ม เพราะอันนั้นต้องตอบ 21 ข้อรวด)
-                ⚠️ ขึ้นเฉพาะขั้นที่ 1 — ขั้นที่ 2/3 คนกำลังดูตัวเลขของตัวเองอยู่ อย่าเอาบทความไปแทรก
+                แถบเตือนความจำใต้เครื่องคิดเลข — ตัวเต็มไปอยู่ในป๊อบอัปที่เด้งตอนเปิดหน้าแล้ว
+                (เจ้าของเว็บสั่ง 28 ส.ค. 2026 ให้ "อ่านก่อนใช้งาน")
+                ⚠️ **ต้องมีปุ่มเปิดอ่านซ้ำเสมอ** คนที่กดปิดป๊อบอัปไปแล้วต้องกลับมาอ่านได้
+                ไม่งั้นข้อความสำคัญอย่าง "ไม่ใช่ยอดหนี้จริง" จะหายไปเลยหลังกดปิดครั้งเดียว
               */}
-              <section className="mt-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 md:p-7">
-                <h2 className="text-lg font-bold text-brand-900 md:text-xl">{intro.heading}</h2>
-                <p className="mt-2 text-base font-medium leading-relaxed text-gray-700">
-                  {intro.lead}
+              <section className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-white px-5 py-4 shadow-sm ring-1 ring-black/5 md:px-7">
+                <p className="min-w-0 flex-1 text-sm leading-relaxed text-gray-600">
+                  <b className="text-brand-800">{intro.heading}</b> — {intro.lead}
                 </p>
-
-                {intro.paragraphs.map((text) => (
-                  <p key={text} className="mt-3 text-base leading-relaxed text-gray-600">
-                    {text}
-                  </p>
-                ))}
-
-                {intro.tips.length > 0 && (
-                  <div className="mt-5 rounded-2xl bg-brand-50/70 px-4 py-4 ring-1 ring-brand-100">
-                    <p className="text-sm font-semibold text-brand-900">ลองฝึกดูแบบนี้</p>
-                    <ul className="mt-2 space-y-2">
-                      {intro.tips.map((tip) => (
-                        <li key={tip} className="flex items-start gap-2.5 text-sm text-brand-900/90">
-                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
-                          <span className="leading-relaxed">{tip}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setStarted(false)}
+                  className="no-print inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-100"
+                >
+                  <BookOpen className="h-4 w-4" /> อ่านวัตถุประสงค์อีกครั้ง
+                </button>
               </section>
             </motion.div>
           )}
 
-          {view === 2 && (
+          {started && view === 2 && (
             <motion.div key="step2" {...fadeSwap(0.35)} style={STACKED}>
               {/* ---------------- ขั้นที่ 2 ผลคำนวณ ---------------- */}
               <div className="space-y-4">
@@ -795,7 +799,7 @@ export default function InterestCalculator({
             </motion.div>
           )}
 
-          {view === 3 && (
+          {started && view === 3 && (
             <motion.div key="step3" {...fadeSwap(0.35)} style={STACKED}>
               {/* ---------------- ขั้นที่ 3 สรุปและอธิบายวิธีคิด ---------------- */}
               <div className="space-y-4">
@@ -969,7 +973,7 @@ export default function InterestCalculator({
         ปุ่มเดินหน้า/ถอยหลังของขั้นที่ 2 และ 3 — อยู่นอกกรอบที่จางสลับ
         จะได้ไม่กระพริบตามทุกครั้งที่เปลี่ยนขั้น (หลักเดียวกับโปรแกรมตรวจสุขภาพการเงิน)
       */}
-      {view > 1 && (
+      {started && view > 1 && (
         <div className="no-print flex items-center justify-between gap-3">
           <button
             type="button"
@@ -1002,6 +1006,67 @@ export default function InterestCalculator({
         {INTEREST_CREDIT} · เวอร์ชัน {INTEREST_VERSION}
       </p>
     </div>
+  );
+}
+
+/**
+ * หน้าวัตถุประสงค์ — **ด่านแรกก่อนใช้งาน** แบบเดียวกับหน้าเปิดของโปรแกรมตรวจสุขภาพการเงิน
+ * (เจ้าของเว็บสั่ง 28 ส.ค. 2026 ให้ทำเป็นหน้าเปิด ไม่ใช่ป๊อบอัปที่เด้งทับเครื่องคิดเลข)
+ *
+ * ⚠️ **ต้องอ่านจบแล้วกดเริ่มเอง** ไม่มีตัวจับเวลาพาไปเอง — คนอ่านช้าต้องไม่โดนดึงออกกลางคัน
+ * ⚠️ **ปุ่มเริ่มอยู่ท้ายบทความ ไม่ใช่ลอยอยู่หัวหน้า** ให้ตาไล่อ่านลงมาจนจบแล้วเจอปุ่มพอดี
+ */
+function IntroScreen({ intro, onStart }: { intro: InterestIntro; onStart: () => void }) {
+  return (
+    <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5">
+      <div className="border-b border-brand-100 bg-gradient-to-b from-brand-50 to-white px-5 py-6 md:px-8">
+        <div className="flex items-start gap-3">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/25">
+            <BookOpen className="h-6 w-6" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold text-brand-900 md:text-2xl">{intro.heading}</h2>
+            <p className="mt-0.5 text-sm text-gray-500">อ่านก่อนเริ่มใช้งาน</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-5 py-6 md:px-8">
+        <p className="text-base font-medium leading-relaxed text-gray-700 md:text-lg">
+          {intro.lead}
+        </p>
+
+        {intro.paragraphs.map((text) => (
+          <p key={text} className="mt-3 text-base leading-relaxed text-gray-600">
+            {text}
+          </p>
+        ))}
+
+        {intro.tips.length > 0 && (
+          <div className="mt-5 rounded-2xl bg-brand-50/70 px-4 py-4 ring-1 ring-brand-100">
+            <p className="text-sm font-semibold text-brand-900">ลองฝึกดูแบบนี้</p>
+            <ul className="mt-2 space-y-2">
+              {intro.tips.map((tip) => (
+                <li key={tip} className="flex items-start gap-2.5 text-sm text-brand-900/90">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
+                  <span className="leading-relaxed">{tip}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      <div className="no-print border-t border-gray-100 bg-gray-50/70 px-5 py-5 md:px-8">
+        <button
+          type="button"
+          onClick={onStart}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-600 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-brand-700"
+        >
+          เริ่มใช้งาน <ArrowRight className="h-5 w-5" />
+        </button>
+      </div>
+    </section>
   );
 }
 

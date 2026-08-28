@@ -338,7 +338,7 @@ export default function ProgramsManager({
       {/* บทความใต้เครื่องคิดเลข — บอกสมาชิกว่าโปรแกรมนี้มีไว้ทำอะไร */}
       <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-lg font-bold text-gray-800">คำอธิบายว่าโปรแกรมนี้มีไว้ทำอะไร</h2>
+          <h2 className="text-lg font-bold text-gray-800">หน้าวัตถุประสงค์ของโปรแกรม</h2>
           <button
             type="button"
             onClick={() => {
@@ -351,10 +351,27 @@ export default function ProgramsManager({
           </button>
         </div>
         <p className="mt-1 text-sm text-gray-600">
-          ขึ้นเป็นบทความ<b>ใต้เครื่องคิดเลข</b>ในขั้นที่ 1 — บอกว่านี่คือสื่อการเรียนรู้ให้สมาชิก
+          หน้าแรกที่สมาชิกเห็นก่อนเข้าเครื่องคิดเลข — บอกว่านี่คือสื่อการเรียนรู้ให้สมาชิก
           ได้ฝึกคิดเอง ไม่ใช่ระบบแจ้งยอดหนี้จริง · <b>พิมพ์เป็นข้อความล้วน</b> ใส่แท็ก HTML
           ลงไปจะโผล่เป็นตัวหนังสือให้สมาชิกเห็น
         </p>
+
+        <label className="mt-3 flex items-start gap-2.5 rounded-lg bg-gray-50 px-3 py-2.5">
+          <input
+            type="checkbox"
+            checked={rateIntro.gate}
+            onChange={(e) => setRateIntro({ ...rateIntro, gate: e.target.checked })}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-brand-600"
+          />
+          <span className="text-sm text-gray-700">
+            <b>ให้อ่านก่อนเริ่มใช้งาน</b> — หน้านี้เป็นด่านแรกที่สมาชิกเห็นเมื่อเปิดโปรแกรม
+            อ่านจบแล้วกดปุ่ม “เริ่มใช้งาน” จึงจะเข้าเครื่องคิดเลข
+            <span className="mt-0.5 block text-xs text-gray-500">
+              ปิดช่องนี้ = เข้าเครื่องคิดเลขทันที แต่สมาชิกยังกดปุ่ม “อ่านวัตถุประสงค์อีกครั้ง”
+              ใต้เครื่องคิดเลขได้เสมอ
+            </span>
+          </span>
+        </label>
 
         <label className="mt-4 block text-sm font-medium text-gray-700">
           หัวเรื่อง
