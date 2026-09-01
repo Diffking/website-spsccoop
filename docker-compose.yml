@@ -92,6 +92,20 @@ services:
   # ต้องสำรองรูปด้วย ไม่งั้นกู้ฐานกลับมาแล้วจะเหลือแต่ path ที่ชี้ไปไฟล์ที่ไม่มีอยู่
   # กู้คืน: docker compose exec -T db psql -U coopsmile coopsmile < backups/ไฟล์.sql
   #         tar -xzf backups/uploads-ไฟล์.tar.gz -C uploads/
+  #
+  # ⚠️ ต้องรอ pg_isready ก่อนเสมอ ห้ามยิง pg_dump ทันทีที่คอนเทนเนอร์สตาร์ต
+  #    condition: service_healthy ไม่พอ — healthcheck ของ db ใช้ pg_isready ผ่าน
+  #    unix socket ในตัวมันเอง ซึ่งผ่านก่อนที่ Postgres จะเปิดรับ TCP จริง
+  #    db-backup จึงยิงเร็วไปแล้วได้ Connection refused ทุกครั้งที่บูตเครื่อง
+  #    แล้วไป sleep ยาว 24 ชม. · เครื่องนี้ปิดทุกคืน มันจึงไม่เคยได้ลองใหม่เลย
+  #    → ไฟล์ .sql เป็น 0 ไบต์ติดกัน 13 วัน (17–31 ส.ค. 2026) กว่าจะรู้ตัว
+  #
+  # ⚠️ dump ลงไฟล์ชั่วคราวก่อน สำเร็จแล้วค่อย mv ทับ — ห้าม > ทับไฟล์จริงตรง ๆ
+  #    เพราะ shell truncate ไฟล์ตั้งแต่ก่อน pg_dump จะเริ่ม พลาดเมื่อไหร่ก็ได้
+  #    ไฟล์เปล่าไปแทนที่ของเดิมทันที · และต้องเช็ค -s ด้วย ไม่ใช่เชื่อ exit code อย่างเดียว
+  #
+  # ⚠️ ล้มเหลวต้องขึ้น log ว่า FAILED — ของเดิมใช้ && เฉย ๆ พลาดแล้วเงียบสนิท
+  #    ส่วน uploads สำรองผ่านทุกวัน จึงดูเหมือนงานสำรองยังทำงานอยู่ทั้งที่ฐานไม่ได้สำรองเลย
   db-backup:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -107,7 +121,7 @@ services:
     entrypoint:
       - sh
       - -c
-      - while true; do pg_dump -h db -U coopsmile coopsmile > /backups/coopsmile-$$(date +%F).sql && echo "db backup OK $$(date)"; tar -czf /backups/uploads-$$(date +%F).tar.gz -C /uploads . && echo "uploads backup OK $$(date)"; find /backups -name 'coopsmile-*.sql' -mtime +14 -delete; find /backups -name 'uploads-*.tar.gz' -mtime +14 -delete; sleep 86400; done
+      - while true; do until pg_isready -h db -U coopsmile -q; do sleep 3; done; if pg_dump -h db -U coopsmile coopsmile > /backups/coopsmile.tmp && [ -s /backups/coopsmile.tmp ]; then mv /backups/coopsmile.tmp /backups/coopsmile-$$(date +%F).sql; echo "db backup OK $$(date)"; else rm -f /backups/coopsmile.tmp; echo "db backup FAILED $$(date)"; fi; if tar -czf /backups/uploads-$$(date +%F).tar.gz -C /uploads .; then echo "uploads backup OK $$(date)"; else echo "uploads backup FAILED $$(date)"; fi; find /backups -name 'coopsmile-*.sql' -mtime +14 -delete; find /backups -name 'uploads-*.tar.gz' -mtime +14 -delete; sleep 86400; done
 
   # อุ่นสำเนาหน้าเว็บบนโฮสต์ วันละ 2 ครั้ง — 09:30 กับ 15:30 เวลาไทย
   #
