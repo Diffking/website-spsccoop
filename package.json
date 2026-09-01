@@ -10,7 +10,8 @@
     "prebuild": "node scripts/copy-pdf-worker.mjs",
     "predev": "node scripts/copy-pdf-worker.mjs",
     "check:blocks": "tsx scripts/roundtrip-check.mts",
-    "check:filter": "tsx scripts/filter-check.mts"
+    "check:filter": "tsx scripts/filter-check.mts",
+    "check:bridge": "tsx scripts/bridge-check.mts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
