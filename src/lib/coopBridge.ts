@@ -92,8 +92,16 @@ export type BridgeEvent = {
   /** mobile = รถโมบาย · project = โครงการ · seminar = สัมมนา */
   type: string;
   title: string;
+  /** สถานที่จัด — มีเฉพาะรายการที่ลงในเมนูปฏิทิน */
   place: string | null;
   time: string | null;
+  /**
+   * รายละเอียดเพิ่มเติม — สำหรับรายการที่มาจากสไลด์คือคำอธิบายใต้หัวข้อสไลด์
+   *
+   * ⚠️ **ห้ามเอาไปลงช่องสถานที่** หน้าเว็บใช้คำอธิบายสไลด์เป็นบรรทัดรองบนปฏิทิน
+   * ซึ่งมักเป็นข้อความยาวทั้งย่อหน้า (วันเวลา จำนวนที่รับ สถานที่ ปนกันมา)
+   */
+  note: string | null;
   /** มาจากไหน — calendar = เมนูปฏิทินสหกรณ์ · slide = แบนเนอร์ที่ใส่วันจัดกิจกรรมไว้ */
   source: "calendar" | "slide";
 };
@@ -395,6 +403,7 @@ export async function getCalendar(): Promise<BridgeEvent[]> {
     title: r.title,
     place: r.place,
     time: r.time,
+    note: null,
     source: "calendar",
   }));
 
@@ -406,8 +415,10 @@ export async function getCalendar(): Promise<BridgeEvent[]> {
       day: Number(date.slice(8)),
       type: s.eventType ?? "project",
       title: s.title,
-      place: s.caption,
+      // สไลด์ไม่มีช่องสถานที่แยก มีแต่คำอธิบายยาว ๆ ซึ่งไม่ใช่สถานที่
+      place: null,
       time: null,
+      note: s.caption,
       source: "slide",
     };
   });
