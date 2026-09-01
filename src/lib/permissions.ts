@@ -31,7 +31,8 @@ export type AreaKey =
   | "pages"
   | "designed"
   | "programs"
-  | "seo";
+  | "seo"
+  | "bridge";
 
 /** รายชื่อพื้นที่ทั้งหมด — ใช้ทำรายการติ๊กเลือกในหน้าผู้ใช้งาน และหาที่อยู่ของแต่ละพื้นที่ */
 export const AREAS: { key: AreaKey; href: string; label: string; group: string }[] = [
@@ -52,6 +53,7 @@ export const AREAS: { key: AreaKey; href: string; label: string; group: string }
   { key: "designed", href: "/admin/designed", label: "หน้าออกแบบอัตโนมัติ", group: "ทั้งเว็บ" },
   { key: "programs", href: "/admin/programs", label: "หน้าโปรแกรม", group: "ทั้งเว็บ" },
   { key: "seo", href: "/admin/seo", label: "SEO", group: "ทั้งเว็บ" },
+  { key: "bridge", href: "/admin/bridge", label: "เชื่อมต่อระบบ (CoopBridge)", group: "ทั้งเว็บ" },
   { key: "pages", href: "/admin/pages", label: "หน้าเนื้อหา — ทุกหมวด", group: "หน้าเนื้อหา" },
 ];
 

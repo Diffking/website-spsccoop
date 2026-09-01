@@ -16,6 +16,7 @@ import {
   Sparkles,
   Users,
   Search,
+  Share2,
   KeyRound,
   Menu,
   X,
@@ -40,6 +41,7 @@ export type MenuKey =
   | "designed"
   | "programs"
   | "seo"
+  | "bridge"
   | "users";
 
 const ITEMS: {
@@ -143,6 +145,14 @@ const ITEMS: {
     icon: Search,
     label: "SEO",
     desc: "กำหนดหน้าที่ให้เครื่องมือค้นหาเก็บ",
+  },
+  {
+    key: "bridge",
+    area: "bridge",
+    href: "/admin/bridge",
+    icon: Share2,
+    label: "เชื่อมต่อระบบ",
+    desc: "ข้อมูลที่แบ่งปันให้ระบบอื่นในสำนักงานอ่าน",
   },
   {
     key: "users",
