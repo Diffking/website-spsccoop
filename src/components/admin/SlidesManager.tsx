@@ -231,6 +231,81 @@ export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; a
     router.refresh();
   }
 
+  /**
+   * ให้ AI อ่านรูปของสไลด์ที่มีอยู่แล้ว "ใหม่อีกครั้ง"
+   *
+   * ของเดิม AI อ่านให้ครั้งเดียวตอนอัปรูป — ผลไม่ถูกใจหรือปรับคำสั่ง AI ทีหลัง
+   * ก็แก้อะไรไม่ได้ นอกจากลบสไลด์ทิ้งแล้วอัปใหม่ ซึ่งทำให้ลำดับกับลิงก์ที่ตั้งไว้หายไปด้วย
+   * (เจ้าของเว็บขอไว้ 2 ก.ย. 2026)
+   *
+   * ⚠️ **วันที่ว่างไม่เขียนทับของเดิม** — AI ถูกสั่งห้ามเดาวันที่ที่ไม่ได้เขียนในภาพ
+   * ถ้าเอา "" ไปทับ วันที่ที่เจ้าหน้าที่ตั้งเองไว้จะหายทุกครั้งที่กดอ่านใหม่
+   */
+  async function reread(slide: SlideRow) {
+    if (
+      !confirm(
+        `ให้ AI อ่านรูปของ “${slide.title}” ใหม่?\n\n` +
+          "หัวข้อกับคำอธิบายที่มีอยู่จะถูกเขียนทับด้วยของใหม่\n" +
+          "ส่วนวันที่จะเขียนทับเฉพาะวันที่ AI อ่านเจอในภาพเท่านั้น",
+      )
+    ) {
+      return;
+    }
+
+    setBusy("ai");
+    setStatus(null);
+    const form = new FormData();
+    form.append("url", slide.imageUrl);
+    form.append("target", "slide");
+    const response = await fetch("/api/admin/ai/read-image/", { method: "POST", body: form });
+    const data = await response.json().catch(() => ({}));
+    setBusy(null);
+
+    if (!response.ok) {
+      setStatus({
+        kind: "error",
+        text: `AI อ่านภาพไม่สำเร็จ (${data.error ?? "ไม่ทราบสาเหตุ"}) — พิมพ์เองได้ที่สไลด์`,
+      });
+      return;
+    }
+
+    const read = (data.data ?? {}) as {
+      title?: string;
+      caption?: string;
+      startsAt?: string;
+      endsAt?: string;
+      eventDate?: string;
+      eventType?: string;
+    };
+
+    const body: Record<string, unknown> = {};
+    const got: string[] = [];
+    if (read.title?.trim()) {
+      body.title = read.title.trim();
+      got.push("หัวข้อ");
+    }
+    if (read.caption?.trim()) {
+      body.caption = read.caption.trim();
+      got.push("เงื่อนไข");
+    }
+    if (read.eventDate) {
+      body.eventDate = read.eventDate;
+      body.eventType = read.eventType || "project";
+      got.push("วันจัดงาน (ปักลงปฏิทินให้แล้ว)");
+    }
+    if (read.startsAt) body.startsAt = read.startsAt;
+    if (read.endsAt) body.endsAt = read.endsAt;
+    if (read.startsAt || read.endsAt) got.push("ช่วงเวลาเผยแพร่");
+
+    if (got.length === 0) {
+      setStatus({ kind: "error", text: "AI อ่านภาพนี้ไม่ได้ความอะไรเลย — พิมพ์เองได้ที่สไลด์" });
+      return;
+    }
+
+    await patch(slide.id, body);
+    setStatus({ kind: "ok", text: `AI อ่านใหม่แล้ว · เติม${got.join(" · ")}ให้` });
+  }
+
   async function row(id: string, init: RequestInit) {
     setBusy("row");
     const response = await fetch(`/api/admin/slides/${id}/`, init);
@@ -332,6 +407,17 @@ export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; a
           >
             {slide.published ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
           </button>
+          {aiReady && (
+            <button
+              type="button"
+              title="ให้ AI อ่านรูปนี้ใหม่ (หัวข้อ เงื่อนไข วันที่)"
+              disabled={busy !== null}
+              onClick={() => void reread(slide)}
+              className="rounded p-1 transition hover:bg-white/15 disabled:opacity-25"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+            </button>
+          )}
           <button
             type="button"
             title="ลิงก์ วันที่ และปฏิทิน"
