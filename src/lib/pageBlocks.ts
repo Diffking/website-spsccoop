@@ -29,7 +29,21 @@ export type Card = {
   href: string;
 };
 
-export type Person = { src: string; name: string; role: string };
+export type Person = {
+  src: string;
+  name: string;
+  role: string;
+  /**
+   * คำบรรยายรูปเดิมที่ติดมากับ `<img alt="…">`
+   *
+   * ⚠️ **ต้องเก็บไว้เขียนกลับ** — หน้าทำเนียบที่ซ่อนชื่อใต้รูป (รูปมีชื่อพิมพ์ติดมาในภาพ)
+   * มีชื่อคนอยู่ใน `alt` ที่เดียวเท่านั้น ถ้าไม่เก็บไว้ ตัวเขียนกลับจะใส่ `alt` จากช่องชื่อ
+   * ซึ่งว่างอยู่ → **แค่เปิด EditUI แล้วกดบันทึก ชื่อทั้งหน้าก็หายเกลี้ยง**
+   * (เกิดขึ้นจริงกับหน้าเจ้าหน้าที่ 17 คน เมื่อ 1 ก.ย. 2026 กว่าจะรู้ตัวก็ตอนที่ระบบอื่น
+   * มาขอข้อมูลแล้วได้ชื่อว่างเปล่ากลับไป)
+   */
+  alt: string;
+};
 
 export type Tab = { title: string; blocks: Block[] };
 
@@ -308,11 +322,14 @@ function peopleOf(el: Element): Block {
         คำสองคำเลยติดกัน ("…สงขลาที่ปรึกษา") — หายเงียบ ๆ ตอนมีคนเปิด EditUI แล้วกดบันทึก
       */
       const html = (el: Element | null) => el?.innerHTML.trim() ?? "";
+      const img = figure.querySelector("img");
       return {
-        src: figure.querySelector("img")?.getAttribute("src") ?? "",
+        src: img?.getAttribute("src") ?? "",
         // ไม่มี span ชื่อ = ทั้ง figcaption คือชื่อ (หน้าทำเนียบที่ปรึกษาเขียนแบบนี้)
         name: html(name ?? figure.querySelector("figcaption")),
         role: html(role),
+        // เก็บไว้เฉย ๆ ไม่ได้เอามาแสดง — มีไว้เขียนกลับตอนช่องชื่อว่าง (ดูหมายเหตุที่ type Person)
+        alt: img?.getAttribute("alt") ?? "",
       };
     }),
   };
@@ -573,8 +590,12 @@ function blockToHtml(block: Block): string {
 
       const figure = (p: Person) =>
         (plain ? `  <figure>${NL}` : `  <figure class="person">${NL}`) +
-        // alt เป็นข้อความล้วนเสมอ — ชื่อที่มี <br> ต้องแปลงเป็นช่องว่างก่อน
-        `    <img src="${escapeAttr(p.src)}" alt="${escapeAttr(plainText(p.name))}">${NL}` +
+        /*
+          alt เป็นข้อความล้วนเสมอ — ชื่อที่มี <br> ต้องแปลงเป็นช่องว่างก่อน
+          ⚠️ ช่องชื่อว่าง = **คงคำบรรยายรูปเดิมไว้** ห้ามเขียนทับด้วยค่าว่าง
+          หน้าที่ซ่อนชื่อใต้รูปมีชื่อคนอยู่ใน alt ที่เดียว ลบทิ้งแล้วไม่มีที่ให้กู้
+        */
+        `    <img src="${escapeAttr(p.src)}" alt="${escapeAttr(plainText(p.name) || p.alt)}">${NL}` +
         caption(p) +
         "  </figure>";
 

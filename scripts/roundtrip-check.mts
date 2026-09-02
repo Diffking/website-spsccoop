@@ -110,6 +110,19 @@ for (const page of pages) {
     if (a !== b) problems.push(`${name}: ${a} -> ${b}`);
   }
 
+  /*
+    คำบรรยายรูป (alt) ต้องไม่หาย — นับตัวอักษรอย่างเดียวจับไม่ได้ เพราะ alt อยู่ในแอตทริบิวต์
+    ไม่ใช่เนื้อความ · หน้าทำเนียบที่ซ่อนชื่อใต้รูปมีชื่อคนอยู่ใน alt ที่เดียว
+    1 ก.ย. 2026 ตัวเขียนกลับใส่ alt จากช่องชื่อซึ่งว่างอยู่ ชื่อเจ้าหน้าที่ 17 คนจึงหายเกลี้ยง
+    แค่มีคนเปิด EditUI แล้วกดบันทึก โดยไม่มีอะไรฟ้องเลย
+  */
+  const altsOf = (html: string) =>
+    (html.match(/alt="([^"]*)"/g) ?? []).map((a) => a.slice(5, -1)).filter(Boolean);
+  const lost = altsOf(before).filter((a) => !altsOf(after).includes(a));
+  if (lost.length > 0) {
+    problems.push(`คำบรรยายรูปหาย ${lost.length} รูป — เช่น "${lost[0]}"`);
+  }
+
   const htmlBlocks = blocks.filter((b) => b.kind === "html").length;
   const tail = htmlBlocks ? ` (ก้อนที่อ่านไม่ออก ${htmlBlocks})` : "";
 

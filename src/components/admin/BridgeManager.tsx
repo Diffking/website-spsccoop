@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Save,
   Loader2,
@@ -57,6 +57,19 @@ const SOURCE_LABEL: Record<string, string> = {
   none: "ไม่มีชื่อ",
 };
 
+/**
+ * ภาพของค่าที่ "บันทึกได้" ณ ตอนนี้ — เอาไว้เทียบว่ามีของค้างยังไม่บันทึกไหม
+ * ไม่รวมโทเคน เพราะปุ่มสร้างโทเคนบันทึกให้ทันทีอยู่แล้ว ไม่ต้องกดบันทึกซ้ำ
+ */
+function snapshot(config: BridgeConfig, ips: string): string {
+  return JSON.stringify({
+    enabled: config.enabled,
+    hiddenGroups: [...config.hiddenGroups].sort(),
+    overrides: config.overrides,
+    ips: ips.trim(),
+  });
+}
+
 /** เวลาแบบอ่านง่าย — ไม่ต้องมีไลบรารีวันที่ */
 function thaiTime(iso: string): string {
   const d = new Date(iso);
@@ -79,8 +92,26 @@ export default function BridgeManager({ initial, groups, events, log, base, aiRe
   const [reading, setReading] = useState("");
   /** คนที่ AI เพิ่งอ่านให้ในรอบนี้ ยังไม่ได้กดบันทึก — ทำสีต่างไว้ให้ตรวจก่อน */
   const [aiFilled, setAiFilled] = useState<string[]>([]);
+  /** ค่าที่บันทึกลงฐานไปแล้ว — เทียบกับของบนจอเพื่อรู้ว่ามีอะไรค้าง */
+  const [saved, setSaved] = useState(() => snapshot(initial, initial.allowIps.join("\n")));
 
   const set = (patch: Partial<BridgeConfig>) => setConfig((prev) => ({ ...prev, ...patch }));
+
+  /**
+   * มีของแก้ไว้แล้วยังไม่ได้บันทึกไหม
+   *
+   * ⚠️ หน้านี้ **ไม่บันทึกให้เอง** (คนละแบบกับหน้าสไลด์) — 2 ก.ย. 2026 เจ้าของเว็บ
+   * พิมพ์ชื่อครบทุกคนแล้วปิดหน้าไป งานหายทั้งหมดเพราะปุ่มบันทึกอยู่ล่างสุดจนไม่เห็น
+   * จึงต้องมีทั้งแถบติดล่างจอและคำเตือนตอนปิดแท็บ เหมือนหน้าเนื้อหา
+   */
+  const dirty = snapshot(config, ips) !== saved;
+
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
   const shared = groups.filter((g) => !config.hiddenGroups.includes(g.key));
   const sharedPeople = shared.reduce((sum, g) => sum + g.count, 0);
@@ -189,7 +220,10 @@ export default function BridgeManager({ initial, groups, events, log, base, aiRe
     const data = await response.json().catch(() => ({}));
     setBusy(false);
     // บันทึกแล้ว = เจ้าหน้าที่ตรวจของที่ AI อ่านให้แล้ว ป้าย "ยังไม่ยืนยัน" จึงหายไป
-    if (response.ok) setAiFilled([]);
+    if (response.ok) {
+      setAiFilled([]);
+      setSaved(snapshot(config, ips));
+    }
     setStatus(
       response.ok
         ? { kind: "ok", text: "บันทึกแล้ว" }
@@ -563,6 +597,29 @@ export default function BridgeManager({ initial, groups, events, log, base, aiRe
           </ul>
         )}
       </section>
+
+      {/*
+        แถบติดล่างจอ — โผล่เมื่อมีที่แก้ไว้แล้วยังไม่ได้บันทึก
+        หน้านี้ยาวมาก (ชื่อคน 47 คนอยู่ในกล่องที่กดกางเอง) ปุ่มบันทึกอยู่ล่างสุด
+        พิมพ์ชื่อเสร็จแล้วปิดหน้าไปเลยคือทางที่งานหาย — เกิดขึ้นจริงมาแล้ว 2 ก.ย. 2026
+      */}
+      {dirty && (
+        <div className="sticky bottom-3 z-30 flex flex-wrap items-center gap-3 rounded-xl bg-gray-900/95 px-4 py-3 text-sm text-white shadow-lg">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-300" />
+          <span className="min-w-0 flex-1">
+            แก้ไว้แล้วแต่ <b>ยังไม่ได้บันทึก</b> — ปิดหน้านี้ตอนนี้สิ่งที่แก้จะหาย
+          </span>
+          <button
+            type="button"
+            onClick={save}
+            disabled={busy}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-2 font-medium text-white transition hover:bg-brand-400 disabled:opacity-60"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            บันทึกเลย
+          </button>
+        </div>
+      )}
 
       {/* ---------- บันทึก ---------- */}
       <div className="flex items-center gap-3">
