@@ -153,7 +153,15 @@ export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; a
       return;
     }
 
-    let read: { title?: string; caption?: string; startsAt?: string; endsAt?: string } = {};
+    let read: {
+      title?: string;
+      caption?: string;
+      startsAt?: string;
+      endsAt?: string;
+      /** วันจัดงานจริง — มีแล้วสไลด์ใบนี้จะไปปักบนปฏิทินหน้าแรกให้เอง */
+      eventDate?: string;
+      eventType?: string;
+    } = {};
     /*
       บอกให้ได้ว่า AI ทำอะไรไปบ้าง — ของเดิมขึ้นว่า "AI เติมหัวข้อให้" ทุกกรณี
       แม้ตอนที่เรียก AI ไม่สำเร็จเลย เจ้าหน้าที่จึงแยกไม่ออกระหว่าง
@@ -171,11 +179,19 @@ export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; a
       const data = await response.json().catch(() => ({}));
       if (response.ok) {
         read = data.data ?? {};
-        // ในภาพไม่ได้เขียนวันไว้ก็ตอบ "" มา (prompt สั่งห้ามเดา) ไม่ใช่อาการเสีย
+        /*
+          ในภาพไม่ได้เขียนวันไว้ก็ตอบ "" มา (prompt สั่งห้ามเดา) ไม่ใช่อาการเสีย
+          บอกแยกเป็นเรื่อง ๆ ว่าได้อะไรมาบ้าง เจ้าหน้าที่จะได้รู้ว่าต้องไปเติมช่องไหนต่อ
+        */
+        const got: string[] = ["หัวข้อ"];
+        if (read.caption?.trim()) got.push("เงื่อนไข");
+        if (read.eventDate) got.push("วันจัดงาน (ปักลงปฏิทินให้แล้ว)");
+        if (read.startsAt || read.endsAt) got.push("ช่วงเวลาเผยแพร่");
         aiNote =
-          read.startsAt || read.endsAt
-            ? "AI เติมหัวข้อและช่วงเวลาเผยแพร่ให้แล้ว"
-            : "AI เติมหัวข้อให้ · ในภาพไม่ได้ระบุวันที่ ตั้งช่วงเวลาเผยแพร่เองได้ที่ช่องด้านล่าง";
+          `AI เติม${got.join(" · ")}ให้แล้ว` +
+          (read.eventDate || read.startsAt || read.endsAt
+            ? ""
+            : " · ในภาพไม่ได้ระบุวันที่ ตั้งเองได้ที่ช่องด้านล่าง");
       } else {
         aiNote = `AI อ่านภาพไม่สำเร็จ (${data.error ?? "ไม่ทราบสาเหตุ"}) — พิมพ์หัวข้อเองได้`;
       }
@@ -191,6 +207,9 @@ export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; a
         caption: read.caption ?? "",
         startsAt: read.startsAt ?? "",
         endsAt: read.endsAt ?? "",
+        // อ่านวันจัดงานได้ = ปักลงปฏิทินหน้าแรกให้เลย ไม่ต้องพิมพ์ซ้ำในเมนูปฏิทิน
+        eventDate: read.eventDate ?? "",
+        eventType: read.eventType ?? "",
       }),
     });
     const data = await created.json().catch(() => ({}));
