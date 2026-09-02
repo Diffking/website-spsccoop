@@ -15,6 +15,7 @@ import {
   Users,
   CalendarDays,
   AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 import type { BridgeConfig, BridgeGroup, BridgeLog } from "@/lib/coopBridge";
 
@@ -36,6 +37,8 @@ type Props = {
   events: number;
   log: BridgeLog;
   base: string;
+  /** ไม่มีคีย์ AI = ซ่อนปุ่มให้ AI อ่านชื่อไปเลย ที่เหลือใช้ได้เหมือนเดิม */
+  aiReady: boolean;
 };
 
 const KIND_LABEL: Record<BridgeGroup["kind"], string> = {
@@ -65,13 +68,17 @@ function thaiTime(iso: string): string {
   }).format(d);
 }
 
-export default function BridgeManager({ initial, groups, events, log, base }: Props) {
+export default function BridgeManager({ initial, groups, events, log, base, aiReady }: Props) {
   const [config, setConfig] = useState<BridgeConfig>(initial);
   const [ips, setIps] = useState(initial.allowIps.join("\n"));
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [showToken, setShowToken] = useState(false);
   const [copied, setCopied] = useState("");
+  /** กลุ่มที่กำลังให้ AI อ่านอยู่ — ปุ่มของกลุ่มอื่นยังกดได้ */
+  const [reading, setReading] = useState("");
+  /** คนที่ AI เพิ่งอ่านให้ในรอบนี้ ยังไม่ได้กดบันทึก — ทำสีต่างไว้ให้ตรวจก่อน */
+  const [aiFilled, setAiFilled] = useState<string[]>([]);
 
   const set = (patch: Partial<BridgeConfig>) => setConfig((prev) => ({ ...prev, ...patch }));
 
@@ -100,6 +107,65 @@ export default function BridgeManager({ initial, groups, events, log, base }: Pr
     }));
   }
 
+  /**
+   * ให้ AI อ่านชื่อจากรูปทั้งกลุ่ม — อ่านเฉพาะคนที่ยังไม่มีชื่อที่เชื่อได้
+   *
+   * ⚠️ เติมลงช่องเฉย ๆ **ไม่บันทึกให้** เจ้าหน้าที่ต้องตรวจแล้วกดบันทึกเอง
+   * ชื่อคนสะกดผิดแล้วไหลไปเข้าทะเบียนของอีกระบบ ตามแก้ยากกว่าคำโปรยบนแบนเนอร์
+   */
+  async function readNames(group: BridgeGroup) {
+    const targets = group.people.filter(
+      (p) => !config.overrides[p.id]?.name && p.nameSource !== "caption",
+    );
+    if (targets.length === 0) return;
+
+    setReading(group.key);
+    setStatus(null);
+    const response = await fetch("/api/admin/bridge/read-names/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ photos: targets.map((p) => p.photoPath) }),
+    });
+    const data = await response.json().catch(() => ({}));
+    setReading("");
+
+    if (!response.ok) {
+      setStatus({ kind: "error", text: data.error ?? "ให้ AI อ่านไม่สำเร็จ" });
+      return;
+    }
+
+    const byPhoto = new Map(
+      (data.results as { photo: string; name: string; role: string; readable: boolean }[]).map(
+        (r) => [r.photo, r],
+      ),
+    );
+    const filled: string[] = [];
+
+    setConfig((prev) => {
+      const overrides = { ...prev.overrides };
+      for (const person of targets) {
+        const got = byPhoto.get(person.photoPath);
+        if (!got?.readable || !got.name.trim()) continue;
+        overrides[person.id] = {
+          ...overrides[person.id],
+          name: got.name.trim(),
+          ...(got.role.trim() ? { role: got.role.trim() } : {}),
+        };
+        filled.push(person.id);
+      }
+      return { ...prev, overrides };
+    });
+
+    setAiFilled((prev) => [...new Set([...prev, ...filled])]);
+    setStatus({
+      kind: filled.length > 0 ? "ok" : "error",
+      text:
+        filled.length > 0
+          ? `AI อ่านชื่อให้ ${filled.length} คน จาก ${targets.length} รูป — ตรวจให้เรียบร้อยแล้วกดบันทึก`
+          : "AI อ่านชื่อจากรูปกลุ่มนี้ไม่ได้เลย ต้องพิมพ์เอง",
+    });
+  }
+
   async function copy(text: string, tag: string) {
     await navigator.clipboard.writeText(text).catch(() => {});
     setCopied(tag);
@@ -122,6 +188,8 @@ export default function BridgeManager({ initial, groups, events, log, base }: Pr
     });
     const data = await response.json().catch(() => ({}));
     setBusy(false);
+    // บันทึกแล้ว = เจ้าหน้าที่ตรวจของที่ AI อ่านให้แล้ว ป้าย "ยังไม่ยืนยัน" จึงหายไป
+    if (response.ok) setAiFilled([]);
     setStatus(
       response.ok
         ? { kind: "ok", text: "บันทึกแล้ว" }
@@ -375,6 +443,29 @@ export default function BridgeManager({ initial, groups, events, log, base }: Pr
                   <summary className="cursor-pointer px-3 py-2 text-xs text-gray-500 transition hover:bg-gray-50">
                     ดูและแก้ชื่อ-ตำแหน่งที่จะส่งออกไป ({group.count} คน)
                   </summary>
+
+                  {aiReady && unchecked > 0 && (
+                    <div className="mx-3 mt-1 flex flex-wrap items-center gap-2 rounded-lg bg-sky-50 p-2">
+                      <button
+                        type="button"
+                        onClick={() => readNames(group)}
+                        disabled={reading !== ""}
+                        className="flex items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-sky-700 disabled:opacity-50"
+                      >
+                        {reading === group.key ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3.5 w-3.5" />
+                        )}
+                        ให้ AI อ่านชื่อจากรูป ({unchecked} คน)
+                      </button>
+                      <span className="text-xs leading-relaxed text-sky-800">
+                        รูปพวกนี้มีชื่อพิมพ์อยู่ในภาพ · AI เติมให้ในช่องเฉย ๆ
+                        <b> ยังไม่บันทึก</b> ตรวจแล้วกดบันทึกเองเสมอ
+                      </span>
+                    </div>
+                  )}
+
                   <div className="space-y-2 p-3 pt-1">
                     {group.people.map((person) => {
                       const fix = config.overrides[person.id] ?? {};
@@ -400,9 +491,11 @@ export default function BridgeManager({ initial, groups, events, log, base }: Pr
                               onChange={(e) => setOverride(person.id, { name: e.target.value })}
                               placeholder={person.name || "ยังไม่มีชื่อ"}
                               className={`min-w-0 flex-1 rounded-lg border px-2.5 py-1.5 text-sm ${
-                                guessed && !fix.name
-                                  ? "border-amber-300 bg-amber-50"
-                                  : "border-gray-200 bg-white"
+                                aiFilled.includes(person.id)
+                                  ? "border-sky-400 bg-sky-50"
+                                  : guessed && !fix.name
+                                    ? "border-amber-300 bg-amber-50"
+                                    : "border-gray-200 bg-white"
                               }`}
                             />
                             <input
@@ -412,8 +505,14 @@ export default function BridgeManager({ initial, groups, events, log, base }: Pr
                               className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
                             />
                           </div>
-                          <span className="w-full shrink-0 text-xs text-gray-400 sm:w-36">
-                            {SOURCE_LABEL[fix.name ? "override" : person.nameSource]}
+                          <span
+                            className={`w-full shrink-0 text-xs sm:w-36 ${
+                              aiFilled.includes(person.id) ? "text-sky-700" : "text-gray-400"
+                            }`}
+                          >
+                            {aiFilled.includes(person.id)
+                              ? "AI อ่านให้ — ยังไม่ยืนยัน"
+                              : SOURCE_LABEL[fix.name ? "override" : person.nameSource]}
                           </span>
                         </div>
                       );
