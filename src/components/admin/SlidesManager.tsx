@@ -205,10 +205,16 @@ export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; a
         // AI อ่านไม่ออกก็ต้องมีหัวข้ออะไรสักอย่าง ไม่งั้น API ปฏิเสธ — แก้ทับบนสไลด์ได้เลย
         title: read.title?.trim() || file.name.replace(/\.[^.]+$/, ""),
         caption: read.caption ?? "",
-        startsAt: read.startsAt ?? "",
+        /*
+          ⚠️ วันเริ่มแสดงที่เท่ากับวันจัดงาน = AI แค่ตอบวันเดียวกันซ้ำ ไม่ใช่วันเริ่มประกาศ
+          เอาไปใช้จริงแล้วสไลด์จะ**หายจากหน้าแรก**จนถึงวันงาน ซึ่งกลับหัวกลับหางกับที่ควรเป็น
+          (ประกาศต้องขึ้นก่อนวันงาน) — เจอจริงกับใบอบรมอาชีพเสริม 2 ก.ย. 2026
+        */
+        startsAt: read.startsAt && read.startsAt !== read.eventDate ? read.startsAt : "",
         endsAt: read.endsAt ?? "",
         // อ่านวันจัดงานได้ = ปักลงปฏิทินหน้าแรกให้เลย ไม่ต้องพิมพ์ซ้ำในเมนูปฏิทิน
-        eventDate: read.eventDate ?? "",
+        // เชื่อ eventType เป็นหลัก — ว่าง = AI บอกเองว่าใบนี้ไม่ใช่กิจกรรม
+        eventDate: read.eventType ? (read.eventDate ?? "") : "",
         eventType: read.eventType ?? "",
       }),
     });
@@ -288,14 +294,22 @@ export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; a
       body.caption = read.caption.trim();
       got.push("เงื่อนไข");
     }
-    if (read.eventDate) {
+    /*
+      ⚠️ ปักปฏิทินเฉพาะใบที่ AI บอกเองว่าเป็นกิจกรรม (eventType ไม่ว่าง)
+      ใบรับสมัครเคยตอบ eventType="" แต่ให้วันอบรมเตรียมความพร้อมที่ผ่านไปแล้ว
+      มาเป็นวันจัดงาน — สองช่องนี้ขัดกันเมื่อไหร่ให้เชื่อ eventType
+    */
+    // วันที่ผ่านไปแล้วไม่ต้องปัก — ใบรับสมัครมักอ้างวันอบรมที่จัดไปแล้วเป็นเงื่อนไขคุณสมบัติ
+    const future = (read.eventDate ?? "") >= new Date().toISOString().slice(0, 10);
+    if (read.eventDate && read.eventType && future) {
       body.eventDate = read.eventDate;
-      body.eventType = read.eventType || "project";
+      body.eventType = read.eventType;
       got.push("วันจัดงาน (ปักลงปฏิทินให้แล้ว)");
     }
-    if (read.startsAt) body.startsAt = read.startsAt;
+    // วันเริ่มแสดงที่เท่ากับวันจัดงานไม่ใช่วันเริ่มประกาศ — ใช้แล้วสไลด์หายจนถึงวันงาน
+    if (read.startsAt && read.startsAt !== read.eventDate) body.startsAt = read.startsAt;
     if (read.endsAt) body.endsAt = read.endsAt;
-    if (read.startsAt || read.endsAt) got.push("ช่วงเวลาเผยแพร่");
+    if (body.startsAt || read.endsAt) got.push("ช่วงเวลาเผยแพร่");
 
     if (got.length === 0) {
       setStatus({ kind: "error", text: "AI อ่านภาพนี้ไม่ได้ความอะไรเลย — พิมพ์เองได้ที่สไลด์" });
