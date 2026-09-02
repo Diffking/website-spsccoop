@@ -386,6 +386,24 @@ docker compose up -d --build web    # เว็บจริงสะดุด ~1
 แก้ schema ต้อง commit โฟลเดอร์ `prisma/migrations/` ไปด้วย — service `migrate` จะรัน
 `prisma migrate deploy` ให้เองก่อน `web` สตาร์ต ถ้าลืม commit ตารางจริงจะไม่ตรงกับโค้ด
 
+### ⚠️ build ในคอนเทนเนอร์พังทั้งที่ `npm run build` บนเครื่องผ่าน → ลอง `--no-cache`
+
+**2 ก.ย. 2026 deploy ไม่ผ่านด้วย `Cannot find module '../lightningcss.linux-x64-musl.node'`**
+ทั้งที่ `npm run build` บนเครื่องผ่านสบาย ๆ · ตรวจแล้วไม่ใช่ที่ lockfile (มีรายการ musl ครบ)
+และไม่ใช่ node_modules ของ Windows หลุดเข้าไป (`.dockerignore` กันไว้แล้ว) —
+ลอง `npm ci` ในคอนเทนเนอร์ alpine เปล่า ๆ ก็ได้ไฟล์ musl ครบ
+
+**สาเหตุคือ layer cache ของขั้น `deps` เสีย** — node_modules ที่ cache ไว้ขาดไฟล์ native
+ของ musl ไป · แก้ด้วยการสั่งใหม่ทั้งก้อน แล้วค่อยสตาร์ต
+
+```bash
+docker compose build --no-cache web    # ~3-5 นาที
+docker compose up -d web               # เว็บสะดุดแค่ตอนนี้ ไม่ใช่ตอน build
+```
+
+ข้อดีของท่านี้คือ **เว็บจริงยังรัน image เก่าอยู่ตลอดช่วง build** ถ้า build พังก็ไม่มีใครรู้สึก
+· ถ้าจะ deploy ตอนมีคนใช้งานเยอะ แยกสองคำสั่งแบบนี้ปลอดภัยกว่า `up -d --build` เสมอ
+
 ## อะไรที่เลื่อนเองได้ ต้องล็อกขนาดไว้ก่อนเสมอ
 
 หน้าแรกมีของที่เปลี่ยนเองอยู่หลายจุด ทุกจุด**ต้องล็อกทั้งความสูงและความกว้างคอลัมน์**
