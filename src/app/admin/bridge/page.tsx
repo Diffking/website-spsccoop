@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { ADMIN_HOME, canArea } from "@/lib/permissions";
 import { getBridgeConfig, getBridgeLog, getDirectory, getCalendar, siteBase } from "@/lib/coopBridge";
+import { AI_READY } from "@/lib/ai";
 import BridgeManager from "@/components/admin/BridgeManager";
 
 /**
@@ -37,6 +38,7 @@ export default async function AdminBridgePage() {
         events={events.length}
         log={log}
         base={siteBase()}
+        aiReady={AI_READY}
       />
     </main>
   );
