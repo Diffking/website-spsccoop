@@ -223,14 +223,41 @@ export async function getSiteInfo(): Promise<SiteInfo> {
 }
 export const getRates = () => getSetting<InterestRates>("interestRates", DEFAULT_RATES);
 
+/**
+ * ชื่อคีย์ชุดเก่าที่บันทึกไว้ก่อนแยกโควตาตามหมวด — `limit` คือดึงกี่เรื่องรวมทุกหมวด
+ * `badgeCount` คือติดป้ายกี่รายการแรกของทั้งชุด · แถวในฐานที่ยังไม่เคยถูกกดบันทึกซ้ำ
+ * หลังเปลี่ยนโครงจะยังเป็นแบบนี้อยู่ ต้องอ่านต่อให้ได้ ไม่งั้นค่าที่เจ้าหน้าที่ตั้งไว้
+ * หายไปเงียบ ๆ แล้วกลับไปใช้ค่าตั้งต้นโดยไม่มีอะไรบอก
+ */
+type LegacyTicker = { limit?: number; badgeCount?: number };
+
+/** ค่าที่บันทึกไว้เป็นอะไรก็ได้ — เอาเฉพาะจำนวนเต็มที่ใช้ได้จริง ที่เหลือถือว่าไม่มี */
+function legacyCount(value: unknown, min: number): number | null {
+  const ok = typeof value === "number" && Number.isFinite(value) && value >= min;
+  return ok ? Math.floor(value as number) : null;
+}
+
 /** ค่าที่บันทึกไว้อาจเก่ากว่าโครงปัจจุบัน เติมค่าที่ขาดจากค่าตั้งต้นให้เสมอ */
 export async function getTickerSettings(): Promise<TickerSettings> {
-  const saved = await getSetting<Partial<TickerSettings>>("ticker", DEFAULT_TICKER);
+  const saved = await getSetting<Partial<TickerSettings> & LegacyTicker>("ticker", DEFAULT_TICKER);
+
+  /*
+    ป้ายของเก่านับรวมทุกหมวด แต่ข่าววิ่งเรียงประกาศขึ้นก่อนเสมอ ป้ายจึงตกอยู่ที่
+    ประกาศทั้งหมดอยู่แล้ว — ย้ายมาลงหมวดประกาศจึงใกล้ของเดิมที่สุด
+    ส่วนจดหมายข่าว/รายงานกิจการใช้ค่าตั้งต้น (ของเดิมไม่เคยได้ป้ายอยู่แล้ว)
+  */
+  const legacyBadge = legacyCount(saved?.badgeCount, 0);
+
   return {
     ...DEFAULT_TICKER,
     ...saved,
+    perKind: saved?.perKind ?? legacyCount(saved?.limit, 1) ?? DEFAULT_TICKER.perKind,
     // merge ตื้น ๆ ไม่พอ — ค่าที่บันทึกไว้ก่อนแยกป้ายตามหมวดยังไม่มีคีย์นี้เลย
-    badgeCounts: { ...DEFAULT_TICKER.badgeCounts, ...(saved?.badgeCounts ?? {}) },
+    badgeCounts: {
+      ...DEFAULT_TICKER.badgeCounts,
+      ...(legacyBadge === null ? {} : { ANNOUNCEMENT: legacyBadge }),
+      ...(saved?.badgeCounts ?? {}),
+    },
   };
 }
 
