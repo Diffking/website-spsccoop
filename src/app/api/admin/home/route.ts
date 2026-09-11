@@ -5,6 +5,7 @@ import { KINDS } from "@/lib/announcementKinds";
 import { TICKER_MAX_PER_KIND } from "@/lib/content";
 import { COMMITTEE_PHOTO_SCALES } from "@/lib/committee";
 import { fillOfficeHours, type OfficeHours } from "@/lib/officeHours";
+import { fillRateTabOrder } from "@/lib/rateTabs";
 import {
   DEFAULT_HOME_SECTIONS,
   DEFAULT_HOME_TONES,
@@ -86,6 +87,7 @@ export async function PUT(request: Request) {
       loan: r.loan ?? [],
       perPage: num(r.perPage, 1, 20, 5),
       autoSeconds: num(r.autoSeconds, 0, 60, 5),
+      tabOrder: fillRateTabOrder(r.tabOrder),
     } satisfies InterestRates);
   }
 

@@ -13,8 +13,16 @@ import {
   RotateCcw,
 } from "lucide-react";
 import type { InterestRates } from "@/lib/settings";
+import { fillRateTabOrder, RATE_TAB_LABEL, type RateTab } from "@/lib/rateTabs";
 
 type Group = "deposit" | "loan";
+
+/** สีจุดหน้าชื่อแท็บ — ตรงกับสีแท็บจริงบนการ์ดหน้าแรก (TABS ใน Hero.tsx) */
+const TAB_DOT: Record<RateTab, string> = {
+  welfare: "bg-emerald-500",
+  deposit: "bg-brand-500",
+  loan: "bg-orange-500",
+};
 
 export default function RatesForm({
   initial,
@@ -32,6 +40,7 @@ export default function RatesForm({
   const rateFile = useRef<HTMLInputElement>(null);
 
   const dirty = JSON.stringify(rates) !== JSON.stringify(saved);
+  const tabOrder = fillRateTabOrder(rates.tabOrder);
 
   /** ให้ AI อ่านภาพประกาศอัตราดอกเบี้ยแล้วเติมตารางให้ — ยังไม่บันทึก คนกดบันทึกเอง */
   async function readFromImage(file: File) {
@@ -86,6 +95,17 @@ export default function RatesForm({
     });
   }
 
+  /** สลับลำดับแท็บบนการ์ดหน้าแรก — ยังไม่บันทึก คนกดบันทึกเองเหมือนช่องอื่นในหน้านี้ */
+  function moveTab(index: number, step: number) {
+    setRates((prev) => {
+      const next = fillRateTabOrder(prev.tabOrder);
+      const target = index + step;
+      if (target < 0 || target >= next.length) return prev;
+      [next[index], next[target]] = [next[target], next[index]];
+      return { ...prev, tabOrder: next };
+    });
+  }
+
   async function save() {
     // ตรวจก่อนยิง จะได้บอกได้ว่าแถวไหนผิด แทนที่จะได้ข้อความรวม ๆ กลับมาจากเซิร์ฟเวอร์
     for (const [group, label] of [
@@ -113,6 +133,7 @@ export default function RatesForm({
       loan: rates.loan.map((r) => ({ label: r.label.trim(), rate: r.rate.trim() })),
       perPage: rates.perPage ?? 5,
       autoSeconds: rates.autoSeconds ?? 5,
+      tabOrder: tabOrder,
     };
 
     const response = await fetch("/api/admin/home/", {
@@ -254,8 +275,48 @@ export default function RatesForm({
         <div className="mt-5 rounded-xl bg-gray-50 p-3">
           <p className="text-sm font-medium text-gray-700">การแสดงผลบนหน้าแรก</p>
           <p className="mt-0.5 text-xs text-gray-500">
-            การ์ดโชว์ทีละหน้าแล้วเลื่อนเองวนไปเรื่อย ๆ ทั้งเงินฝากและเงินกู้
+            การ์ดโชว์ทีละหน้าแล้วเลื่อนเองวนไปเรื่อย ๆ ทั้งสวัสดิการ เงินฝาก และเงินกู้
           </p>
+
+          <div className="mt-3">
+            <span className="mb-1 block text-sm text-gray-600">ลำดับแท็บบนการ์ด</span>
+            <ol className="space-y-1.5">
+              {tabOrder.map((key, index) => (
+                <li
+                  key={key}
+                  className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-black/5"
+                >
+                  <span className="w-5 shrink-0 text-right text-xs text-gray-400">{index + 1}</span>
+                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${TAB_DOT[key]}`} />
+                  <span className="min-w-0 flex-1 text-sm text-gray-700">{RATE_TAB_LABEL[key]}</span>
+                  <span className="flex shrink-0 items-center">
+                    <button
+                      type="button"
+                      onClick={() => moveTab(index, -1)}
+                      disabled={index === 0}
+                      title="เลื่อนขึ้น"
+                      className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-25"
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveTab(index, 1)}
+                      disabled={index === tabOrder.length - 1}
+                      title="เลื่อนลง"
+                      className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-25"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ol>
+            <span className="mt-1 block text-xs text-gray-400">
+              อันดับ 1 ขึ้นก่อนตอนเปิดหน้าเว็บ แล้วเลื่อนไปตามลำดับ · สวัสดิการดึงจากหน้าสวัสดิการ
+              ถ้าไม่มีข้อมูล แท็บนั้นจะไม่ขึ้น
+            </span>
+          </div>
 
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
             <label className="block">

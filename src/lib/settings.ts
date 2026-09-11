@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { DEFAULT_COMMITTEE_PHOTO_SCALE } from "@/lib/committee";
 import type { Kind } from "@/lib/announcementKinds";
+import type { RateTab } from "@/lib/rateTabs";
 import {
   fillHomeSections,
   fillHomeTones,
@@ -74,6 +75,8 @@ export type InterestRates = {
   perPage?: number;
   /** วินาทีต่อหนึ่งหน้าก่อนเลื่อนเอง · 0 = ไม่เลื่อนเอง */
   autoSeconds?: number;
+  /** ลำดับแท็บบนการ์ดหน้าแรก · ไม่มีค่า = สวัสดิการ → เงินรับฝาก → เงินให้กู้ (ดู fillRateTabOrder) */
+  tabOrder?: RateTab[];
 };
 
 /** ข่าววิ่งใต้แบนเนอร์ — ปกติดึงประกาศล่าสุดมาเองไม่ต้องมาพิมพ์ซ้ำ */
