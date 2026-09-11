@@ -6,9 +6,10 @@ import { CalendarX, Bus, FolderKanban, Presentation, MapPin, Clock, ChevronLeft,
 import SectionHeading from "@/components/ui/SectionHeading";
 import type { CalendarEvent } from "@/data/home";
 import { useIsClient } from "@/lib/useIsClient";
+import { DEFAULT_OFFICE_HOURS } from "@/lib/officeHours";
 
 const TYPE = {
-  holiday: { color: "bg-accent-red", ring: "ring-accent-red/30", Icon: CalendarX, label: "วันหยุด" },
+  holiday: { color: "bg-accent-red", ring: "ring-accent-red/30", Icon: CalendarX, label: "วันหยุดสหกรณ์" },
   mobile: { color: "bg-brand-400", ring: "ring-brand-400/30", Icon: Bus, label: "รถโมบาย" },
   project: { color: "bg-purple-500", ring: "ring-purple-500/30", Icon: FolderKanban, label: "โครงการ" },
   seminar: { color: "bg-accent-green", ring: "ring-accent-green/30", Icon: Presentation, label: "สัมมนา" },
@@ -58,9 +59,10 @@ function EventItem({ ev }: { ev: CalendarEvent }) {
 const CARD_HEIGHT = "h-[19rem] md:h-[23rem] [@media(max-height:699px)]:h-[15rem]";
 
 function DayCard({
-  day, year, month, today, focus, events,
+  day, year, month, today, focus, events, officeDays,
 }: {
   day: number | null; year: number; month: number; today: number; focus: boolean; events: CalendarEvent[];
+  officeDays: number[];
 }) {
   // ช่องว่างเมื่อเลยขอบเดือน (คงรูปแบบ 3 คอลัมน์)
   if (day === null) {
@@ -72,6 +74,13 @@ function DayCard({
   const isToday = day === today;
   const rel = day < today ? "ผ่านมาแล้ว" : isToday ? "วันนี้" : "ล่วงหน้า";
   const relColor = day < today ? "bg-gray-400" : isToday ? "bg-brand-500" : "bg-accent-green";
+  /*
+    วันหยุดสหกรณ์ = วันที่อยู่ในรายการวันหยุด (หลังบ้าน → วันหยุด) หรือวันที่ไม่ใช่วันทำการ
+    ตามที่ตั้งไว้ในส่วนท้ายเว็บ (ปกติคือเสาร์-อาทิตย์) — เจ้าของเว็บสั่ง 11 ก.ย. 2569
+    ให้บอกบนการ์ดเลย สมาชิกไม่ต้องเดาเองว่าวันนั้นสหกรณ์เปิดไหม
+    · กิจกรรมที่ตรงกับวันหยุด (เช่น รถโมบายวันเสาร์) ยังขึ้นตามปกติ ป้ายนี้แค่บอกว่าสำนักงานปิด
+  */
+  const closed = evs.some((e) => e.type === "holiday") || !officeDays.includes(dow);
 
   return (
     <div
@@ -97,8 +106,8 @@ function DayCard({
         <span
           className={`block font-bold leading-none ${
             focus
-              ? "text-4xl text-brand-600 md:text-5xl [@media(max-height:699px)]:text-5xl"
-              : "text-2xl text-gray-700 md:text-3xl [@media(max-height:699px)]:text-lg"
+              ? `text-4xl md:text-5xl [@media(max-height:699px)]:text-5xl ${closed ? "text-accent-red" : "text-brand-600"}`
+              : `text-2xl md:text-3xl [@media(max-height:699px)]:text-lg ${closed ? "text-accent-red/80" : "text-gray-700"}`
           }`}
         >
           {day}
@@ -106,6 +115,11 @@ function DayCard({
         <span className="mt-1 block text-[11px] text-gray-500 md:text-sm">
           {THAI_DOW[dow]} · {THAI_MONTHS[month]}
         </span>
+        {closed && (
+          <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-accent-red/10 px-2 py-0.5 text-[10px] font-semibold text-accent-red md:text-xs">
+            <CalendarX className="h-3 w-3" /> วันหยุดสหกรณ์
+          </span>
+        )}
       </div>
 
       {/*
@@ -122,7 +136,7 @@ function DayCard({
           evs.map((ev, i) => <EventItem key={i} ev={ev} />)
         ) : (
           <p className="grid h-full min-h-16 place-items-center text-center text-xs text-gray-300">
-            — ไม่มีกิจกรรม —
+            {closed ? "— สหกรณ์ปิดทำการ —" : "— ไม่มีกิจกรรม —"}
           </p>
         )}
       </div>
@@ -141,10 +155,13 @@ function DayCard({
 export default function CoopCalendar({
   holidays = [],
   events = [],
+  officeDays = DEFAULT_OFFICE_HOURS.days,
   bg = "bg-sky-soft",
 }: {
   holidays?: CalendarEvent[];
   events?: CalendarEvent[];
+  /** วันทำการ 0=อาทิตย์ … 6=เสาร์ — วันที่ไม่อยู่ในนี้ขึ้นป้าย "วันหยุดสหกรณ์" */
+  officeDays?: number[];
   bg?: string;
 }) {
   const isClient = useIsClient();
@@ -236,7 +253,7 @@ export default function CoopCalendar({
               className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)] items-stretch gap-2 md:gap-4"
             >
               {cols.map((d, i) => (
-                <DayCard key={i} day={d} year={year} month={month} today={today} focus={i === 1} events={allEvents} />
+                <DayCard key={i} day={d} year={year} month={month} today={today} focus={i === 1} events={allEvents} officeDays={officeDays} />
               ))}
             </motion.div>
           </div>
