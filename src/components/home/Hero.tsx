@@ -265,12 +265,22 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
  * ความสูงคงที่ตาม perPage ไม่ว่าหน้านั้นจะมีกี่แถว การ์ดจึงไม่กระตุกตอนเปลี่ยนหน้า
  */
 /**
- * แถบสามอย่างบนการ์ดหน้าแรก — เงินรับฝาก · เงินให้กู้ · สวัสดิการสมาชิก
+ * แถบสามอย่างบนการ์ดหน้าแรก — สวัสดิการสมาชิก · เงินรับฝาก · เงินให้กู้
+ * (เจ้าของเว็บสั่งลำดับนี้ 11 ก.ย. 2569 · ลำดับคีย์ในก้อนนี้ = ลำดับแท็บ = ลำดับที่เลื่อนไป)
  *
- * สองอันแรกโชว์อัตราดอกเบี้ย ส่วนสวัสดิการโชว์ **ชื่อกับกำหนดยื่นเอกสาร** เท่านั้น
+ * เงินฝาก/เงินกู้โชว์อัตราดอกเบี้ย ส่วนสวัสดิการโชว์ **ชื่อกับกำหนดยื่นเอกสาร** เท่านั้น
  * เพราะเงื่อนไขการจ่ายยาวมาก ใส่ลงการ์ดเล็ก ๆ นี้ไม่ไหว — คนที่สนใจกดลิงก์ท้ายการ์ดไปอ่านต่อ
  */
 const TABS = {
+  welfare: {
+    label: "สวัสดิการ",
+    head: "กำหนดยื่นเอกสาร",
+    href: "/welfare/",
+    on: "bg-emerald-500 text-white shadow",
+    off: "text-emerald-700 hover:text-emerald-800",
+    value: "text-emerald-600",
+    dot: "bg-emerald-500",
+  },
   deposit: {
     label: "เงินรับฝาก",
     head: "อัตราดอกเบี้ย (ต่อปี)",
@@ -289,15 +299,6 @@ const TABS = {
     value: "text-orange-600",
     dot: "bg-orange-500",
   },
-  welfare: {
-    label: "สวัสดิการ",
-    head: "กำหนดยื่นเอกสาร",
-    href: "/welfare/",
-    on: "bg-emerald-500 text-white shadow",
-    off: "text-emerald-700 hover:text-emerald-800",
-    value: "text-emerald-600",
-    dot: "bg-emerald-500",
-  },
 } as const;
 
 type TabKey = keyof typeof TABS;
@@ -308,7 +309,7 @@ function RateCard({ rates, welfare }: { rates: InterestRates; welfare: WelfareBr
   // เจ้าหน้าที่ตั้งเองได้ในหลังบ้าน · ไม่ได้ตั้งก็ใช้จังหวะกลางที่วางไว้ให้ไม่ตรงกับการ์ดอื่น
   const autoSeconds = rates.autoSeconds ?? SLIDE_TIMING.rates.every / 1000;
 
-  // ตัดเป็นหน้า ๆ เรียงเงินรับฝาก → เงินให้กู้ → สวัสดิการ — ลำดับนี้คือลำดับที่จะเลื่อนไป
+  // ตัดเป็นหน้า ๆ เรียงตามลำดับคีย์ใน TABS (สวัสดิการ → เงินรับฝาก → เงินให้กู้) — ลำดับนี้คือลำดับที่จะเลื่อนไป
   const source: Record<TabKey, { label: string; value: string; unit?: string }[]> = {
     deposit: rates.deposit.map((r) => ({ label: r.label, value: String(r.rate), unit: "%" })),
     loan: rates.loan.map((r) => ({ label: r.label, value: String(r.rate), unit: "%" })),
