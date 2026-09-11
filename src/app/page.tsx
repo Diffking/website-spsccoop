@@ -21,6 +21,7 @@ import {
   getHomeOrder,
   getHomeSections,
   getHomeTones,
+  getOfficeHours,
   getRates,
   getSiteInfo,
   getSplash,
@@ -57,6 +58,7 @@ export default async function Home() {
     tones,
     order,
     welfare,
+    hours,
   ] = await Promise.all([
     getSiteInfo(),
     getRates(),
@@ -78,6 +80,7 @@ export default async function Home() {
     getHomeTones(),
     getHomeOrder(),
     getWelfareBrief(),
+    getOfficeHours(),
   ]);
 
   // สีพื้นหลังของแต่ละส่วน — "สลับให้เอง" คิดจากส่วนที่แสดงอยู่จริง ตามลำดับที่จัดไว้
@@ -113,7 +116,9 @@ export default async function Home() {
         <MemberCorner links={memberLinks} bg={bg.member} />
       </>
     ),
-    calendar: <CoopCalendar holidays={holidays} events={calendar} bg={bg.calendar} />,
+    calendar: (
+      <CoopCalendar holidays={holidays} events={calendar} officeDays={hours.days} bg={bg.calendar} />
+    ),
     officers: <OfficerService items={officers} bg={bg.officers} />,
   };
 
