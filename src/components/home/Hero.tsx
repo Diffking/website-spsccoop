@@ -10,6 +10,7 @@ import SlideProgress from "@/components/ui/SlideProgress";
 import { useAutoRotate } from "@/lib/useAutoRotate";
 import { SLIDE_TIMING, STACKED, fadeSwap } from "@/lib/slideMotion";
 import type { InterestRates } from "@/lib/settings";
+import { fillRateTabOrder } from "@/lib/rateTabs";
 
 /** สไลด์มาจากฐาน (แก้ที่ /admin/home) — ถ้ายังไม่มี ใช้ชุดที่ติดมากับโค้ดแทน */
 export type HeroSlide = { src: string | StaticImageData; title: string; desc: string; href: string };
@@ -266,7 +267,8 @@ function BannerSlider({ slides }: { slides: HeroSlide[] }) {
  */
 /**
  * แถบสามอย่างบนการ์ดหน้าแรก — สวัสดิการสมาชิก · เงินรับฝาก · เงินให้กู้
- * (เจ้าของเว็บสั่งลำดับนี้ 11 ก.ย. 2569 · ลำดับคีย์ในก้อนนี้ = ลำดับแท็บ = ลำดับที่เลื่อนไป)
+ * ลำดับแท็บ (= ลำดับที่เลื่อนไป) ตั้งได้ที่หลังบ้าน → อัตราดอกเบี้ย เก็บใน rates.tabOrder
+ * ลำดับคีย์ในก้อนนี้ไม่มีผลกับหน้าเว็บ — ดู fillRateTabOrder() ใน src/lib/rateTabs.ts
  *
  * เงินฝาก/เงินกู้โชว์อัตราดอกเบี้ย ส่วนสวัสดิการโชว์ **ชื่อกับกำหนดยื่นเอกสาร** เท่านั้น
  * เพราะเงื่อนไขการจ่ายยาวมาก ใส่ลงการ์ดเล็ก ๆ นี้ไม่ไหว — คนที่สนใจกดลิงก์ท้ายการ์ดไปอ่านต่อ
@@ -309,14 +311,15 @@ function RateCard({ rates, welfare }: { rates: InterestRates; welfare: WelfareBr
   // เจ้าหน้าที่ตั้งเองได้ในหลังบ้าน · ไม่ได้ตั้งก็ใช้จังหวะกลางที่วางไว้ให้ไม่ตรงกับการ์ดอื่น
   const autoSeconds = rates.autoSeconds ?? SLIDE_TIMING.rates.every / 1000;
 
-  // ตัดเป็นหน้า ๆ เรียงตามลำดับคีย์ใน TABS (สวัสดิการ → เงินรับฝาก → เงินให้กู้) — ลำดับนี้คือลำดับที่จะเลื่อนไป
+  // ตัดเป็นหน้า ๆ เรียงตามลำดับที่ตั้งไว้ในหลังบ้าน (rates.tabOrder) — ลำดับนี้คือลำดับที่จะเลื่อนไป
+  const order = fillRateTabOrder(rates.tabOrder);
   const source: Record<TabKey, { label: string; value: string; unit?: string }[]> = {
     deposit: rates.deposit.map((r) => ({ label: r.label, value: String(r.rate), unit: "%" })),
     loan: rates.loan.map((r) => ({ label: r.label, value: String(r.rate), unit: "%" })),
     welfare: welfare.map((w) => ({ label: w.label, value: w.note })),
   };
 
-  const pages = (Object.keys(TABS) as TabKey[]).flatMap((group) => {
+  const pages = order.flatMap((group) => {
     const rows = source[group];
     if (rows.length === 0) return [];
     return Array.from({ length: Math.ceil(rows.length / perPage) }, (_, i) => ({
@@ -348,7 +351,7 @@ function RateCard({ rates, welfare }: { rates: InterestRates; welfare: WelfareBr
     if (target !== -1) setIndex(target);
   };
   // โชว์เฉพาะแท็บที่มีข้อมูลจริง — ไม่มีสวัสดิการก็เหลือสองแท็บเหมือนเดิม
-  const shown = (Object.keys(TABS) as TabKey[]).filter((k) => source[k].length > 0);
+  const shown = order.filter((k) => source[k].length > 0);
 
   return (
     <div
