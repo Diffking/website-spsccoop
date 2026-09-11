@@ -50,7 +50,8 @@ export const nav: NavItem[] = [
   { label: "รายงานการประชุมประจำเดือน", href: "/meeting-report" },
   {
     label: "ระบบสมาชิก",
-    href: "/member",
+    // เว้นว่าง = หัวข้อไว้กางเมนูย่อย กดเองไม่ไปไหน — ระบบสมาชิกอยู่เว็บนอก ให้เข้าทางเมนูย่อยเท่านั้น
+    href: "",
     children: [
       { label: "สอบถามข้อมูลสมาชิก", href: "/member/login" },
       { label: "ใบเสร็จประจำเดือน", href: "/member/profile" },
