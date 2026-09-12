@@ -5,6 +5,9 @@ import { applyEventSync } from "@/lib/officerEventSync";
  * ตัวดึงกิจกรรมอัตโนมัติเรียกที่นี่ — service `holiday-sync` ใน docker-compose.yml
  * (service เดียวกับวันหยุด ยิงสองเส้นทางในรอบเดียว จะได้ไม่ต้องมีตัวตั้งเวลาสองตัว)
  *
+ * **เพิ่มอย่างเดียว ไม่ทับ ไม่ลบเด็ดขาด** (`addAll`) — การทับของที่เจ้าหน้าที่แก้ไว้
+ * และการลบ ต้องมีคนติ๊กเองในหลังบ้านเท่านั้น ตรงนี้ไม่มีใครนั่งดูว่ามันทำอะไรไป
+ *
  * **ไม่มีอะไรเปลี่ยนก็ไม่ทำอะไรเลย** ไม่เขียนฐาน ไม่ล้างสำเนาบนโฮสต์ ไม่ขึ้น log
  * วิ่งทุก 6 ชม. จึงไม่สร้างงานให้ใคร
  *
@@ -14,9 +17,6 @@ import { applyEventSync } from "@/lib/officerEventSync";
  * ด่านของเส้นทางนี้จึงเป็น **โทเคน** แทน — ใช้ตัวเดียวกับวันหยุด (`HOLIDAY_SYNC_TOKEN`)
  * หรือจะตั้งแยกที่ `CALENDAR_SYNC_TOKEN` ก็ได้ · ไม่ตั้งเลย = ปิดตาย ตอบ 404
  * เหมือนไม่มีเส้นทางนี้อยู่ (เผลอเปิดทิ้งไว้ไม่ได้)
- *
- * ไม่ทับเวลาที่เจ้าหน้าที่แก้ไว้เด็ดขาด — ตรงนี้ไม่มีใครนั่งดูว่ามันทับอะไรไป
- * ใครอยากทับต้องไปกดเองในหลังบ้าน (มีให้ติ๊กยืนยันทีละครั้ง)
  */
 export async function POST(request: Request) {
   const expected = (
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "โทเคนไม่ถูกต้อง" }, { status: 401 });
   }
 
-  const result = await applyEventSync(false);
+  const result = await applyEventSync({ addAll: true });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
@@ -42,7 +42,6 @@ export async function POST(request: Request) {
   return NextResponse.json({
     added: result.added,
     changed: result.changed,
-    // บอกด้วยว่าเพิ่มอะไรไปบ้าง เผื่อต้องย้อนดูใน log ว่าของมาจากไหน
-    events: result.items.map((item) => `${item.date} ${item.title} ${item.place}`.trim()),
+    removed: result.removed,
   });
 }
