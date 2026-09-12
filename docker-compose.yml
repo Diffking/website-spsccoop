@@ -164,7 +164,7 @@ services:
         echo "ตั้งตารางอุ่นแคชแล้ว: $$WARM_CRON (เวลาไทย) — สั่งเองได้ที่ sh /warm.sh"
         exec crond -f -l 8
 
-  # ดึงวันหยุดจากระบบสำนักงานในวงแลนอัตโนมัติ ทุก 6 ชม.
+  # ดึงวันหยุด + กิจกรรม (รถตู้ · โครงการ · สัมมนา) จากระบบสำนักงานอัตโนมัติ ทุก 6 ชม.
   # เช็คก่อนเสมอ — เหมือนเดิมก็ไม่เขียนฐาน ไม่ล้างแคช และไม่ขึ้น log อะไรเลย
   # (ดู src/lib/holidaySync.ts) · ไม่ตั้ง HOLIDAY_SYNC_TOKEN = เส้นทางปิดตาย ตัวนี้ก็ไม่ทำงาน
   #
@@ -190,6 +190,13 @@ services:
             case "$$out" in
               *'"added":0,"renamed":0'*) ;;
               *) echo "วันหยุด $$(date '+%F %H:%M') $$out" ;;
+            esac
+            # กิจกรรมจากระบบสำนักงาน (รถตู้ · โครงการ · สัมมนา) — ดู src/lib/officerEventSync.ts
+            # ใช้โทเคนตัวเดียวกัน ยิงในรอบเดียวกัน จะได้ไม่ต้องมีตัวตั้งเวลาสองตัว
+            out=$$(curl -s -m 60 -X POST -H "x-sync-token: $$HOLIDAY_SYNC_TOKEN" http://web:3000/api/calendar/sync/)
+            case "$$out" in
+              *'"added":0,"changed":0'*) ;;
+              *) echo "กิจกรรม $$(date '+%F %H:%M') $$out" ;;
             esac
           fi
           sleep 21600
