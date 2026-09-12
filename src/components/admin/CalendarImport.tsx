@@ -2,16 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Check, CloudDownload, Loader2, Plus, RefreshCw } from "lucide-react";
+import { AlertTriangle, Check, CloudDownload, Loader2, RefreshCw, Trash2 } from "lucide-react";
 
 /**
- * ดึงกิจกรรมจากระบบสำนักงาน — ปุ่มเดียวจบ แต่ให้เห็นก่อนว่าจะเปลี่ยนอะไร
+ * ดึงกิจกรรมจากระบบสำนักงาน — เห็นก่อนว่ามีอะไร แล้ว **ติ๊กเลือกเป็นรายรายการ**
  *
- * หน้าตาและขั้นตอนเดียวกับปุ่มดึงวันหยุด (src/components/admin/HolidayImport.tsx)
- * ตั้งใจให้เหมือนกัน เจ้าหน้าที่จะได้ไม่ต้องเรียนรู้สองแบบ
+ * เจ้าของเว็บสั่งไว้ 12 ก.ย. 2569 ว่าต้องเลือกได้เองว่าจะเอาอันไหนเข้า อันไหนให้ทับ
+ * และอันไหนลบทิ้ง — ไม่ใช่กดทีเดียวเหมาทั้งชุด · ขั้นตอนกด "ดูรายการ" ก่อน
+ * เหมือนปุ่มดึงวันหยุด (src/components/admin/HolidayImport.tsx) จะได้ไม่ต้องเรียนรู้สองแบบ
  */
 
 type Item = {
+  /** รหัสรายการที่เซิร์ฟเวอร์คำนวณมาให้ — หน้าจอไม่คำนวณเอง (ดู PreviewEvent) */
+  key: string;
   date: string;
   type: "mobile" | "project" | "seminar";
   title: string;
@@ -22,7 +25,17 @@ type Item = {
   current?: { id: string; title: string; place: string; time: string };
 };
 
-const TYPE_LABEL: Record<Item["type"], string> = {
+/** แถวในเว็บที่ต้นทางไม่มี — อาจเป็นของที่เจ้าหน้าที่พิมพ์เอง จึงต้องติ๊กลบทีละอัน */
+type Extra = {
+  id: string;
+  date: string;
+  type: string;
+  title: string;
+  place: string;
+  time: string;
+};
+
+const TYPE_LABEL: Record<string, string> = {
   mobile: "รถโมบาย",
   project: "โครงการ",
   seminar: "สัมมนา",
@@ -41,8 +54,35 @@ const readable = (date: string) => {
   return Number.isNaN(d.getTime()) ? date : thaiDate.format(d);
 };
 
-/** คีย์ของแถว — วันเดียวกันมีได้หลายรายการ จึงต้องรวมชนิดกับสถานที่ด้วย */
-const rowKey = (item: Item) => `${item.date}|${item.type}|${item.title}|${item.place}`;
+const describe = (row: { title: string; place: string; time: string }) =>
+  [row.title, row.place, row.time].filter(Boolean).join(" · ");
+
+/** ช่องติ๊กหนึ่งช่อง — ใช้ซ้ำทั้งสามกลุ่ม จะได้หน้าตาเหมือนกันหมด */
+function Row({
+  checked,
+  onToggle,
+  accent,
+  children,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+  accent: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <li>
+      <label className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-white/70">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={onToggle}
+          className={`mt-0.5 h-4 w-4 shrink-0 ${accent}`}
+        />
+        <span className="min-w-0 flex-1">{children}</span>
+      </label>
+    </li>
+  );
+}
 
 export default function CalendarImport({ from }: { from: string }) {
   const router = useRouter();
@@ -50,8 +90,24 @@ export default function CalendarImport({ from }: { from: string }) {
   const [error, setError] = useState("");
   const [done, setDone] = useState("");
   const [items, setItems] = useState<Item[] | null>(null);
+  const [extra, setExtra] = useState<Extra[]>([]);
   const [missing, setMissing] = useState<string[]>([]);
-  const [updateDetails, setUpdateDetails] = useState(false);
+
+  /* ที่ติ๊กไว้ — เพิ่ม (รหัสจากต้นทาง) · ทับ (id ในเว็บ) · ลบ (id ในเว็บ) */
+  const [addKeys, setAddKeys] = useState<Set<string>>(new Set());
+  const [updateIds, setUpdateIds] = useState<Set<string>>(new Set());
+  const [removeIds, setRemoveIds] = useState<Set<string>>(new Set());
+
+  const toggle = (
+    set: Set<string>,
+    apply: (next: Set<string>) => void,
+    value: string,
+  ) => {
+    const next = new Set(set);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    apply(next);
+  };
 
   async function load() {
     setBusy("load");
@@ -66,17 +122,33 @@ export default function CalendarImport({ from }: { from: string }) {
       setError(data.error ?? "ดึงข้อมูลไม่สำเร็จ");
       return;
     }
-    setItems(data.items ?? []);
+
+    const list = (data.items ?? []) as Item[];
+    setItems(list);
+    setExtra((data.extra ?? []) as Extra[]);
     setMissing(data.missing ?? []);
+    // ของใหม่ติ๊กไว้ให้เลย (ปกติก็อยากได้อยู่แล้ว) ส่วนทับกับลบต้องติ๊กเอง
+    setAddKeys(new Set(list.filter((i) => i.status === "new").map((i) => i.key)));
+    setUpdateIds(new Set());
+    setRemoveIds(new Set());
   }
 
   async function apply() {
+    if (removeIds.size > 0) {
+      const ok = window.confirm(`ลบกิจกรรม ${removeIds.size} รายการออกจากเว็บถาวร — ยืนยันไหม`);
+      if (!ok) return;
+    }
+
     setBusy("save");
     setError("");
     const response = await fetch("/api/admin/home/calendar/source/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ updateDetails }),
+      body: JSON.stringify({
+        addKeys: [...addKeys],
+        updateIds: [...updateIds],
+        removeIds: [...removeIds],
+      }),
     });
     const data = await response.json().catch(() => ({}));
     setBusy(null);
@@ -85,18 +157,22 @@ export default function CalendarImport({ from }: { from: string }) {
       setError(data.error ?? "บันทึกไม่สำเร็จ");
       return;
     }
+
     setItems(null);
-    setDone(
-      data.added || data.changed
-        ? `เพิ่ม ${data.added} รายการ${data.changed ? ` · แก้รายละเอียด ${data.changed} รายการ` : ""}`
-        : (data.message ?? "ตรงกับระบบสำนักงานอยู่แล้ว"),
-    );
+    setExtra([]);
+    const parts = [
+      data.added ? `เพิ่ม ${data.added} รายการ` : "",
+      data.changed ? `แก้ ${data.changed} รายการ` : "",
+      data.removed ? `ลบ ${data.removed} รายการ` : "",
+    ].filter(Boolean);
+    setDone(parts.length > 0 ? parts.join(" · ") : (data.message ?? "ไม่ได้เลือกรายการไหนไว้"));
     router.refresh();
   }
 
   const added = items?.filter((i) => i.status === "new") ?? [];
   const changed = items?.filter((i) => i.status === "changed") ?? [];
   const same = items?.filter((i) => i.status === "same") ?? [];
+  const picked = addKeys.size + updateIds.size + removeIds.size;
 
   return (
     <section className="mb-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
@@ -108,7 +184,7 @@ export default function CalendarImport({ from }: { from: string }) {
           <h2 className="font-semibold text-gray-800">ดึงกิจกรรมจากระบบสำนักงาน</h2>
           <p className="mt-0.5 text-xs text-gray-500">
             เอาตารางรถตู้ โครงการ และสัมมนาที่ลงไว้ในระบบสำนักงาน ({from}) มาลงปฏิทินหน้าแรก
-            — ไม่ต้องพิมพ์ซ้ำสองที่ · ดึงมาแล้วยังแก้ชื่อ เวลา หรือซ่อนได้ตามปกติ
+            — กดดูรายการก่อน แล้ว<strong>ติ๊กเลือกเองว่าจะเอาอันไหน</strong>
             · เอาเฉพาะตั้งแต่ต้นเดือนนี้เป็นต้นไป
           </p>
         </div>
@@ -147,93 +223,117 @@ export default function CalendarImport({ from }: { from: string }) {
       )}
 
       {items && (
-        <div className="mt-3 space-y-3">
+        <div className="mt-3 space-y-4">
           <p className="text-sm text-gray-600">
-            ระบบสำนักงานมี {items.length} รายการ —{" "}
-            <strong className="font-semibold text-emerald-700">
-              เพิ่มใหม่ {added.length} รายการ
-            </strong>
-            {changed.length > 0 && <> · รายละเอียดไม่ตรงกัน {changed.length} รายการ</>}
-            {same.length > 0 && <> · ตรงกันอยู่แล้ว {same.length} รายการ</>}
+            ระบบสำนักงานมี {items.length} รายการ — ใหม่ {added.length} · ต่างกัน {changed.length} ·
+            ตรงกันอยู่แล้ว {same.length}
+            {extra.length > 0 && <> · มีในเว็บแต่ต้นทางไม่มี {extra.length}</>}
           </p>
 
           {added.length > 0 && (
-            <ul className="max-h-64 space-y-1 overflow-y-auto rounded-xl bg-emerald-50/60 p-2">
-              {added.map((item) => (
-                <li key={rowKey(item)} className="flex items-center gap-2 px-1 text-sm text-gray-700">
-                  <Plus className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                  <span className="w-36 shrink-0 text-xs text-gray-500">{readable(item.date)}</span>
-                  <span className="w-20 shrink-0 text-xs text-brand-600">
-                    {TYPE_LABEL[item.type]}
-                  </span>
-                  <span className="min-w-0 truncate">
-                    {item.title}
-                    {item.place && <span className="text-gray-500"> · {item.place}</span>}
-                    {item.time && <span className="text-gray-400"> · {item.time}</span>}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div className="rounded-xl bg-emerald-50/60 p-2">
+              <p className="px-2 pb-1 text-xs font-semibold text-emerald-800">
+                เพิ่มเข้าเว็บ — ติ๊กไว้ให้แล้ว เอาออกได้ถ้าไม่ต้องการ
+              </p>
+              <ul className="max-h-64 space-y-0.5 overflow-y-auto">
+                {added.map((item) => (
+                  <Row
+                    key={item.key}
+                    checked={addKeys.has(item.key)}
+                    onToggle={() => toggle(addKeys, setAddKeys, item.key)}
+                    accent="accent-emerald-600"
+                  >
+                    <span className="text-xs text-gray-500">{readable(item.date)}</span>{" "}
+                    <span className="text-xs text-brand-600">{TYPE_LABEL[item.type]}</span>{" "}
+                    {describe(item)}
+                  </Row>
+                ))}
+              </ul>
+            </div>
           )}
 
           {changed.length > 0 && (
             <div className="rounded-xl bg-amber-50/70 p-2">
-              <ul className="max-h-40 space-y-1 overflow-y-auto">
+              <p className="px-2 pb-1 text-xs font-semibold text-amber-900">
+                รายละเอียดไม่ตรงกัน — ติ๊กเฉพาะอันที่ยอมให้ข้อมูลจากระบบสำนักงานทับ
+              </p>
+              <ul className="max-h-56 space-y-0.5 overflow-y-auto">
                 {changed.map((item) => (
-                  <li
-                    key={rowKey(item)}
-                    className="flex items-center gap-2 px-1 text-sm text-gray-700"
+                  <Row
+                    key={item.key}
+                    checked={item.current ? updateIds.has(item.current.id) : false}
+                    onToggle={() =>
+                      item.current && toggle(updateIds, setUpdateIds, item.current.id)
+                    }
+                    accent="accent-amber-600"
                   >
-                    <span className="w-36 shrink-0 text-xs text-gray-500">
-                      {readable(item.date)}
-                    </span>
-                    <span className="min-w-0 truncate">
-                      <span className="text-gray-400 line-through">
-                        {item.current?.title}
-                        {item.current?.place ? ` · ${item.current.place}` : ""}
-                        {item.current?.time ? ` · ${item.current.time}` : ""}
-                      </span>{" "}
-                      →{" "}
-                      <span>
-                        {item.title}
-                        {item.place ? ` · ${item.place}` : ""}
-                        {item.time ? ` · ${item.time}` : ""}
-                      </span>
-                    </span>
-                  </li>
+                    <span className="text-xs text-gray-500">{readable(item.date)}</span>{" "}
+                    <span className="text-gray-400 line-through">
+                      {item.current ? describe(item.current) : ""}
+                    </span>{" "}
+                    → {describe(item)}
+                  </Row>
                 ))}
               </ul>
-              <label className="mt-1.5 flex cursor-pointer items-center gap-2 px-1 text-xs text-amber-900">
-                <input
-                  type="checkbox"
-                  checked={updateDetails}
-                  onChange={(e) => setUpdateDetails(e.target.checked)}
-                  className="h-3.5 w-3.5 accent-amber-600"
-                />
-                ใช้ชื่อ สถานที่ และเวลาจากระบบสำนักงานทับของที่แก้ไว้ในเว็บด้วย
-              </label>
             </div>
           )}
 
-          {added.length === 0 && changed.length === 0 ? (
+          {extra.length > 0 && (
+            <div className="rounded-xl bg-red-50/60 p-2">
+              <p className="px-2 pb-1 text-xs font-semibold text-red-800">
+                มีในเว็บ แต่ระบบสำนักงานไม่มี — ติ๊กอันที่จะลบทิ้ง
+              </p>
+              <p className="px-2 pb-1.5 text-[11px] text-red-700/80">
+                ⚠️ กิจกรรมที่เจ้าหน้าที่พิมพ์เองในเว็บก็มาอยู่ตรงนี้ด้วย ดูให้แน่ก่อนติ๊ก · ลบแล้วเอาคืนไม่ได้
+              </p>
+              <ul className="max-h-56 space-y-0.5 overflow-y-auto">
+                {extra.map((row) => (
+                  <Row
+                    key={row.id}
+                    checked={removeIds.has(row.id)}
+                    onToggle={() => toggle(removeIds, setRemoveIds, row.id)}
+                    accent="accent-red-600"
+                  >
+                    <span className="text-xs text-gray-500">{readable(row.date)}</span>{" "}
+                    <span className="text-xs text-brand-600">
+                      {TYPE_LABEL[row.type] ?? row.type}
+                    </span>{" "}
+                    {describe(row)}
+                  </Row>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {added.length === 0 && changed.length === 0 && extra.length === 0 ? (
             <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-500">
-              ตรงกับระบบสำนักงานอยู่แล้ว ไม่มีอะไรต้องดึง
+              ตรงกับระบบสำนักงานอยู่แล้ว ไม่มีอะไรต้องทำ
             </p>
           ) : (
-            <button
-              onClick={apply}
-              disabled={busy !== null}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
-            >
-              {busy === "save" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4" />
-              )}
-              ดึงเข้าเว็บ
-              {added.length > 0 && ` — เพิ่ม ${added.length} รายการ`}
-              {updateDetails && changed.length > 0 && ` · แก้รายละเอียด ${changed.length} รายการ`}
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={apply}
+                disabled={busy !== null || picked === 0}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {busy === "save" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                ทำตามที่เลือก
+              </button>
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                {addKeys.size > 0 && <span className="text-emerald-700">เพิ่ม {addKeys.size}</span>}
+                {updateIds.size > 0 && <span className="text-amber-700">ทับ {updateIds.size}</span>}
+                {removeIds.size > 0 && (
+                  <span className="inline-flex items-center gap-1 text-red-700">
+                    <Trash2 className="h-3.5 w-3.5" /> ลบ {removeIds.size}
+                  </span>
+                )}
+                {picked === 0 && <span>ยังไม่ได้เลือกรายการไหน</span>}
+              </span>
+            </div>
           )}
         </div>
       )}
