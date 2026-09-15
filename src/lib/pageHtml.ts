@@ -39,6 +39,8 @@ export const ALLOWED_CLASSES = new Set([
   // หมุดอัตราดอกเบี้ยดึงสด — เนื้อในถูกใส่ให้ตอน render (ดู src/lib/liveRates.ts)
   // ไม่มีคลาสนี้ใน ALLOWED_CLASSES หมุดจะโดนตัวกรองกินตอนเจ้าหน้าที่กดบันทึก
   "live-deposit-rates", "live-loan-rates", "welfare-view",
+  // หมุดตารางรถตู้ออกหน่วย (ดู src/lib/liveVan.ts)
+  "live-van-schedule",
   "cols-2", "cols-3", "cols-4", "cols-5",
 ]);
 

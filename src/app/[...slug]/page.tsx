@@ -12,6 +12,7 @@ import { pageMetadata } from "@/lib/seo";
 import { localAssetsInHtml } from "@/lib/assetFallback";
 import { repairStructure } from "@/lib/htmlStructure";
 import { LIVE_DEPOSIT_RATES, LIVE_LOAN_RATES, splitAtRates } from "@/lib/liveRates";
+import { LIVE_VAN_SCHEDULE, fillVanSchedule, getVanSchedule } from "@/lib/liveVan";
 import RateSections from "@/components/site/RateSections";
 import WelfareSections from "@/components/site/WelfareSections";
 import { readWelfare } from "@/lib/welfareGroups";
@@ -76,7 +77,10 @@ export default async function ContentPage({ params }: Params) {
   const wantsDeposit = page.body.includes(LIVE_DEPOSIT_RATES);
   const wantsLoan = page.body.includes(LIVE_LOAN_RATES);
   const rates = wantsDeposit || wantsLoan ? await getRates() : null;
-  const html = repairStructure(localAssetsInHtml(page.body));
+  // ตารางรถตู้ออกหน่วย — อ่านฐานเฉพาะหน้าที่มีหมุด (ดู src/lib/liveVan.ts)
+  const vanRows = page.body.includes(LIVE_VAN_SCHEDULE) ? await getVanSchedule() : null;
+  const repaired = repairStructure(localAssetsInHtml(page.body));
+  const html = vanRows ? fillVanSchedule(repaired, vanRows) : repaired;
   const split = splitAtRates(html, wantsDeposit ? LIVE_DEPOSIT_RATES : LIVE_LOAN_RATES);
   /*
     หน้าเงินให้กู้/เงินรับฝาก: ดึงตารางระเบียบ/แบบฟอร์มท้ายหน้าออกมา

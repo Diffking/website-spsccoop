@@ -34,6 +34,21 @@ export default function PageContent({ html, className = "" }: { html: string; cl
       img.decoding = "async";
     });
 
+    /*
+     * ตารางรถตู้ (src/lib/liveVan.ts): ซ่อนรอบที่เลยวันไปแล้ว
+     * หน้านี้ส่วนใหญ่ถูกอ่านผ่านสำเนาบน www.spsccoop.com ซึ่งอาจเก่าหลายวันตอนเครื่องต้นทางปิด
+     * ทุกแถวหายหมดเมื่อไหร่ เปิดแถว "ยังไม่มีกำหนดการ" แทน จะได้ไม่เหลือตารางเปล่า
+     */
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+    root.querySelectorAll<HTMLTableElement>("table.van-schedule").forEach((table) => {
+      const rows = Array.from(table.querySelectorAll<HTMLTableRowElement>("tr[data-van-date]"));
+      rows.forEach((row) => {
+        row.hidden = (row.dataset.vanDate ?? "") < today;
+      });
+      const empty = table.querySelector<HTMLTableRowElement>("tr[data-van-empty]");
+      if (empty) empty.hidden = rows.some((row) => !row.hidden);
+    });
+
     // ตารางกว้างเกินจอ: ห่อให้เลื่อนแนวนอนได้ในกรอบตัวเอง ไม่ดันทั้งหน้าให้เลื่อนซ้ายขวา
     root.querySelectorAll("table").forEach((table) => {
       /*
