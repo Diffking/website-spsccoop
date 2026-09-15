@@ -5,8 +5,9 @@ import { applyEventSync } from "@/lib/officerEventSync";
  * ตัวดึงกิจกรรมอัตโนมัติเรียกที่นี่ — service `holiday-sync` ใน docker-compose.yml
  * (service เดียวกับวันหยุด ยิงสองเส้นทางในรอบเดียว จะได้ไม่ต้องมีตัวตั้งเวลาสองตัว)
  *
- * **เพิ่มอย่างเดียว ไม่ทับ ไม่ลบเด็ดขาด** (`addAll`) — การทับของที่เจ้าหน้าที่แก้ไว้
- * และการลบ ต้องมีคนติ๊กเองในหลังบ้านเท่านั้น ตรงนี้ไม่มีใครนั่งดูว่ามันทำอะไรไป
+ * **เพิ่มของใหม่ทุกชนิด** (`addAll`) · **อัปเดต/ลบเฉพาะรอบรถตู้ที่มาจากระบบสำนักงาน**
+ * (`followVan` — ตารางออกหน่วยบนหน้าเว็บต้องตรงกับที่รถออกจริง) · ของที่เจ้าหน้าที่พิมพ์เอง
+ * และโครงการ/สัมมนา การทับหรือลบยังต้องมีคนติ๊กเองในหลังบ้านเท่านั้น
  *
  * **ไม่มีอะไรเปลี่ยนก็ไม่ทำอะไรเลย** ไม่เขียนฐาน ไม่ล้างสำเนาบนโฮสต์ ไม่ขึ้น log
  * วิ่งทุก 6 ชม. จึงไม่สร้างงานให้ใคร
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "โทเคนไม่ถูกต้อง" }, { status: 401 });
   }
 
-  const result = await applyEventSync({ addAll: true });
+  const result = await applyEventSync({ addAll: true, followVan: true });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }

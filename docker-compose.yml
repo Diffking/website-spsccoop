@@ -193,9 +193,10 @@ services:
             esac
             # กิจกรรมจากระบบสำนักงาน (รถตู้ · โครงการ · สัมมนา) — ดู src/lib/officerEventSync.ts
             # ใช้โทเคนตัวเดียวกัน ยิงในรอบเดียวกัน จะได้ไม่ต้องมีตัวตั้งเวลาสองตัว
+            # ⚠️ แก้ entrypoint นี้แล้วต้อง `docker compose up -d holiday-sync` (restart ไม่พอ)
             out=$$(curl -s -m 60 -X POST -H "x-sync-token: $$HOLIDAY_SYNC_TOKEN" http://web:3000/api/calendar/sync/)
             case "$$out" in
-              *'"added":0,"changed":0'*) ;;
+              *'"added":0,"changed":0,"removed":0'*) ;;
               *) echo "กิจกรรม $$(date '+%F %H:%M') $$out" ;;
             esac
           fi
