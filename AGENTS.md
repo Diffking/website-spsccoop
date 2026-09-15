@@ -401,6 +401,17 @@ docker compose build --no-cache web    # ~3-5 นาที
 docker compose up -d web               # เว็บสะดุดแค่ตอนนี้ ไม่ใช่ตอน build
 ```
 
+⚠️ **มี migration ใหม่ ต้อง build `migrate` ด้วยเสมอ** — `migrate` เป็น image แยก
+(`target: build`) `docker compose build web` ไม่ได้สร้างมันใหม่ · 15 ก.ย. 2569 build แค่ `web`
+แล้ว `up -d web` ได้ `No pending migrations to apply` ทั้งที่มี migration ใหม่ โค้ดใหม่ขึ้นก่อน
+คอลัมน์ในฐาน ปฏิทินหน้าแรกพังจนกว่าจะรันเอง · ท่าที่ถูก:
+
+```bash
+docker compose build web migrate    # สองตัวพร้อมกัน
+docker compose up -d web            # migrate รันก่อน web สตาร์ต
+docker compose logs migrate | tail  # ต้องเห็นชื่อ migration ใหม่ ไม่ใช่ "No pending"
+```
+
 ข้อดีของท่านี้คือ **เว็บจริงยังรัน image เก่าอยู่ตลอดช่วง build** ถ้า build พังก็ไม่มีใครรู้สึก
 · ถ้าจะ deploy ตอนมีคนใช้งานเยอะ แยกสองคำสั่งแบบนี้ปลอดภัยกว่า `up -d --build` เสมอ
 
