@@ -147,6 +147,10 @@ model CalendarEvent {
   place     String?
   time      String?
   published Boolean  @default(true)
+  /// มาจากไหน — "officer" = ดึงจากระบบสำนักงาน · null = เจ้าหน้าที่พิมพ์เองในหลังบ้าน
+  /// รถตู้ที่เป็น "officer" ตัวดึงอัตโนมัติอัปเดต/ลบตามต้นทางให้เอง (ดู src/lib/officerEventSync.ts)
+  /// ส่วน null ไม่ถูกแตะเด็ดขาด
+  source    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

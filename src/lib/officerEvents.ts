@@ -197,6 +197,8 @@ export type CurrentEvent = {
   title: string;
   place: string;
   time: string;
+  /** "officer" = ดึงมาจากระบบสำนักงาน · null = เจ้าหน้าที่พิมพ์เอง */
+  source?: string | null;
 };
 
 export type ComparedEvent = SourceEvent & {
