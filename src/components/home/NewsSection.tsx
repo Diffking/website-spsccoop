@@ -335,8 +335,18 @@ function CommitteeCard({
         </button>
       </div>
       <div className="mt-4 text-center">
+        {/*
+          ไปหน้าเนื้อหา "คณะกรรมการดำเนินการ ชุดที่ 45" ที่เจ้าหน้าที่แก้เองได้ในหลังบ้าน
+          (เจ้าของเว็บกำหนดปลายทางนี้เอง 17 ก.ย. 2569) — ของเดิมชี้ /about/directory/board
+          ซึ่งเป็นหน้าที่ฝังรูปกรรมการไว้ในโค้ด แก้ชื่อหรือสลับคนทีต้อง deploy ใหม่ทุกครั้ง
+
+          ⚠️ เขียนเป็นที่อยู่แบบสัมพัทธ์เสมอ ห้ามใส่ https://spsccoop.com/… เต็ม ๆ
+          หน้าเว็บชุดเดียวกันนี้เสิร์ฟทั้งที่ spsccoop.org (ต้นทาง) และ www.spsccoop.com
+          (สำเนาบนโฮสต์) — ใส่โดเมนตายตัวเมื่อไหร่ คนที่อ่านอยู่บน .org จะถูกเด้งข้ามไป .com
+          กลางคัน และตอนตรวจงานที่ .org ตามกฎข้อ 3 ก็จะกดแล้วหลุดออกไปทุกครั้ง
+        */}
         <Link
-          href="/about/directory/board"
+          href="/about/directory/board45/"
           className="inline-flex items-center gap-1 rounded-full bg-accent-amber px-5 py-2 text-sm font-semibold text-white shadow transition hover:brightness-105"
         >
           ดูทั้งหมด →
