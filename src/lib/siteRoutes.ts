@@ -13,7 +13,7 @@ import { PROGRAM_PATHS } from "@/lib/programPages";
  * หน้าที่เขียนไว้ในโค้ด (ไม่ได้อยู่ในตาราง Page) — เพิ่มหน้าใหม่ในโค้ดเมื่อไหร่ ต้องมาต่อท้ายที่นี่
  * ไม่งั้นหลังบ้านจะเตือนว่า "ยังไม่มีหน้า" ทั้งที่กดเข้าได้จริง
  */
-export const CODED_ROUTES = ["/", "/about/directory/board", ...PROGRAM_PATHS];
+export const CODED_ROUTES = ["/", "/about/directory/board", "/news", ...PROGRAM_PATHS];
 
 export type LinkStatus =
   /** ไม่ได้ใส่ลิงก์ — เป็นหัวข้อไว้กางเมนูย่อยเฉย ๆ */

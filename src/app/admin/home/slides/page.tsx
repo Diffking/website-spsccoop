@@ -3,8 +3,10 @@ import { currentUser } from "@/lib/auth";
 import { ADMIN_HOME, canArea } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { AI_READY } from "@/lib/ai";
-import SlidesManager from "@/components/admin/SlidesManager";
+import SlidesManager, { type DocLink } from "@/components/admin/SlidesManager";
 import StorageStatus from "@/components/admin/StorageStatus";
+import { getAnnouncements } from "@/lib/content";
+import { KIND_LABEL, announcementLine, readerHref } from "@/lib/announcementKinds";
 
 export default async function AdminSlidesPage() {
   const user = await currentUser();
@@ -13,6 +15,26 @@ export default async function AdminSlidesPage() {
   if (!canArea(user, "home.slides")) redirect(ADMIN_HOME);
 
   const slides = await db.slide.findMany({ orderBy: { sortOrder: "asc" } });
+
+  /*
+   * รายการเอกสารให้เลือกเป็นปลายทางของสไลด์
+   *
+   * ⚠️ ที่อยู่ปลายทางคิดด้วย readerHref ตัวเดียวกับหน้าแรก — ห้ามประกอบ /ebook/<id>/ เองที่นี่
+   * ไม่งั้นวันหลังแก้กฎว่าหมวดไหนอ่านแบบ E-Book แล้วหลังบ้านจะพาไปคนละที่กับที่หน้าเว็บพาไป
+   * · ตัวที่ยังไม่มีไฟล์แนบถูกตัดออก (readerHref คืน null) จะได้ไม่มีให้เลือกแล้วกดไปเจอที่ว่าง
+   */
+  const docs: DocLink[] = (await getAnnouncements(500))
+    .map((a) => {
+      const href = readerHref(a.kind, a.id, a.href);
+      return href
+        ? {
+            href,
+            label: `${announcementLine(a.kind, a.number, a.title, a.hideNumber)} · ${a.date}`,
+            group: KIND_LABEL[a.kind],
+          }
+        : null;
+    })
+    .filter((d): d is DocLink => d !== null);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
@@ -41,6 +63,7 @@ export default async function AdminSlidesPage() {
           eventType: s.eventType ?? "",
         }))}
         aiReady={AI_READY}
+        docs={docs}
       />
     </main>
   );
