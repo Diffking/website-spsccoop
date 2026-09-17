@@ -16,7 +16,6 @@ import type { AnnouncementItem } from "@/lib/content";
 import type { Item } from "@/lib/homeItems";
 import {
   KINDS,
-  KIND_EBOOK,
   KIND_HEADING,
   KIND_LABEL,
   announcementLine,
@@ -127,14 +126,23 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
           style={{ ...STACKED, gridTemplateRows: `repeat(${PER_PAGE}, minmax(4.25rem, auto))` }}
           className="grid grid-cols-1 divide-y divide-gray-100"
         >
-          {shown.map((a) => (
+          {shown.map((a) => {
+            const to = readerHref(a.kind, a.id, a.href);
+            /*
+             * ⚠️ ดูจาก **ปลายทางจริง** ไม่ใช่จากหมวด — จดหมายข่าว/รายงานกิจการที่ใส่เป็นลิงก์
+             * ไปเว็บอื่น (ไม่ใช่ไฟล์ PDF) `readerHref` จะพาไปลิงก์นั้นตรง ๆ ไม่ได้เข้าตัวอ่าน
+             * ของเดิมเช็คแค่ `KIND_EBOOK[kind]` จึงติดป้าย "อ่านแบบ E-Book" ให้ทั้งที่กดแล้วออกนอกเว็บ
+             * · หน้ารวม /news/ ใช้กฎเดียวกันเป๊ะ (NewsArchive.tsx) แก้ที่ไหนต้องแก้ทั้งสองที่
+             */
+            const ebook = !!to?.startsWith("/ebook/");
+            return (
             // min-w-0 ซ้ำอีกชั้น — ช่องกริดยอมแคบแล้ว ตัวรายการก็ต้องยอมแคบตามด้วย
             <li key={a.id} className="min-w-0">
               <MaybeLink
-                href={readerHref(a.kind, a.id, a.href)}
+                href={to}
                 className="group flex items-start gap-3 py-3 transition hover:bg-brand-50/60 rounded-lg px-2 -mx-2"
               >
-                {KIND_EBOOK[a.kind] && a.href && a.href !== "#" ? (
+                {ebook ? (
                   <BookOpen className="mt-0.5 h-5 w-5 shrink-0 text-brand-400" />
                 ) : (
                   <FileText className="mt-0.5 h-5 w-5 shrink-0 text-brand-400" />
@@ -155,7 +163,7 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
                     <span className="flex items-center gap-1">
                       <CalendarDays className="h-3.5 w-3.5" /> {a.date}
                     </span>
-                    {KIND_EBOOK[a.kind] && a.href && a.href !== "#" && (
+                    {ebook && (
                       <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-600">
                         อ่านแบบ E-Book
                       </span>
@@ -164,7 +172,8 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
                 </div>
               </MaybeLink>
             </li>
-          ))}
+            );
+          })}
         </motion.ul>
         </AnimatePresence>
         </div>
@@ -181,21 +190,25 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
             className="block rounded-full"
           />
         </div>
+        {/*
+          ⚠️ ปุ่มสองตัวนี้ **วนกลับได้** ห้ามใส่ disabled กลับเข้ามา
+          ของเดิมกดถึงหน้าสุดท้ายแล้วตัน ทั้งที่ตัวมันเองเลื่อนวนอยู่ตลอด (`% pageCount`
+          ที่ step) คนกดตามจึงเจอปุ่มจางกดไม่ได้ทั้งที่รออีกสิบวินาทีมันก็วนเอง
+          — เจ้าของเว็บทักไว้ 22 ส.ค. 2026
+        */}
         <div className="mt-2 flex items-center justify-center gap-2 text-sm text-gray-500">
           <button
-            onClick={() => setPage(current - 1)}
-            disabled={current === 0}
+            onClick={() => setPage((current - 1 + pageCount) % pageCount)}
             aria-label="หน้าก่อนหน้า"
-            className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 transition hover:bg-gray-50 disabled:opacity-30"
+            className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 transition hover:bg-gray-50"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <span className="tabular-nums">หน้า {current + 1} / {pageCount}</span>
           <button
-            onClick={() => setPage(current + 1)}
-            disabled={current >= pageCount - 1}
+            onClick={() => setPage((current + 1) % pageCount)}
             aria-label="หน้าถัดไป"
-            className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 transition hover:bg-gray-50 disabled:opacity-30"
+            className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 transition hover:bg-gray-50"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -204,8 +217,9 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
       )}
 
       <div className="mt-4 text-center">
+        {/* ติดหมวดที่กำลังอ่านอยู่ไปด้วย หน้ารวมจะได้เปิดมาตรงแท็บเดิม ไม่ต้องกดหาใหม่ */}
         <Link
-          href="/news"
+          href={`/news/?kind=${kind}`}
           className="inline-flex items-center gap-1 rounded-full bg-accent-amber px-5 py-2 text-sm font-semibold text-white shadow transition hover:brightness-105"
         >
           ดูทั้งหมด →

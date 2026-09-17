@@ -105,7 +105,31 @@ function scheduleState(slide: SlideRow): { label: string; tone: string } {
   return { label: "กำลังแสดง", tone: "bg-emerald-600/90 text-white" };
 }
 
-export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; aiReady: boolean }) {
+/**
+ * เอกสารในเว็บที่เอามาเป็นปลายทางของสไลด์ได้ — ประกาศ · จดหมายข่าว · รายงานกิจการ
+ *
+ * เจ้าของเว็บขอไว้ 12 ส.ค. 2026: ประกาศของสหกรณ์มาเป็น PDF อยู่แล้ว คนกดแบนเนอร์
+ * แล้วควรมีที่ให้ไปอ่านฉบับเต็ม — ของเดิมช่องลิงก์เป็นช่องพิมพ์เปล่า ๆ
+ * ต้องไปเปิดอีกหน้าเพื่อคัดลอกที่อยู่มาวางเอง
+ */
+export type DocLink = {
+  /** ที่อยู่ปลายทางจริง — /ebook/<id>/ หรือไฟล์ตรง ๆ (คิดมาจาก readerHref ฝั่งเซิร์ฟเวอร์) */
+  href: string;
+  /** บรรทัดที่เจ้าหน้าที่เห็นในรายการ */
+  label: string;
+  /** ชื่อหมวดไว้จัดกลุ่มใน <optgroup> */
+  group: string;
+};
+
+export default function SlidesManager({
+  items,
+  aiReady,
+  docs = [],
+}: {
+  items: SlideRow[];
+  aiReady: boolean;
+  docs?: DocLink[];
+}) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -459,6 +483,7 @@ export default function SlidesManager({ items, aiReady }: { items: SlideRow[]; a
         {openId === slide.id && (
           <SlideSettings
             slide={slide}
+            docs={docs}
             onChange={(body) => patch(slide.id, body)}
             onReplaceImage={(url) => patch(slide.id, { imageUrl: url })}
           />
@@ -674,20 +699,34 @@ function SlideCard({
 
 function SlideSettings({
   slide,
+  docs,
   onChange,
   onReplaceImage,
 }: {
   slide: SlideRow;
+  docs: DocLink[];
   onChange: (body: Record<string, unknown>) => void;
   onReplaceImage: (url: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
+
+  // จัดกลุ่มตามหมวดไว้ก่อน จะได้ทำ <optgroup> โดยไม่ต้องไล่ซ้ำหลายรอบตอนวาด
+  const groups = docs.reduce<Record<string, DocLink[]>>((acc, d) => {
+    (acc[d.group] ??= []).push(d);
+    return acc;
+  }, {});
 
   return (
     <div className="mt-2 space-y-3 rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200">
       <label className="block">
         <span className="text-xs text-gray-500">ลิงก์เมื่อคลิกสไลด์ (เว้นว่าง = ไม่ลิงก์ไปไหน)</span>
         <input
+          /*
+            ⚠️ key ผูกกับค่าปัจจุบัน — ช่องนี้เป็นแบบ defaultValue (ไม่คุมค่า)
+            เลือกเอกสารจากรายการข้างล่างแล้วค่าในฐานเปลี่ยน แต่ตัวช่องยังค้างของเดิม
+            ถ้าไม่บังคับให้สร้างใหม่ เจ้าหน้าที่จะเห็นลิงก์เก่าค้างทั้งที่บันทึกไปแล้ว
+          */
+          key={slide.href ?? ""}
           defaultValue={slide.href ?? ""}
           onBlur={(e) => {
             if (e.target.value !== (slide.href ?? "")) onChange({ href: e.target.value });
@@ -696,6 +735,33 @@ function SlideSettings({
           className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
         />
       </label>
+
+      {docs.length > 0 && (
+        <label className="block">
+          <span className="text-xs text-gray-500">
+            หรือเลือกจากเอกสารในเว็บ — จดหมายข่าวกับรายงานกิจการจะเปิดแบบ E-Book ให้เอง
+          </span>
+          <select
+            // ค่าเป็น "" เสมอ = เป็นปุ่มเลือก ไม่ใช่ช่องที่จำค่าไว้ · ค่าจริงอยู่ในช่องลิงก์ข้างบน
+            value=""
+            onChange={(e) => {
+              if (e.target.value) onChange({ href: e.target.value });
+            }}
+            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-400"
+          >
+            <option value="">— เลือกเอกสาร —</option>
+            {Object.entries(groups).map(([group, list]) => (
+              <optgroup key={group} label={group}>
+                {list.map((d) => (
+                  <option key={d.href} value={d.href}>
+                    {d.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
