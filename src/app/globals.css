@@ -336,8 +336,34 @@ body {
   border-radius: .6rem; background: #f3f4f6;
   box-shadow: 0 4px 14px rgb(15 83 144 / .12);
 }
+/* ---- ป้ายชื่อใต้รูป ----
+   เจ้าของเว็บขอไว้ 21 ก.ย. 2569: ของเดิมเป็นตัวหนังสือสีเกือบดำลอยบนพื้นขาว
+   พอกรรมการใส่สูทสีดำทั้งแถว ทั้งการ์ด "ดำไปหมด" แยกไม่ออกว่าตรงไหนรูปตรงไหนชื่อ
+
+   จึงทำเป็นแถบป้ายสีฟ้าอ่อนล้อธีมเว็บ (brand-50) ชื่อเป็นน้ำเงินกรมท่า (brand-800)
+   ไม่ใช่สีดำ · เส้นขอบผมสี brand-100 หนึ่งพิกเซลคุมทรงให้ดูเป็นทางการ ไม่ใช่กล่องสีลอย ๆ
+
+   ⚠️ กว้างเท่ารูปเสมอ (max-width เท่ากับ .people figure img) ไม่ใช่เต็มความกว้างช่อง
+   ไม่งั้นจอกว้าง ๆ ป้ายจะยื่นออกมาสองข้างกว้างกว่ารูป ดูเหมือนวางผิดที่
+
+   ⚠️ CSS ชุดนี้ใช้ร่วมกับ EditUI ในหลังบ้าน (.prose-page ชุดเดียวกัน — ดู AGENTS.md)
+   แก้ตรงนี้แล้วหน้าแก้ไขเปลี่ยนตามทันที ซึ่งตั้งใจให้เป็นแบบนั้น เจ้าหน้าที่จะได้เห็นของจริง */
 .prose-page .person figcaption,
-.prose-page .people figure figcaption { margin-top: .6rem; text-align: center; }
+.prose-page .people figure figcaption {
+  margin: .55rem auto 0;
+  max-width: 13rem;
+  border-radius: .5rem;
+  padding: .45rem .55rem .5rem;
+  text-align: center;
+  background: linear-gradient(180deg, #f5fafe 0%, var(--color-brand-50) 100%);
+  box-shadow: inset 0 0 0 1px var(--color-brand-100);
+}
+
+/* การ์ดคนในแถวเดียวกันสูงเท่ากัน — ป้ายชื่อจึงจบที่ระดับเดียวกันทั้งแถว
+   ถึงบางคนชื่อยาวตกสองบรรทัดแต่บางคนบรรทัดเดียว (flex ในแถวยืดให้เท่ากันอยู่แล้ว
+   เหลือแค่บอกให้ป้ายกินที่ว่างที่เหลือ) — ไม่ได้เดาความสูงเป็นตัวเลข */
+.prose-page .people figure { display: flex; flex-direction: column; }
+.prose-page .people figure figcaption { flex: 1; }
 
 /* ---- ซ่อนชื่อกับตำแหน่งใต้รูป ----
    รูปบุคลากรของสหกรณ์มีแถบชื่อ-สกุลกับตำแหน่งพิมพ์ติดมาในภาพเลย
@@ -355,11 +381,16 @@ body {
   font-family: system-ui, sans-serif; font-size: .75rem; color: #92600a;
 }
 
+/* ⚠️ ห้ามกลับไปใช้สีดำ/เทาเข้ม (#1f2937) กับชื่อ — เจ้าของเว็บสั่งไว้ 21 ก.ย. 2569
+   รูปบุคลากรเป็นสูทสีดำเกือบทุกใบ ชื่อสีดำใต้รูปทำให้ทั้งการ์ดเป็นสีดำทึบไปหมด
+   น้ำเงินกรมท่าอ่านชัดพอกันแต่แยกตัวออกจากรูปได้ และเป็นสีเดียวกับหัวข้อทั้งเว็บ */
 .prose-page .person-name {
-  display: block; font-weight: 600; color: #1f2937; line-height: 1.45; font-size: .95rem;
+  display: block; font-weight: 600; color: var(--color-brand-800); line-height: 1.45; font-size: .95rem;
 }
+/* ตำแหน่งใช้น้ำเงินอ่อนลงมาหนึ่งขั้น ไม่ใช่เทา — เทาบนพื้นฟ้าอ่อนดูซีดจนอ่านยาก
+   สีนี้ผ่านเกณฑ์ contrast 4.5:1 บนพื้น brand-50 แล้ว (ตัวอักษรเล็กกว่าปกติจึงต้องเช็ค) */
 .prose-page .person-role {
-  display: block; margin-top: .1rem; font-size: .82rem; color: #6b7280; line-height: 1.45;
+  display: block; margin-top: .15rem; font-size: .82rem; color: #3d6182; line-height: 1.45;
 }
 
 /* ---- การ์ดลิงก์แบบตาราง ----
