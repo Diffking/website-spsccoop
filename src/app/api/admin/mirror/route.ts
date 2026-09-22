@@ -20,5 +20,6 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as { force?: boolean };
   const result = await runWarm(Boolean(body.force));
 
-  return NextResponse.json({ ...result, status: await mirrorStatus() });
+  // เพิ่งยิงหาโฮสต์ไปแล้ว ถามสถานะใหม่ได้ · แต่ถ้าอุ่นพลาด อย่ายิงซ้ำ ใช้ค่าที่จำไว้
+  return NextResponse.json({ ...result, status: await mirrorStatus(result.ok) });
 }
