@@ -45,7 +45,25 @@ function warmUrl(): string | null {
   return url && token ? `${url}?token=${encodeURIComponent(token)}` : null;
 }
 
-export async function mirrorStatus(): Promise<MirrorStatus> {
+/*
+ * ⚠️ จำผลไว้ 6 ชม. ทั้งตอนสำเร็จและตอนพลาด — บทเรียน 22 ก.ย. 2569
+ * เดิมหน้าภาพรวมหลังบ้านถามโฮสต์ทุกครั้งที่มีคนเปิด = คำขอจากไอพีสำนักงานไปโฮสต์
+ * ไม่จำกัดจำนวน ซึ่งไฟร์วอลล์โฮสต์นับรวมจนแบนมาแล้ว · พลาดแล้วก็ห้ามถามซ้ำเช่นกัน
+ * ถามใหม่เฉพาะตอนเจ้าหน้าที่กดปุ่มอุ่นเอง (runWarm → fresh)
+ */
+const STATUS_TTL_MS = 6 * 3_600_000;
+let remembered: { at: number; value: MirrorStatus } | null = null;
+
+export async function mirrorStatus(fresh = false): Promise<MirrorStatus> {
+  if (!fresh && remembered && Date.now() - remembered.at < STATUS_TTL_MS) {
+    return remembered.value;
+  }
+  const value = await askStatus();
+  remembered = { at: Date.now(), value };
+  return value;
+}
+
+async function askStatus(): Promise<MirrorStatus> {
   const base = warmUrl();
   const shown = warmBase();
   if (!base) {

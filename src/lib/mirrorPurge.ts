@@ -61,7 +61,16 @@ function closeBreaker(): void {
 
 type PurgeBody = { token: string; paths?: string[]; all?: true };
 
+/*
+ * ⚠️ ปิดไว้เป็นค่าตั้งต้นตั้งแต่ 22 ก.ย. 2569 — ทุกการกดบันทึก = หนึ่งคำขอจากไอพีสำนักงานไปโฮสต์
+ * ซึ่งไฟร์วอลล์โฮสต์นับรวมจนแบนมาแล้ว · ตั้งแต่ mirror.php บนโฮสต์เลิกลบไฟล์ (ตีว่าหมดอายุแทน)
+ * การล้างทันทีก็ไม่จำเป็นแล้ว ของที่แก้ขึ้น .com เองภายใน ttl_page 120 วิ
+ * อยากเปิดกลับ: ตั้ง MIRROR_PURGE_ON_SAVE=1 ใน .env (เจ้าของเว็บตัดสินใจเท่านั้น)
+ */
+const PURGE_ON_SAVE = process.env.MIRROR_PURGE_ON_SAVE === "1";
+
 async function tell(body: PurgeBody): Promise<void> {
+  if (!PURGE_ON_SAVE) return;
   const url = process.env.MIRROR_PURGE_URL;
   const token = process.env.MIRROR_PURGE_TOKEN;
   if (!url || !token) return;
