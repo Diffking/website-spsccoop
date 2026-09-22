@@ -257,24 +257,37 @@ final class Mirror
         readfile($item['file']);
     }
 
-    /** ลบของในแคชของที่อยู่นี้ */
+    /**
+     * "ล้าง" = ตีว่าหมดอายุ ไม่ใช่ลบไฟล์ทิ้ง
+     *
+     * คำขอถัดไปจะไปเอาของใหม่จากหลังบ้านเหมือนเดิม แต่ถ้าหลังบ้านปิดไปแล้ว
+     * ยังมีของเก่าไว้เสิร์ฟ (สถานะ stale) แทนที่จะขึ้นหน้าแจ้งปรับปรุง
+     *
+     * บทเรียน 21 ก.ย. 2569 — เดิมลบไฟล์ทิ้ง เจ้าหน้าที่บันทึกประกาศ 16:40 แล้วปิดเครื่อง 16:44
+     * หน้าที่ไม่มีใครเปิดในสามนาทีนั้นไม่มีสำเนาเหลือเลย .com ขึ้นหน้าปรับปรุงทั้งคืน
+     */
+    private function expire(string $meta): bool
+    {
+        $info = json_decode((string) @file_get_contents($meta), true);
+        if (!is_array($info) || !is_file(substr($meta, 0, -5) . '.bin')) {
+            return false;
+        }
+        $info['time'] = 0;
+        return @file_put_contents($meta, json_encode($info, JSON_UNESCAPED_UNICODE)) !== false;
+    }
+
+    /** ล้างสำเนาของที่อยู่นี้ (ตีว่าหมดอายุ — ดู expire) */
     public function purge(string $path): bool
     {
-        $ok = false;
-        foreach (['.json', '.bin'] as $ext) {
-            $file = $this->key($path) . $ext;
-            if (is_file($file)) {
-                $ok = @unlink($file) || $ok;
-            }
-        }
-        return $ok;
+        return $this->expire($this->key($path) . '.json');
     }
 
     /**
-     * ลบสำเนาหน้าเว็บทั้งหมด — ใช้ตอนหลังบ้านแก้ของที่กระทบทุกหน้า (เมนู หัวเว็บ ค่าตั้ง)
+     * ล้างสำเนาหน้าเว็บทั้งหมด — ใช้ตอนหลังบ้านแก้ของที่กระทบทุกหน้า (เมนู หัวเว็บ ค่าตั้ง)
      *
      * ปกติเว้นรูปกับไฟล์แนบไว้ ($pagesOnly) เพราะของพวกนั้นแทบไม่เปลี่ยน แต่รวมกันเป็นสิบ ๆ MB
-     * ลบทิ้งทีก็ต้องโหลดใหม่หมดทั้งที่เนื้อไฟล์เหมือนเดิม — เปลืองทั้งเวลาและเน็ตของโฮสต์
+     * ล้างทีก็ต้องโหลดใหม่หมดทั้งที่เนื้อไฟล์เหมือนเดิม — เปลืองทั้งเวลาและเน็ตของโฮสต์
+     * · ไม่ลบไฟล์ทิ้ง แค่ตีว่าหมดอายุ (ดู expire) · อยากลบจริงให้ลบโฟลเดอร์ cache/ ใน File Manager
      */
     public function purgeAll(bool $pagesOnly = true): int
     {
@@ -286,8 +299,7 @@ final class Mirror
                     continue;
                 }
             }
-            @unlink(substr($meta, 0, -5) . '.bin');
-            if (@unlink($meta)) {
+            if ($this->expire($meta)) {
                 $count++;
             }
         }
