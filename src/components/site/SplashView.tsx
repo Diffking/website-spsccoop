@@ -2,7 +2,9 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import EnterSiteButton from "@/components/site/EnterSiteButton";
+import SplashCountdown from "@/components/site/SplashCountdown";
 import {
+  autoEnterSeconds,
   getActiveOccasion,
   type SplashContent,
   type SplashOccasion,
@@ -12,30 +14,34 @@ import { useIsClient } from "@/lib/useIsClient";
 
 /**
  * เนื้อหาหน้า splash — เลือกวันสำคัญฝั่ง client เท่านั้น
- * (เว็บเป็น static export ถ้าเลือกตอน build วันที่จะแช่เป็นวันที่ build ตลอดไป)
+ * (ดูเหตุผลที่หัวไฟล์ src/content/splash.ts)
  *
  * ?preview=<id> = บังคับดูวันสำคัญที่ระบุ ไม่สนวันที่ — ใช้จากปุ่มดูตัวอย่างในหลังบ้าน
  */
-/** null = วันนี้ไม่มีวันสำคัญที่ต้องแสดง */
-function resolveOccasion(content: SplashContent): SplashOccasion | null {
+/** occasion เป็น null = วันนี้ไม่มีวันสำคัญที่ต้องแสดง */
+function resolveOccasion(content: SplashContent): {
+  occasion: SplashOccasion | null;
+  preview: boolean;
+} {
   let previewId: string | null = null;
   try {
     previewId = new URLSearchParams(window.location.search).get("preview");
   } catch {}
 
   if (previewId) {
-    return content.occasions.find((o) => o.id === previewId) ?? null;
+    return { occasion: content.occasions.find((o) => o.id === previewId) ?? null, preview: true };
   }
-  return getActiveOccasion(content);
+  return { occasion: getActiveOccasion(content), preview: false };
 }
 
 export default function SplashView({ content }: { content: SplashContent }) {
   const isClient = useIsClient();
   const reduce = useReducedMotion();
   // ยังไม่ hydrate = ยังไม่รู้วันที่/query string ของผู้ใช้ (จอดำเปล่าๆ กันภาพผิดกระพริบ)
-  const occasion = isClient ? resolveOccasion(content) : undefined;
+  const resolved = isClient ? resolveOccasion(content) : undefined;
+  const occasion = resolved?.occasion;
 
-  if (occasion === undefined) {
+  if (resolved === undefined || occasion === undefined) {
     return <main className="min-h-screen bg-black" />;
   }
 
@@ -50,6 +56,12 @@ export default function SplashView({ content }: { content: SplashContent }) {
   }
 
   const light = isLightSplashBg(occasion.bg);
+
+  /*
+    ตอนกดดูตัวอย่างจากหลังบ้านห้ามนับถอยหลัง — เจ้าหน้าที่เปิดมาตรวจรูปกับข้อความ
+    แล้วจู่ ๆ โดนพาออกไปหน้าแรกเอง จะตรวจงานไม่ได้
+  */
+  const countdown = resolved.preview ? 0 : autoEnterSeconds(content);
 
   // ทยอยปรากฏทีละชั้น ภาพ → ข้อความ → ปุ่ม ให้ความรู้สึกสงบ ไม่โผล่พรวดพร้อมกัน
   const step = (delay: number) => ({
@@ -117,8 +129,10 @@ export default function SplashView({ content }: { content: SplashContent }) {
         </motion.div>
       )}
 
-      <motion.div className="relative" {...step(0.8)}>
+      {/* ปุ่มกับตัวนับเป็นเรื่องเดียวกัน (ทางเข้าเว็บ) จึงจางขึ้นมาพร้อมกันในจังหวะเดียว */}
+      <motion.div className="relative flex flex-col items-center gap-5" {...step(0.8)}>
         <EnterSiteButton label={content.buttonText} light={light} />
+        {countdown > 0 && <SplashCountdown seconds={countdown} light={light} />}
       </motion.div>
     </main>
   );

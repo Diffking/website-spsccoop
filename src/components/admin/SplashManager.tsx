@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { Save, Loader2, Plus, Trash2, Eye, GripVertical } from "lucide-react";
-import type { SplashContent, SplashOccasion, SplashRepeat, SplashTiming } from "@/content/splash";
+import {
+  MAX_AUTO_ENTER_SECONDS,
+  type SplashContent,
+  type SplashOccasion,
+  type SplashRepeat,
+  type SplashTiming,
+} from "@/content/splash";
 import { DEFAULT_SPLASH_BG, SPLASH_BACKGROUNDS } from "@/lib/splashTheme";
 
 const BLANK: SplashOccasion = {
@@ -172,6 +178,26 @@ export default function SplashManager({ initial }: { initial: SplashContent }) {
             onChange={(e) => setContent((prev) => ({ ...prev, buttonText: e.target.value }))}
             className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
           />
+        </label>
+
+        <label className="mt-3 block">
+          <span className="text-sm text-gray-600">นับถอยหลังแล้วพาเข้าเว็บเอง (วินาที)</span>
+          <input
+            type="number"
+            min={0}
+            max={MAX_AUTO_ENTER_SECONDS}
+            value={content.autoEnterSeconds ?? 0}
+            onChange={(e) =>
+              setContent((prev) => ({ ...prev, autoEnterSeconds: Number(e.target.value) }))
+            }
+            className="mt-1 w-28 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+          />
+          <span className="mt-1 block text-xs leading-relaxed text-gray-500">
+            0 = ไม่นับ ให้ผู้เข้าเว็บกดปุ่มเอง (ค่าตั้งต้น) · ใส่เลขอื่นจะมีวงแหวนนับถอยหลังตัวใหญ่
+            อยู่ใต้ปุ่ม ครบแล้วพาเข้าหน้าแรกให้เอง — เอาเมาส์ชี้ค้างไว้จะหยุดนับ และมีปุ่ม
+            “หยุดนับถอยหลัง” ให้กดด้วย · สูงสุด {MAX_AUTO_ENTER_SECONDS} วินาที ·
+            ตอนกดดูตัวอย่างจะไม่นับ จะได้ตรวจงานได้
+          </span>
         </label>
       </section>
 
