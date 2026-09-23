@@ -128,8 +128,30 @@ body {
 }
 .splash-button { animation: splash-pulse 3.4s ease-in-out infinite; }
 
+/* ขอบจอมืดลง ดันสายตาเข้าหากลางภาพ — ของนิ่ง ไม่ขยับ ไม่กินแรงเครื่อง
+   พื้นสว่าง (ครีม) ใช้เงาอุ่นแทนสีดำ ไม่งั้นหน้าดูหม่นเหมือนภาพเก่า */
+.splash-vignette {
+  background: radial-gradient(ellipse at center, transparent 42%, rgb(0 0 0 / .58) 100%);
+}
+.splash-vignette-light {
+  background: radial-gradient(ellipse at center, transparent 48%, rgb(92 58 12 / .16) 100%);
+}
+
+/* ฝุ่นทองลอยขึ้นช้า ๆ — เพิ่มบรรยากาศให้หน้าไม่นิ่งสนิท ไม่ใช่ของดึงสายตา
+   จางเข้าจางออกเองทั้งหัวและท้าย จะได้ไม่เห็นจังหวะที่มันวาร์ปกลับไปเริ่มใหม่
+   ⚠️ ความช้าคือหัวใจ — เร่งเมื่อไหร่จะกลายเป็นหิมะตกทันที ผิดโทนหน้าไว้อาลัย */
+@keyframes splash-dust {
+  0%   { transform: translateY(0) scale(1); opacity: 0; }
+  14%  { opacity: .6; }
+  82%  { opacity: .32; }
+  100% { transform: translateY(-150px) scale(.82); opacity: 0; }
+}
+.splash-dust { animation-name: splash-dust; animation-timing-function: linear; animation-iteration-count: infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   .splash-glow, .splash-image, .splash-button { animation: none; }
+  /* ฝุ่นเป็นของประดับล้วน ไม่ได้บอกอะไร — หยุดแล้วค้างเป็นจุดกลางจอดูแปลกกว่า ซ่อนไปเลย */
+  .splash-dust { display: none; }
 }
 
 /* ================= เนื้อหาที่พิมพ์จากหลังบ้าน (HTML) =================

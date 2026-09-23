@@ -29,13 +29,17 @@ const CIRCUMFERENCE = 2 * Math.PI * R;
 export default function SplashCountdown({
   seconds,
   light = false,
+  onDone,
 }: {
   /** นับจากกี่วินาที — ต้องมากกว่า 0 (ไม่งั้นอย่าวาดคอมโพเนนต์นี้เลย) */
   seconds: number;
   /** พื้นหลังสว่าง = ต้องใช้ตัวหนังสือเข้ม */
   light?: boolean;
+  /** ไม่ส่งมา = ไปหน้าแรกทันที · ส่งมา = ให้หน้าที่ครอบอยู่จัดการเอง (จางออกก่อนค่อยไป) */
+  onDone?: () => void;
 }) {
   const enter = useEnterSite();
+  const done = onDone ?? enter;
   const total = seconds * 1000;
 
   const [left, setLeft] = useState(total);
@@ -54,12 +58,12 @@ export default function SplashCountdown({
       setLeft(ms);
       if (ms === 0) {
         clearInterval(timer);
-        enter();
+        done();
       }
     }, TICK_MS);
 
     return () => clearInterval(timer);
-  }, [paused, stopped, enter]);
+  }, [paused, stopped, done]);
 
   if (stopped) return null;
 

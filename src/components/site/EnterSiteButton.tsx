@@ -13,15 +13,18 @@ import { useEnterSite } from "@/components/site/useEnterSite";
 export default function EnterSiteButton({
   label = "เข้าสู่เว็บไซต์",
   light = false,
+  onEnter,
 }: {
   label?: string;
   /** พื้นหลังสว่าง = ต้องใช้ตัวหนังสือเข้ม */
   light?: boolean;
+  /** ไม่ส่งมา = ไปหน้าแรกทันที · ส่งมา = ให้หน้าที่ครอบอยู่จัดการเอง (จางออกก่อนค่อยไป) */
+  onEnter?: () => void;
 }) {
   const enter = useEnterSite();
   return (
     <button
-      onClick={enter}
+      onClick={onEnter ?? enter}
       className={`splash-button group inline-flex items-center gap-2 rounded-full border px-8 py-3 text-base font-medium backdrop-blur transition duration-300 ${
         light
           ? "border-amber-700/30 bg-black/5 text-amber-900 hover:border-amber-700/60 hover:bg-black/10"
