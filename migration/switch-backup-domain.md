@@ -13,14 +13,16 @@
 | ขั้น | ทำอะไร | สถานะ |
 |---|---|---|
 | 1 | แก้โค้ด + `.env` ให้ชี้ spsccoop.org | ✅ |
-| 2 | เพิ่ม `spsccoop.org` + `admin.spsccoop.org` เข้าอุโมงค์ `webcoopsmile` | ✅ |
+| 2 | เพิ่ม `spsccoop.org` + `admin.spsccoop.org` เข้าอุโมงค์ `webspsc` | ✅ |
 | 3 | `docker compose up -d --build web` | ✅ |
 | 4 | `config.php` บนโฮสต์ → `'backend' => 'https://spsccoop.org'` | ✅ |
 | 5 | ปลด `admin.coopsmile.org` ออกจากอุโมงค์ | ✅ |
-| 6 | ปลด `coopsmile.org` ออกจากอุโมงค์ | ⬜ เหลืออย่างเดียว |
+| 6 | ปลด `coopsmile.org` ออกจากอุโมงค์ | ✅ **23 ก.ย. 2569** |
 
-ไม่มีอะไรพึ่ง `coopsmile.org` อีกแล้ว — `.env` เอาออกหมดแล้ว และตัวมิเรอร์บนโฮสต์
-ดึงผ่าน `spsccoop.org` เรียบร้อย · เหลือแค่ลบ public hostname ทิ้ง ทำตอนไหนก็ได้
+**ย้ายโดเมนเสร็จครบทุกขั้นแล้ว** — 23 ก.ย. 2569 ปลด public hostname `coopsmile.org`
+ออกจากอุโมงค์ เหลือ `spsccoop.org` กับ `admin.spsccoop.org` สองแถว (catch-all = 404)
+· ตรวจหลังปลดด้วย `r.jina.ai` จากนอกไอพีเรา — `www.spsccoop.com` ขึ้นหน้าแรกปกติ
+ตัวมิเรอร์ยังดึงผ่าน `spsccoop.org` ได้เหมือนเดิม
 
 ## บทเรียน 21 ส.ค. 2026 — ลำดับสำคัญกว่าที่คิด
 
@@ -38,9 +40,19 @@
 
 ## ขั้นที่ 6 — ปลด coopsmile.org ให้ถูกวิธี
 
+⚠️⚠️ **ปลดแค่ public hostname ในอุโมงค์ ห้ามลบโซน `coopsmile.org` ทิ้ง** —
+`OFFICER_EVENT_SOURCE_URL=https://officer.coopsmile.org/liff/admin` ยังใช้งานอยู่จริง
+เป็นต้นทางที่ดึงรถตู้เคลื่อนที่กับโครงการเข้าปฏิทิน (`src/lib/officerEvents.ts`)
+· `officer.coopsmile.org` เป็นคนละ hostname คนละอุโมงค์กับตัวที่จะปลด
+ลบผิดชั้นเมื่อไหร่ ปฏิทินหน้าแรกจะขาดรถตู้ไปเงียบ ๆ ไม่มีอะไรฟ้อง
+
+ตรวจแล้ว 23 ก.ย. 2569 ว่าไม่มีอะไรพึ่งโดเมนเปล่าอีก — โค้ด · `.env` · `php-frontend` ·
+`config.php` บนโฮสต์ (ชี้ `spsccoop.org` แล้ว) · ฐานข้อมูล `Page.body` `Media.url`
+`Setting` = 0 แถว
+
 ทำตามลำดับนี้ ถ้าพลาดก็ถอยกลับได้ใน 30 วินาที
 
-1. Cloudflare → Zero Trust → Networks → Tunnels → **`webcoopsmile`** → Edit →
+1. Cloudflare → Zero Trust → Networks → Tunnels → **`webspsc`** → Edit →
    Published application routes → ลบ `coopsmile.org` และ `admin.coopsmile.org`
 2. ล้างแคชแล้วเปิดหน้าเว็บทดสอบ — ถ้าขึ้นครบแปลว่าตัวมิเรอร์ดึงผ่าน `spsccoop.org` ได้จริง
 
@@ -72,12 +84,14 @@ curl -s -o /dev/null -w '%{http_code}\n' https://www.spsccoop.com/about/history/
 | `PUBLIC_SITE_URL` | `https://spsccoop.org` |
 | `ANALYTICS_HOST` | `spsccoop.com,spsccoop.org` |
 
-อุโมงค์ `webcoopsmile` (อีก 4 ตัวในบัญชีเป็นระบบอื่น อย่าไปแตะ)
+อุโมงค์ชื่อ **`webspsc`** (อีกหลายตัวในบัญชีเป็นระบบอื่น อย่าไปแตะ)
+· ⚠️ **อย่าสับสนกับ `webcoopsmile` ซึ่งเป็นชื่อโปรเจกต์ของ `docker compose`**
+(ที่โผล่เป็นชื่อคอนเทนเนอร์ `webcoopsmile-web-1`) คนละเรื่องกับชื่ออุโมงค์
 
 ```
 spsccoop.org               → HTTP  web:3000
 admin.spsccoop.org         → HTTP  web:3000
-coopsmile.org              → HTTP  web:3000     ← เหลือตัวนี้ตัวเดียว รอปลด
+catch-all                  → http_status:404
 ```
 
 Type ต้องเป็น `HTTP` ไม่ใช่ HTTPS · URL เป็น `web:3000` ไม่ใช่ `localhost:3000`
