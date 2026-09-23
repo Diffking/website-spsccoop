@@ -29,6 +29,7 @@ import {
 import { getAnnouncements, getHolidayEvents, getSlides, getWelfareBrief } from "@/lib/content";
 import { getCalendarEvents, getItems } from "@/lib/homeItems";
 import { pageMetadata } from "@/lib/seo";
+import { splashRedirectScript } from "@/lib/splashRedirect";
 
 // อ่านที่อยู่/ดอกเบี้ยจากฐานทุกครั้งที่มีคนเข้า — แก้ในหลังบ้านแล้วเห็นผลทันทีไม่ต้อง deploy
 // (ห้าม prerender ตอน build ด้วย เพราะตอน build ใน Docker ยังไม่มี DATABASE_URL)
@@ -137,8 +138,18 @@ export default async function Home() {
     },
   };
 
+  /*
+    เด้งไปหน้าวันสำคัญตั้งแต่ก่อนหน้าแรกจะวาด — ต้องเป็นของชิ้นแรกสุดที่ส่งออกไป
+    เบราว์เซอร์อ่าน HTML มาถึงบรรทัดนี้เมื่อไหร่ก็รันทันที ยังไม่ทันโหลด JS ก้อนใหญ่
+    หรือ hydrate อะไรเลย (ของเดิมรอ hydrate ทั้งหน้าเสร็จก่อน ผู้ใช้เลยเห็นหน้าแรก
+    ค้างอยู่หลายวินาทีแล้วค่อยโดนดึงไป) · เหตุผลเต็ม ๆ อยู่ที่ src/lib/splashRedirect.ts
+    null = วันนี้ไม่มีวันสำคัญไหนต้องเด้ง ไม่ต้องใส่สคริปต์ลงหน้าเลย
+  */
+  const splashScript = splashRedirectScript(splash);
+
   return (
     <>
+      {splashScript && <script dangerouslySetInnerHTML={{ __html: splashScript }} />}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
+import { useEnterSite } from "@/components/site/useEnterSite";
 
 /**
  * ปุ่ม "เข้าสู่เว็บไซต์" บนหน้า splash — จำว่าเข้าแล้ว (ไม่เด้ง splash ซ้ำใน session)
@@ -18,14 +18,7 @@ export default function EnterSiteButton({
   /** พื้นหลังสว่าง = ต้องใช้ตัวหนังสือเข้ม */
   light?: boolean;
 }) {
-  const router = useRouter();
-  const enter = () => {
-    try {
-      // เก็บเป็นเวลา ไม่ใช่แค่ธง — โหมด "เด้งทุกครั้ง" ต้องรู้ว่าเพิ่งกดเข้าไปเมื่อไหร่
-      sessionStorage.setItem("spsc_entered", String(Date.now()));
-    } catch {}
-    router.push("/");
-  };
+  const enter = useEnterSite();
   return (
     <button
       onClick={enter}

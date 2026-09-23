@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireWrite } from "@/lib/apiAuth";
 import { saveSetting } from "@/lib/settings";
-import type { SplashContent, SplashOccasion, SplashRepeat, SplashTiming } from "@/content/splash";
+import {
+  autoEnterSeconds as clampAutoEnter,
+  type SplashContent,
+  type SplashOccasion,
+  type SplashRepeat,
+  type SplashTiming,
+} from "@/content/splash";
 import { DEFAULT_SPLASH_BG, isSplashBackground } from "@/lib/splashTheme";
 import { purgeEverySite } from "@/lib/mirrorPurge";
 
@@ -72,6 +78,8 @@ export async function PUT(request: Request) {
     buttonText: body.buttonText.trim(),
     timing,
     repeat,
+    // เลขเกินเพดานหรืออ่านไม่ออกถูกดัดให้อยู่ในช่วงที่ใช้ได้ ไม่ปฏิเสธทั้งคำขอ
+    autoEnterSeconds: clampAutoEnter(body),
     occasions,
   } satisfies SplashContent);
 
