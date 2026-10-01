@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { WARM_ONLY_PATHS, publicPaths } from "@/lib/publicPaths";
+import { readerHref, type Kind } from "@/lib/announcementKinds";
 
 /**
  * รายชื่อที่อยู่หน้าสาธารณะทั้งหมด — ให้ตัวมิเรอร์ฝั่งโฮสต์เอาไปไล่ดึงมาเก็บล่วงหน้า
@@ -109,8 +110,30 @@ async function filesInDatabase(): Promise<string[]> {
   }
 }
 
+/**
+ * หน้าอ่าน E-Book (/ebook/<id>/) ของจดหมายข่าวกับรายงานกิจการ
+ *
+ * ไม่อยู่ใน publicPaths เพราะเป็นหน้าตามเอกสาร ไม่ใช่หน้าเนื้อหา (sitemap ไม่ต้องรู้)
+ * แต่ตัวมิเรอร์ต้องรู้ — ไม่งั้นเครื่องสำนักงานหลับแล้วสมาชิกกดอ่านจดหมายข่าว
+ * จะเจอหน้าปรับปรุงทั้งที่ไฟล์ PDF มีสำเนาบนโฮสต์อยู่แล้ว
+ */
+async function ebookPaths(): Promise<string[]> {
+  try {
+    const rows = await db.announcement.findMany({
+      where: { published: true, fileUrl: { not: null } },
+      select: { id: true, kind: true, fileUrl: true },
+    });
+    return rows
+      .map((r) => readerHref(r.kind as Kind, r.id, r.fileUrl))
+      .filter((href): href is string => !!href?.startsWith("/ebook/"));
+  } catch (error) {
+    console.error("อ่านรายชื่อหน้า E-Book ไม่ได้:", error);
+    return [];
+  }
+}
+
 export async function GET() {
-  const paths = [...new Set([...(await publicPaths()), ...WARM_ONLY_PATHS])];
+  const paths = [...new Set([...(await publicPaths()), ...WARM_ONLY_PATHS, ...(await ebookPaths())])];
 
   // รวมสองทาง: ไล่โฟลเดอร์ (รูปทั้งหมด) + ถามฐาน (ไฟล์แนบประกาศที่ยังเผยแพร่อยู่)
   const [runtime, fromDb] = await Promise.all([runtimeFiles(), filesInDatabase()]);

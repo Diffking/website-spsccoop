@@ -24,11 +24,43 @@ final class Mirror
         }
     }
 
-    /** ที่อยู่ที่ขอมา รวมพารามิเตอร์ท้าย URL (ต่างพารามิเตอร์ = คนละหน้า) */
+    /**
+     * พารามิเตอร์ที่ไม่มีผลกับเนื้อหาหน้า — ตัดทิ้งก่อนหาสำเนา
+     *
+     * ลิงก์ที่แชร์จาก Facebook/LINE/Google ถูกต่อรหัสติดตามท้ายมาเสมอ (fbclid ไม่ซ้ำกันทุกคลิก)
+     * ถ้าเอาไปนับเป็นคนละหน้า สำเนาที่อุ่นไว้จะไม่ถูกใช้เลย · เครื่องสำนักงานหลับเมื่อไหร่
+     * คนที่กดลิงก์จากโซเชียลเจอหน้าปรับปรุงทันที ทั้งที่หน้านั้นมีสำเนาอยู่แล้ว
+     * _rsc = ตัวเลขที่ Next ต่อท้ายตอนเปลี่ยนหน้าในเว็บ หลังบ้านตอบเป็น HTML หน้าเดียวกันอยู่แล้ว
+     */
+    private const IGNORED_PARAMS = ['fbclid', 'gclid', 'gbraid', 'wbraid', 'igshid', 'mibextid', 'msclkid', 'ttclid', '_ga', '_gl', '_rsc'];
+
+    /** ที่อยู่ที่ขอมา รวมพารามิเตอร์ท้าย URL (ต่างพารามิเตอร์ = คนละหน้า ยกเว้นตัวใน IGNORED_PARAMS) */
     public function path(): string
     {
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
-        return '/' . ltrim($uri, '/');
+        return self::normalize('/' . ltrim($uri, '/'));
+    }
+
+    /** ตัดพารามิเตอร์ติดตาม (IGNORED_PARAMS กับ utm_*) ออก ที่เหลือคงลำดับเดิม */
+    public static function normalize(string $path): string
+    {
+        $q = strpos($path, '?');
+        if ($q === false) {
+            return $path;
+        }
+        $keep = [];
+        foreach (explode('&', substr($path, $q + 1)) as $pair) {
+            if ($pair === '') {
+                continue;
+            }
+            $name = strtolower(urldecode(explode('=', $pair, 2)[0]));
+            if (in_array($name, self::IGNORED_PARAMS, true) || str_starts_with($name, 'utm_')) {
+                continue;
+            }
+            $keep[] = $pair;
+        }
+        $base = substr($path, 0, $q);
+        return $keep === [] ? $base : $base . '?' . implode('&', $keep);
     }
 
     /** ที่อยู่นี้ห้ามส่งต่อไหม */
@@ -190,6 +222,27 @@ final class Mirror
         }
 
         $info = ['status' => $status, 'type' => $type, 'time' => time(), 'extra' => $extra];
+
+        /*
+         * หลังบ้านตอบได้ แต่ฐานข้อมูลยังไม่พร้อม — หน้าออกมาว่าง (ไม่มีสไลด์ ไม่มีข่าว) ทั้งที่ได้ 200
+         * หลังบ้านติดป้าย <meta name="mirror-data" content="down"> มาให้ (ดู src/app/layout.tsx)
+         *
+         * ห้ามเก็บทับสำเนาดี — ไม่งั้นเครื่องหลับต่อแล้วเสิร์ฟหน้าว่างทั้งคืน
+         * มีสำเนาเดิม: คืน null ให้คนเรียกเสิร์ฟของเดิม (stale)
+         * ไม่มีเลย: ส่งหน้านี้ให้ดูไปก่อนแต่ไม่เก็บ (ดีกว่าหน้าปรับปรุง)
+         */
+        if (str_contains($type, 'html') && str_contains($body, '<meta name="mirror-data" content="down"')) {
+            if ($this->cached($path) !== null) {
+                return null;
+            }
+            $tmp = $this->key($path) . '.tmp';
+            file_put_contents($tmp, $body);
+            $info['file'] = $tmp;
+            $info['age'] = 0;
+            $info['degraded'] = true;
+            return $info;
+        }
+
         file_put_contents($this->key($path) . '.bin', $body);
         file_put_contents($this->key($path) . '.json', json_encode($info, JSON_UNESCAPED_UNICODE));
 
