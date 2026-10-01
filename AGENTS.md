@@ -18,7 +18,9 @@
 กว่าจะกลับมาใช้ได้ต้องแจ้งบริษัทปลดให้ — ระหว่างนั้นทำอะไรกับโฮสต์ไม่ได้เลย
 
 **แผงควบคุมโฮสต์คือ DirectAdmin ไม่ใช่ cPanel** — `https://ns77.hostinglotus.net:2222` (ยืนยัน 1 ต.ค. 2569)
-· ไฟล์เว็บอยู่ที่ `~/domains/spsccoop.com/public_html/` · Cron Jobs: `/CMD_CRON_JOBS`
+· ไฟล์เว็บอยู่ที่ `~/domains/spsccoop.com/public_html/`
+· **แพ็กเกจนี้ไม่มี Cron Jobs** (Advanced Features ไม่มีเมนูนี้ — เช็ค 1 ต.ค. 2569) อยากให้โฮสต์อุ่นเองทุก 10 นาที
+  ต้องขอ HostingLotus เปิดก่อน แล้วตั้ง `*/10 * * * *` · `cd ~ && flock -n /tmp/spsc-warm.lock /usr/local/bin/php domains/spsccoop.com/public_html/warm.php >/dev/null 2>&1`
 (พอร์ต 2082/2083 ในบันทึกการแบนข้างบนเป็นพอร์ตที่ไฟร์วอลล์ปิด ไม่ได้แปลว่าใช้ cPanel)
 
 ### กฎที่ต้องทำตาม
