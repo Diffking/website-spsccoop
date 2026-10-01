@@ -186,6 +186,14 @@ export type SlideItem = {
 const SLIDE_LOOKAHEAD_MS = 7 * 24 * 3_600_000;
 
 /**
+ * ⚠️ endsAt ในฐานคือ "เที่ยงคืนต้นวัน" ของวันสุดท้าย (parseDay ใน /api/admin/slides)
+ * แต่หลังบ้านโชว์ว่า "แสดงถึง <วันนั้น>" = แสดงทั้งวันนั้น · เดิมหน้าเว็บตัดทิ้งตั้งแต่เที่ยงคืน
+ * สไลด์เลยหายก่อนกำหนดหนึ่งวันเต็ม (เจอจริง 1 ต.ค. 2569 สไลด์ปิดบัญชี "แสดงถึง 1 ต.ค." หายตั้งแต่ตี 0)
+ * → ให้แสดงถึงสิ้นวันนั้น (เที่ยงคืนต้นวันถัดไป ลบ 1 มิลลิวินาที)
+ */
+const DAY_MS = 24 * 3_600_000;
+
+/**
  * แบนเนอร์สไลด์หน้าแรก — คืนลิสต์ว่างถ้ายังไม่มีในฐาน
  * (หน้าแรกจะใช้ภาพชุดเดิมที่ติดมากับโค้ดแทน จะได้ไม่มีช่องว่างคาหน้า)
  */
@@ -199,14 +207,14 @@ export async function getSlides(): Promise<SlideItem[]> {
         published: true,
         AND: [
           { OR: [{ startsAt: null }, { startsAt: { lte: new Date(now.getTime() + SLIDE_LOOKAHEAD_MS) } }] },
-          { OR: [{ endsAt: null }, { endsAt: { gte: now } }] },
+          { OR: [{ endsAt: null }, { endsAt: { gt: new Date(now.getTime() - DAY_MS) } }] },
         ],
       },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     });
     return rows.map((r) => {
       const startsAt = r.startsAt?.getTime() ?? null;
-      const endsAt = r.endsAt?.getTime() ?? null;
+      const endsAt = r.endsAt ? r.endsAt.getTime() + DAY_MS - 1 : null;
       return {
         id: r.id,
         src: localAsset(r.imageUrl),
