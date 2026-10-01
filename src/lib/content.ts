@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getTickerSettings } from "@/lib/settings";
 import { announcementLine, KINDS, type Kind } from "@/lib/announcementKinds";
 import { localAsset } from "@/lib/assetFallback";
+import { slideLiveAt } from "@/lib/slideWindow";
 import { repairStructure } from "@/lib/htmlStructure";
 import { readWelfare } from "@/lib/welfareGroups";
 import type { CalendarEvent } from "@/data/home";
@@ -160,7 +161,29 @@ export async function getHolidayEvents(): Promise<CalendarEvent[]> {
   }
 }
 
-export type SlideItem = { id: string; src: string; title: string; desc: string; href: string };
+export type SlideItem = {
+  id: string;
+  src: string;
+  title: string;
+  desc: string;
+  href: string;
+  /** ช่วงที่ให้แสดง (มิลลิวินาที) — null = ไม่จำกัด · เบราว์เซอร์ใช้กรองเองตามเวลาจริง */
+  startsAt: number | null;
+  endsAt: number | null;
+  /** แสดงอยู่ ณ ตอนสร้างหน้า — ใช้ตอนวาดครั้งแรกให้ตรงกับ HTML ที่เซิร์ฟเวอร์ส่งมา */
+  live: boolean;
+};
+
+/**
+ * สไลด์ที่จะเริ่มภายในกี่วันข้างหน้า ให้ติดไปกับหน้าล่วงหน้าเลย
+ *
+ * ⚠️ เหตุผล: หน้าที่ www.spsccoop.com เสิร์ฟตอนเครื่องสำนักงานหลับคือ "สำเนา" ที่อุ่นไว้
+ * ถ้าเลือกสไลด์ตามวันที่ตอนสร้างหน้าอย่างเดียว เครื่องหลับข้ามเที่ยงคืนแล้วสไลด์วันใหม่
+ * จะไม่ขึ้น (เจอจริง 1 ต.ค. 2569) · ส่งไปทั้งช่วงแล้วให้เบราว์เซอร์กรองเองตามเวลาจริง
+ * สำเนาเก่าก็ยังเปลี่ยนสไลด์ตรงเวลา — หลักเดียวกับหน้าวันสำคัญ (src/content/splash.ts)
+ * 7 วัน = ครอบเสาร์อาทิตย์กับวันหยุดยาวที่เครื่องปิดได้สบาย
+ */
+const SLIDE_LOOKAHEAD_MS = 7 * 24 * 3_600_000;
 
 /**
  * แบนเนอร์สไลด์หน้าแรก — คืนลิสต์ว่างถ้ายังไม่มีในฐาน
@@ -168,25 +191,33 @@ export type SlideItem = { id: string; src: string; title: string; desc: string; 
  */
 export async function getSlides(): Promise<SlideItem[]> {
   try {
-    // แสดงเฉพาะที่ถึงวันเริ่มแล้วและยังไม่เลยวันสิ้นสุด — ข่าวเก่าหายเองไม่ต้องมาคอยลบ
+    // ข่าวที่เลยวันสิ้นสุดแล้วไม่ส่งไปเลย — หายเองไม่ต้องมาคอยลบ
+    // ส่วนที่ยังไม่ถึงวันเริ่ม ส่งไปล่วงหน้า (ดู SLIDE_LOOKAHEAD_MS)
     const now = new Date();
     const rows = await db.slide.findMany({
       where: {
         published: true,
         AND: [
-          { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+          { OR: [{ startsAt: null }, { startsAt: { lte: new Date(now.getTime() + SLIDE_LOOKAHEAD_MS) } }] },
           { OR: [{ endsAt: null }, { endsAt: { gte: now } }] },
         ],
       },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     });
-    return rows.map((r) => ({
-      id: r.id,
-      src: localAsset(r.imageUrl),
-      title: r.title,
-      desc: r.caption ?? "",
-      href: r.href ?? "#",
-    }));
+    return rows.map((r) => {
+      const startsAt = r.startsAt?.getTime() ?? null;
+      const endsAt = r.endsAt?.getTime() ?? null;
+      return {
+        id: r.id,
+        src: localAsset(r.imageUrl),
+        title: r.title,
+        desc: r.caption ?? "",
+        href: r.href ?? "#",
+        startsAt,
+        endsAt,
+        live: slideLiveAt({ startsAt, endsAt }, now.getTime()),
+      };
+    });
   } catch (error) {
     console.error("อ่านแบนเนอร์สไลด์ไม่ได้:", error);
     return [];

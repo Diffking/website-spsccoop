@@ -11,9 +11,41 @@ import { useAutoRotate } from "@/lib/useAutoRotate";
 import { SLIDE_TIMING, STACKED, fadeSwap } from "@/lib/slideMotion";
 import type { InterestRates } from "@/lib/settings";
 import { fillRateTabOrder } from "@/lib/rateTabs";
+import { slideLiveAt } from "@/lib/slideWindow";
 
 /** สไลด์มาจากฐาน (แก้ที่ /admin/home) — ถ้ายังไม่มี ใช้ชุดที่ติดมากับโค้ดแทน */
-export type HeroSlide = { src: string | StaticImageData; title: string; desc: string; href: string };
+export type HeroSlide = {
+  src: string | StaticImageData;
+  title: string;
+  desc: string;
+  href: string;
+  /** ช่วงที่ให้แสดง (มิลลิวินาที) — ไม่ระบุ = แสดงตลอด (ชุดที่ติดมากับโค้ดไม่มีช่วง) */
+  startsAt?: number | null;
+  endsAt?: number | null;
+  /** แสดงอยู่ตอนเซิร์ฟเวอร์สร้างหน้า — ไม่ระบุ = แสดง */
+  live?: boolean;
+};
+
+/**
+ * เวลาปัจจุบันฝั่งเบราว์เซอร์ เดินทุกนาที — null ระหว่างวาดครั้งแรก
+ *
+ * ครั้งแรกต้องยังไม่รู้เวลา ไม่งั้นสไลด์ที่วาดจะไม่ตรงกับ HTML ที่ได้มา (hydration พัง)
+ * · ที่ต้องเดินเองเพราะหน้าบน www.spsccoop.com อาจเป็นสำเนาที่อุ่นไว้ตั้งแต่เมื่อวาน
+ *   (เครื่องสำนักงานหลับ) สไลด์ต้องขึ้น/หายตามเวลาจริงของคนอ่าน ไม่ใช่เวลาที่สร้างหน้า
+ */
+function useClock(): number | null {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const first = setTimeout(tick, 0);
+    const every = setInterval(tick, 60_000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(every);
+    };
+  }, []);
+  return now;
+}
 
 // จังหวะของทุกสไลด์บนหน้าแรกอยู่รวมกันที่ src/lib/slideMotion.ts
 const SLIDE_MS = SLIDE_TIMING.banner.every;
@@ -487,7 +519,13 @@ export default function Hero({
   /** ชื่อสวัสดิการ + กำหนดยื่นเอกสาร — อ่านมาจากหน้า /welfare/ (ดู src/app/page.tsx) */
   welfare?: WelfareBrief[];
 }) {
-  const shown = slides.length > 0 ? slides : activitySlides;
+  const now = useClock();
+  const live = slides.filter((s) =>
+    now === null
+      ? s.live !== false
+      : slideLiveAt({ startsAt: s.startsAt ?? null, endsAt: s.endsAt ?? null }, now),
+  );
+  const shown = live.length > 0 ? live : activitySlides;
   return (
     /*
       เปิดหน้าเว็บมาต้องเห็น "สไลด์ + ตารางดอกเบี้ย + ข่าววิ่ง" เต็มจอพอดี ไม่ให้ส่วนถัดไป
@@ -508,7 +546,8 @@ export default function Hero({
         ความยาวเปลี่ยน คอลัมน์ก็ขยับ — แบนเนอร์ฝั่งซ้ายเลยกระตุกตามทุกครั้งที่วน
       */}
       <div className="mx-auto grid w-full max-w-6xl gap-5 px-4 md:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
-        <BannerSlider slides={shown} />
+        {/* key เปลี่ยนเมื่อชุดสไลด์เปลี่ยน (ถึงเวลาขึ้น/หมดเวลา) — เริ่มที่ใบแรกใหม่ ไม่ค้างเลขใบเกินจำนวน */}
+        <BannerSlider key={shown.map((s) => s.title).join("|")} slides={shown} />
         <RateCard rates={rates} welfare={welfare} />
       </div>
     </section>
