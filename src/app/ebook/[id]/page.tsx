@@ -7,6 +7,7 @@ import PageTracker from "@/components/site/PageTracker";
 import EbookReader from "@/components/site/EbookReader";
 import BackToTop from "@/components/ui/BackToTop";
 import { db } from "@/lib/db";
+import { localAsset } from "@/lib/assetFallback";
 import { KIND_LABEL, announcementLine, type Kind } from "@/lib/announcementKinds";
 
 // เอกสารแก้ได้จากหลังบ้าน จึงอ่านฐานทุกครั้ง (และตอน build ยังไม่มี DATABASE_URL)
@@ -23,6 +24,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const item = await db.announcement.findUnique({ where: { id }, select: { title: true } });
   return { title: item ? `${item.title} | สหกรณ์ออมทรัพย์สาธารณสุขสงขลา` : "ไม่พบเอกสาร" };
+}
+
+/** ที่อยู่ไฟล์ให้ตัวอ่าน — ดูเหตุผลที่จุดเรียกใช้ */
+function readerSource(id: string, fileUrl: string): string {
+  const local = localAsset(fileUrl);
+  return local.startsWith("/uploads/") ? local : `/api/ebook/${id}/`;
 }
 
 export default async function EbookPage({ params }: { params: Promise<{ id: string }> }) {
@@ -57,8 +64,16 @@ export default async function EbookPage({ params }: { params: Promise<{ id: stri
           </p>
         </div>
 
-        {/* ส่งผ่านโดเมนเราเอง — pdf.js อ่านข้ามโดเมนไม่ได้ ดู src/app/api/ebook/[id]/route.ts */}
-        <EbookReader src={`/api/ebook/${item.id}`} title={item.title} />
+        {/*
+          ส่งผ่านโดเมนเราเอง — pdf.js อ่านข้ามโดเมนไม่ได้ ดู src/app/api/ebook/[id]/route.ts
+
+          ⚠️ ไฟล์ที่อยู่ใน uploads/ ของเครื่องนี้แล้ว ให้อ่านจาก /uploads/ ตรง ๆ ไม่ผ่าน /api/ebook
+          เพราะ /uploads/ คือที่อยู่ที่ตัวอุ่นแคชเก็บสำเนาไว้บน www.spsccoop.com อยู่แล้ว
+          (ดู filesInDatabase ใน /api/public/pages) · ผ่าน /api/ebook/<id> โฮสต์ต้องเก็บไฟล์เดิม
+          ซ้ำอีกชุด (~180 MB) และเดิมตัวอุ่นเก็บได้แค่คำตอบ 308 พาไปที่อยู่ที่มี / ปิดท้าย
+          ไม่ได้ตัวไฟล์ — เครื่องสำนักงานหลับแล้วเปิด E-Book ไม่ขึ้น (เจอ 1 ต.ค. 2569)
+        */}
+        <EbookReader src={readerSource(item.id, item.fileUrl)} title={item.title} />
       </main>
       <BackToTop />
       <Footer />
