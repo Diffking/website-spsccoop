@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import {
   AI_READY,
   readAnnouncementFromFile,
+  readDocRowFromFile,
   readRatesFromImage,
   readSlideFromImage,
 } from "@/lib/ai";
@@ -33,7 +34,8 @@ const MEDIA_TYPES = [
   "application/pdf",
 ] as const;
 type MediaType = (typeof MEDIA_TYPES)[number];
-const TARGETS = ["slide", "rates", "announcement"] as const;
+// docRow = ไฟล์ที่ลากมาวางในตารางดาวน์โหลดของ EditUI (ส่ง examples = ชื่อรายการเดิมมาด้วย)
+const TARGETS = ["slide", "rates", "announcement", "docRow"] as const;
 /** จำนวนหน้าแรกของ PDF ที่ส่งให้ AI อ่าน — หัวเรื่องอยู่หน้าแรก เผื่อไว้ถึงหน้า 3 */
 const AI_PAGES = 3;
 type Target = (typeof TARGETS)[number];
@@ -55,6 +57,7 @@ export async function POST(request: Request) {
   const url = String(form?.get("url") ?? "").trim();
   // หมวดของเอกสาร — ใช้เลือกกติกาเลขที่ (รายงานกิจการใช้ RS-63)
   const kind = String(form?.get("kind") ?? "ANNOUNCEMENT");
+  const examples = parseExamples(form?.get("examples"));
 
   if (!TARGETS.includes(target as Target)) {
     return NextResponse.json({ error: "ไม่รู้จักชนิดข้อมูลที่จะให้อ่าน" }, { status: 400 });
@@ -104,6 +107,7 @@ export async function POST(request: Request) {
       target as Target,
       kind,
       media.originalName,
+      examples,
     );
   }
 
@@ -133,7 +137,20 @@ export async function POST(request: Request) {
     target as Target,
     kind,
     file.name,
+    examples,
   );
+}
+
+/** ชื่อรายการเดิมในตารางที่หน้าจอส่งมาเป็นตัวอย่าง — จำกัดจำนวนและความยาว กันคำขอบวม */
+function parseExamples(raw: FormDataEntryValue | null | undefined): string[] {
+  try {
+    const list = JSON.parse(String(raw ?? "[]"));
+    return Array.isArray(list)
+      ? list.filter((x): x is string => typeof x === "string" && x.trim() !== "").slice(0, 5).map((x) => x.slice(0, 200))
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 async function read(
@@ -142,6 +159,7 @@ async function read(
   target: Target,
   kind = "ANNOUNCEMENT",
   fileName = "",
+  examples: string[] = [],
 ) {
   // หัวเรื่อง/เลขที่/วันที่ อยู่หน้าแรกเสมอ — รายงานกิจการเป็นร้อยหน้า
   // ถ้าส่งทั้งเล่มไปให้ AI อ่านจะรอนานมากและเปลืองค่าเรียกใช้เปล่า ๆ
@@ -155,7 +173,9 @@ async function read(
         ? await readSlideFromImage(base64, mediaType)
         : target === "rates"
           ? await readRatesFromImage(base64, mediaType)
-          : await readAnnouncementFromFile(base64, mediaType, kind, fileName);
+          : target === "docRow"
+            ? await readDocRowFromFile(base64, mediaType, examples, fileName)
+            : await readAnnouncementFromFile(base64, mediaType, kind, fileName);
 
     // รายงานกิจการมักตั้งชื่อไฟล์เป็น RS_63 อยู่แล้ว — ถ้า AI ไม่ได้เลขที่มา เอาจากชื่อไฟล์ให้เลย
     // (แน่นอนกว่าปล่อยให้ตีความเอง และเจ้าหน้าที่ยังแก้ได้ก่อนบันทึกอยู่ดี)

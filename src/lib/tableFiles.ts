@@ -70,7 +70,7 @@ export const plainText = (html: string) =>
     .replace(/&amp;/g, "&")
     .trim();
 
-const escHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+export const escHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const escAttr = (s: string) => escHtml(s).replace(/"/g, "&quot;");
 
 /** เลขลำดับท้ายช่อง — "1." · "<span class="badge pink">New</span> 1." */
@@ -189,6 +189,59 @@ export function guessName(
     name: latest.name.replace(latest.date.match, text),
     date: { ...date, match: text },
   };
+}
+
+/**
+ * ชื่อรายการจากวันที่ที่ AI อ่านได้ในเอกสาร (YYYY-MM-DD ค.ศ.)
+ *
+ * ลอกถ้อยคำจากแถวล่าสุดแล้วเปลี่ยนแค่วันที่ — แน่นอนกว่าให้ AI เขียนทั้งประโยคเอง
+ * คืน null ถ้าแถวเดิมไม่มีวันที่ให้ลอก หรือวันที่อ่านไม่ออก
+ */
+export function nameFromIsoDate(
+  latest: TableShape["latest"],
+  iso: string,
+): { name: string; date: ThaiDate & { match: string } } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
+  if (!latest || !m) return null;
+  const date: ThaiDate = {
+    day: Number(m[3]),
+    month: Number(m[2]) - 1,
+    year: Number(m[1]) + 543,
+    abbr: latest.date.abbr,
+  };
+  if (date.month < 0 || date.month > 11 || date.day < 1 || date.day > 31) return null;
+  const text = formatThaiDate(date);
+  return { name: latest.name.replace(latest.date.match, text), date: { ...date, match: text } };
+}
+
+/** เปลี่ยนเฉพาะวันที่ในชื่อเดิม — ใช้ตอนเปลี่ยนไฟล์ของแถวเดิมแล้ว AI อ่านวันที่ใหม่ได้ */
+export function swapDate(name: string, iso: string): string | null {
+  const old = findThaiDate(plainText(name));
+  if (!old) return null;
+  const next = nameFromIsoDate({ date: old, name }, iso);
+  return next && next.name !== name ? next.name : null;
+}
+
+/** ไฟล์ที่ไอคอนในช่องนี้ชี้อยู่ — ไว้โชว์ชื่อและเปิดดูในหลังบ้าน */
+export function fileOf(cell: string): { href: string; name: string } | null {
+  const a = PDF_ICON.exec(cell)?.[0];
+  if (!a) return null;
+  const attr = (n: string) =>
+    plainText(new RegExp(`\\s${n}="([^"]*)"`).exec(a)?.[1] ?? "");
+  let href = attr("href");
+  // ไอคอนแบบเปิดอ่าน ชี้ไปหน้า /read/?src=… — เปิดดูให้ตรงไปที่ไฟล์เลย
+  if (href.startsWith("/read/")) {
+    const src = new URLSearchParams(href.split("?")[1] ?? "").get("src");
+    if (src) href = src;
+  }
+  const title = attr("title").replace(/^เปิดอ่าน\s*/, "");
+  return { href, name: title || decodeURIComponent(href.split("/").pop() ?? "") };
+}
+
+/** ชื่อรายการเดิมในตาราง (ไม่เกิน 5 แถวที่ใหม่สุด) ส่งให้ AI เป็นตัวอย่างการเขียนชื่อ */
+export function nameExamples(rows: string[][], shape: TableShape): string[] {
+  const names = rows.map((r) => plainText(r[shape.nameCol] ?? "")).filter(Boolean);
+  return (shape.atTop ? names : names.reverse()).slice(0, 5);
 }
 
 /** เรียงไฟล์ที่โยนมาหลายไฟล์ตามวันในชื่อไฟล์ เก่า→ใหม่ — ไฟล์ที่ไม่มีวันที่คงลำดับเดิมไว้ท้าย */
