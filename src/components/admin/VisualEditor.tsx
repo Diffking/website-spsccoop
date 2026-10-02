@@ -38,6 +38,15 @@ import {
   emptyBlock,
   htmlToBlocks,
 } from "@/lib/pageBlocks";
+import {
+  guessName,
+  iconFor,
+  plainText,
+  putIcon,
+  readShape,
+  renumber,
+  sortFiles,
+} from "@/lib/tableFiles";
 
 /**
  * EditUI — แก้หน้าเว็บบนหน้าเว็บ
@@ -92,6 +101,24 @@ export default function VisualEditor({ value, onChange, folder }: Props) {
     written.current = value;
     setReady(true);
   }, [value]);
+
+  /*
+   * ลากไฟล์มาวางพลาดนอกตาราง เบราว์เซอร์จะเปิด PDF ทับหน้านี้ทั้งหน้า งานที่ยังไม่บันทึกหายหมด
+   * กันไว้ทั้งหน้าจอ — ที่รับไฟล์จริงคือตาราง (TableView) ซึ่งจัดการเองก่อนถึงตรงนี้
+   */
+  useEffect(() => {
+    const stop = (e: DragEvent) => {
+      // ช่องเลือกไฟล์ปกติของส่วนอื่นในหน้ารับไฟล์ด้วยพฤติกรรมของเบราว์เซอร์เอง ห้ามไปกัน
+      if ((e.target as HTMLElement | null)?.closest?.('input[type="file"]')) return;
+      if (e.dataTransfer && Array.from(e.dataTransfer.types).includes("Files")) e.preventDefault();
+    };
+    window.addEventListener("dragover", stop);
+    window.addEventListener("drop", stop);
+    return () => {
+      window.removeEventListener("dragover", stop);
+      window.removeEventListener("drop", stop);
+    };
+  }, []);
 
   const commit = (next: Block[]) => {
     setBlocks(next);
@@ -751,7 +778,7 @@ function BlockView({
       );
 
     case "table":
-      return <TableView block={block} picked={picked} onChange={onChange} />;
+      return <TableView block={block} picked={picked} folder={folder} onChange={onChange} />;
 
     case "pdfCard":
       return (
@@ -908,21 +935,145 @@ function ListView({
 
 /* ---------- ตาราง ---------- */
 
+/** ลากไฟล์จากเครื่องเข้ามา (ไม่ใช่ลากตัวหนังสือในหน้า) */
+const hasFiles = (e: React.DragEvent) => Array.from(e.dataTransfer.types).includes("Files");
+
 function TableView({
   block,
   picked,
+  folder,
   onChange,
 }: {
   block: Extract<Block, { kind: "table" }>;
   picked: boolean;
+  folder: string;
   onChange: (next: Block) => void;
 }) {
   const cols = Math.max(block.head.length, ...block.rows.map((r) => r.length), 1);
   /** ทำให้ทุกแถวยาวเท่ากันเสมอ — แถวสั้นกว่าคนอื่นทำให้ตารางบนหน้าเว็บเบี้ยว */
   const pad = (row: string[]) => Array.from({ length: cols }, (_, i) => row[i] ?? "");
+  const shape = readShape(block.head, block.rows);
+
+  /*
+   * โยนไฟล์ — ลงช่องไอคอนของแถวไหน = เปลี่ยนไฟล์ของแถวนั้น · ลงที่อื่นในตาราง = เพิ่มแถวใหม่
+   * `drop` บอกว่ากำลังลากผ่านตรงไหน ไว้ทำกรอบฟ้า (-1 = ทั้งตาราง)
+   */
+  const [drop, setDrop] = useState<number | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  /** ชื่อรายการที่ระบบเดาให้ — ยังตรงกับที่เดาไว้ = ยังไม่มีใครตรวจ ติดป้ายไว้ */
+  const [guessed, setGuessed] = useState<Set<string>>(() => new Set());
+  const [hover, setHover] = useState<{ row: number; top: number } | null>(null);
+  const frame = useRef<HTMLDivElement>(null);
+
+  /** แถวที่อยู่ใต้เมาส์ + ช่องไอคอนหรือเปล่า — อ่านจาก DOM จริง ไม่ต้องห้อย data-* ไว้ทุกช่อง */
+  const spot = (target: EventTarget) => {
+    const td = (target as HTMLElement).closest?.("td");
+    const tr = td?.parentElement as HTMLTableRowElement | undefined;
+    if (!td || !tr || tr.parentElement?.tagName !== "TBODY") return null;
+    return { row: tr.sectionRowIndex, file: (td as HTMLTableCellElement).cellIndex === shape.fileCol };
+  };
+
+  async function upload(files: File[], row: number | null) {
+    const pdfs = files.filter((f) => /\.pdf$/i.test(f.name));
+    setError(pdfs.length < files.length ? "รับเฉพาะไฟล์ PDF — ไฟล์อื่นถูกข้ามไป" : "");
+    if (pdfs.length === 0) return;
+
+    // เปลี่ยนไฟล์ของแถวเดิมได้ทีละไฟล์ · เพิ่มแถวใหม่เรียงตามวันในชื่อไฟล์ เก่า→ใหม่
+    const queue = row === null ? sortFiles(pdfs) : pdfs.slice(0, 1);
+    let rows = block.rows.map(pad);
+    let latest = shape.latest;
+    const names = new Set(guessed);
+    const failed: string[] = [];
+
+    // อัปทีละไฟล์ ไม่ยิงพร้อมกัน — PDF ใหญ่ต้องรอบีบด้วย Ghostscript ฝั่งเซิร์ฟเวอร์
+    for (const [i, file] of queue.entries()) {
+      const label = queue.length > 1 ? `กำลังอัป ${i + 1}/${queue.length}` : "กำลังอัป";
+      setBusy(`${label} · 0%`);
+      const form = new FormData();
+      form.append("file", file);
+      form.append("folder", folder);
+      const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", form, (p) =>
+        setBusy(`${label} · ${p}%`),
+      );
+      if (!result.ok) {
+        failed.push(file.name);
+        continue;
+      }
+
+      const icon = iconFor(shape.icon, result.data.url, file.name);
+      if (row !== null) {
+        rows = rows.map((r, n) =>
+          n === row ? r.map((c, k) => (k === shape.fileCol ? putIcon(c, icon) : c)) : r,
+        );
+        continue;
+      }
+
+      const guess = guessName(latest, file.name);
+      if (guess.date) latest = { date: guess.date, name: guess.name };
+      names.add(plainText(guess.name));
+      const fresh = Array.from({ length: cols }, (_, k) =>
+        k === shape.fileCol ? icon : k === shape.nameCol ? guess.name : k === shape.numCol ? "0." : "",
+      );
+      rows = shape.atTop ? [fresh, ...rows] : [...rows, fresh];
+    }
+
+    setBusy(null);
+    if (failed.length > 0) setError(`อัปไม่สำเร็จ: ${failed.join(", ")}`);
+    setGuessed(names);
+    onChange({ ...block, rows: renumber(rows, shape.numCol) });
+  }
+
+  const moveRow = (from: number, to: number) => {
+    if (to < 0 || to >= block.rows.length) return;
+    const rows = block.rows.map(pad);
+    [rows[from], rows[to]] = [rows[to], rows[from]];
+    onChange({ ...block, rows: renumber(rows, shape.numCol) });
+    setHover(null);
+  };
+
+  const removeRow = (at: number) => {
+    const name = plainText(block.rows[at]?.[shape.nameCol] ?? "") || `แถวที่ ${at + 1}`;
+    if (!confirm(`ลบแถว “${name}” ?`)) return;
+    const rows = block.rows.filter((_, n) => n !== at).map(pad);
+    onChange({ ...block, rows: renumber(rows.length ? rows : [Array(cols).fill("")], shape.numCol) });
+    setHover(null);
+  };
 
   return (
     <>
+      <div
+        ref={frame}
+        className={`edit-dropzone ${drop === -1 ? "is-over" : ""}`}
+        onDragOver={(e) => {
+          if (!hasFiles(e)) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+          const at = spot(e.target);
+          setDrop(at?.file ? at.row : -1);
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setDrop(null);
+        }}
+        onDrop={(e) => {
+          if (!hasFiles(e)) return;
+          // กันเบราว์เซอร์เปิด PDF ทับหน้าแก้ไข หรือแปะไฟล์ลงช่องที่พิมพ์ได้เอง
+          e.preventDefault();
+          setDrop(null);
+          if (busy) return;
+          const at = spot(e.target);
+          void upload(Array.from(e.dataTransfer.files), at?.file ? at.row : null);
+        }}
+        onMouseOver={(e) => {
+          const tr = (e.target as HTMLElement).closest("tr");
+          if (!tr || tr.parentElement?.tagName !== "TBODY" || !frame.current) return;
+          const row = (tr as HTMLTableRowElement).sectionRowIndex;
+          if (hover?.row === row) return;
+          const top = tr.getBoundingClientRect().top - frame.current.getBoundingClientRect().top;
+          setHover({ row, top });
+        }}
+        onMouseLeave={() => setHover(null)}
+      >
       <div className="table-scroll">
         <table>
           {block.head.length > 0 && (
@@ -953,6 +1104,13 @@ function TableView({
                   <RichText
                     key={c}
                     as="td"
+                    className={
+                      c === shape.fileCol && drop === r
+                        ? "edit-drop-cell"
+                        : c === shape.nameCol && guessed.has(plainText(cell))
+                          ? "edit-guess"
+                          : ""
+                    }
                     value={cell}
                     onChange={(html) =>
                       onChange({
@@ -971,8 +1129,60 @@ function TableView({
         </table>
       </div>
 
+        {hover && !busy && (
+          <span className="edit-row-tools" style={{ top: hover.top }}>
+            <button type="button" title="เลื่อนแถวนี้ขึ้น" onClick={() => moveRow(hover.row, hover.row - 1)}>
+              <ChevronUp className="h-3.5 w-3.5" />
+            </button>
+            <button type="button" title="เลื่อนแถวนี้ลง" onClick={() => moveRow(hover.row, hover.row + 1)}>
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            <button type="button" title="ลบแถวนี้" onClick={() => removeRow(hover.row)}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </span>
+        )}
+
+        {(drop !== null || busy) && (
+          <span className="edit-drop-hint">
+            {busy ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {busy}
+              </>
+            ) : drop === -1 ? (
+              shape.atTop ? "ปล่อยเพื่อเพิ่มเป็นแถวใหม่บนสุด" : "ปล่อยเพื่อเพิ่มเป็นแถวใหม่ล่างสุด"
+            ) : (
+              `ปล่อยเพื่อเปลี่ยนไฟล์ของแถวที่ ${(drop ?? 0) + 1}`
+            )}
+          </span>
+        )}
+      </div>
+
+      {error && <p className="edit-error mt-1">{error}</p>}
+      {[...guessed].some((g) => block.rows.some((r) => plainText(r[shape.nameCol] ?? "") === g)) && (
+        <p className="edit-guess-note">
+          ชื่อในกรอบฟ้า ระบบเดาให้จากแถวเดิม — ตรวจวันที่ให้ถูก ถ้าไม่ตรงคลิกพิมพ์ทับได้เลย
+        </p>
+      )}
+
       {picked && (
         <Options>
+          <label className="edit-upload">
+            <FileText className="h-3.5 w-3.5" />
+            เพิ่มไฟล์ PDF
+            <input
+              type="file"
+              accept=".pdf,application/pdf"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                e.target.value = "";
+                if (files.length > 0 && !busy) void upload(files, null);
+              }}
+            />
+          </label>
+          <span>หรือลากไฟล์มาวางในตาราง</span>
           <button
             type="button"
             onClick={() => onChange({ ...block, rows: [...block.rows, Array(cols).fill("")] })}
