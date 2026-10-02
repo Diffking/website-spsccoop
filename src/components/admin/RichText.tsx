@@ -32,6 +32,12 @@ export type TextTag =
   | "blockquote"
   | "figcaption";
 
+/**
+ * ช่องว่างจริงไหม — ช่องที่มีแต่ไอคอน PDF หรือรูป ไม่มีตัวหนังสือ **ไม่ใช่ช่องว่าง**
+ * (เดิมดูแค่ตัวหนังสือ ช่องไอคอนในตารางดาวน์โหลดเลยขึ้น "…" ค้างหน้าไอคอนทุกแถว)
+ */
+const isBlank = (el: HTMLElement) => !(el.textContent ?? "").trim() && !el.querySelector("a, img");
+
 export default function RichText({
   value,
   onChange,
@@ -74,14 +80,14 @@ export default function RichText({
     } else if (el.innerHTML !== value) {
       el.innerHTML = value;
     }
-    setEmpty(!(el.textContent ?? "").trim());
+    setEmpty(isBlank(el));
   }, [value, bar, plain]);
 
   const publish = () => {
     const el = box.current;
     if (!el) return;
     const text = el.textContent ?? "";
-    setEmpty(!text.trim());
+    setEmpty(isBlank(el));
     onChange(plain ? text.replace(/\s+/g, " ").trim() : cleanInline(el.innerHTML));
   };
 
