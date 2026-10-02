@@ -89,6 +89,12 @@ export function useTableFiles(block: TableBlock, folder: string, onChange: (next
 
   /** แก้แถวของตารางตัวล่าสุด แล้วเรียงเลขลำดับใหม่ */
   const apply = (edit: (rows: string[][], cols: number) => string[][], renum = true) => {
+    /*
+     * ช่องที่กำลังพิมพ์อยู่ไม่รับค่าใหม่จากข้างนอก (RichText กันเคอร์เซอร์เด้ง) — ถ้าแถวเลื่อนตอนนั้น
+     * พอคลิกออก มันเขียนข้อความเก่าทับลงแถวที่เลื่อนเข้ามาแทน · ปลดโฟกัสก่อนเสมอ
+     * (ที่พิมพ์ไว้ถูกส่งออกทุกตัวอักษรอยู่แล้ว ไม่มีอะไรหาย)
+     */
+    if (renum) (document.activeElement as HTMLElement | null)?.blur?.();
     const b = live.current.block;
     const rows = edit(padded(b), colsOf(b));
     const next = { ...b, rows: renum ? renumber(rows, readShape(b.head, rows).numCol) : rows };

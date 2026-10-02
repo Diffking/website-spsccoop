@@ -142,19 +142,21 @@ export function readShape(head: string[], rows: string[][]): TableShape {
 /** ไอคอนใหม่หน้าตาเดียวกับไอคอนที่มีอยู่ — สี ขนาด และแบบ (โหลดตรง/เปิดอ่าน) */
 export function iconFor(template: string | null, url: string, fileName: string): string {
   const cls = /class="([^"]*)"/.exec(template ?? "")?.[1] ?? "pdf-icon";
-  const style = /style="([^"]*)"/.exec(template ?? "")?.[1] ?? "--pdf-size:30px";
+  // ขนาดต้องเท่าไอคอนเดิมเป๊ะ ไอคอนเดิมไม่ได้ตั้งขนาด = อันใหม่ก็ไม่ตั้ง ไม่งั้นแถวสูงไม่เท่ากัน
+  // (เจอจริง 2 ต.ค. 2569) · ตารางที่ยังไม่มีไอคอนเลยถึงใช้ 30px ตามค่าตั้งต้นของแถบเครื่องมือ
+  const style = template ? /style="([^"]*)"/.exec(template)?.[1] ?? "" : "--pdf-size:30px";
   const read = /href="\/read\//.test(template ?? "") || /\bread\b/.test(cls);
   const name = escAttr(fileName);
 
   if (read) {
     const href = `/read/?src=${encodeURIComponent(url)}&title=${encodeURIComponent(fileName)}`;
     return (
-      `<a class="${cls}" style="${style}" href="${escAttr(href)}" ` +
+      `<a class="${cls}"${style ? ` style="${style}"` : ""} href="${escAttr(href)}" ` +
       `title="เปิดอ่าน ${name}" aria-label="เปิดอ่านแบบ E-Book ${name}"></a>`
     );
   }
   return (
-    `<a class="${cls}" style="${style}" href="${escAttr(url)}" download ` +
+    `<a class="${cls}"${style ? ` style="${style}"` : ""} href="${escAttr(url)}" download ` +
     `title="${name}" aria-label="ดาวน์โหลด ${name}"></a>`
   );
 }

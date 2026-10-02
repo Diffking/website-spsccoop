@@ -971,8 +971,19 @@ function TableView({
       <div
         ref={frame}
         className={`edit-dropzone ${drop === -1 ? "is-over" : ""}`}
+        /*
+          ⚠️ ห้ามลากของในตาราง (ไอคอน PDF · ข้อความที่เลือกไว้) ไปวางช่องอื่น — เบราว์เซอร์ย้าย HTML
+          ให้เองนอกการรับรู้ของ React เคยสร้าง <td> เกินมาทางขวาแล้วไอคอนไปค้างอยู่ในนั้น
+          พอกดบันทึก ไอคอนหายเพราะช่องนั้นไม่มีอยู่ในข้อมูล (เจอจริง 2 ต.ค. 2569)
+          รับเฉพาะไฟล์ที่ลากมาจากเครื่อง · ย้ายแถวใช้ปุ่ม ▲▼ แทน
+        */
+        onDragStart={(e) => e.preventDefault()}
         onDragOver={(e) => {
-          if (!hasFiles(e)) return;
+          if (!hasFiles(e)) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "none";
+            return;
+          }
           e.preventDefault();
           e.dataTransfer.dropEffect = "copy";
           const at = spot(e.target);
@@ -982,9 +993,9 @@ function TableView({
           if (!e.currentTarget.contains(e.relatedTarget as Node)) setDrop(null);
         }}
         onDrop={(e) => {
-          if (!hasFiles(e)) return;
-          // กันเบราว์เซอร์เปิด PDF ทับหน้าแก้ไข หรือแปะไฟล์ลงช่องที่พิมพ์ได้เอง
+          // กันเบราว์เซอร์เปิด PDF ทับหน้าแก้ไข หรือย้าย/แปะของลงช่องที่พิมพ์ได้เอง
           e.preventDefault();
+          if (!hasFiles(e)) return;
           setDrop(null);
           if (busy) return;
           const at = spot(e.target);
