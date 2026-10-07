@@ -77,8 +77,6 @@ export async function PUT(request: Request) {
   const existing = await db.announcement.findMany({ where: { kind: body.kind }, select: { id: true } });
   const ids = new Set(existing.map((a) => a.id));
   if (new Set(order).size !== order.length || order.length !== ids.size || order.some((id) => !ids.has(id))) {
-    // สมาชิกจะได้เห็นของใหม่ทันที ไม่ต้องรอสำเนาบนโฮสต์หมดอายุ
-    purgeEverySite();
     return NextResponse.json(
       { error: "รายการที่ส่งมาไม่ตรงกับที่มีอยู่ ลองโหลดหน้าใหม่" },
       { status: 409 },
