@@ -13,7 +13,11 @@ export default async function AdminAnnouncementsPage() {
   // ไม่ได้ดูแลส่วนนี้ก็ไม่ต้องเห็น — เมนูซ่อนให้แล้ว ตรงนี้กันคนพิมพ์ที่อยู่เข้ามาเอง
   if (!canArea(user, "home.announcements")) redirect(ADMIN_HOME);
 
-  const announcements = await db.announcement.findMany({ orderBy: { publishedAt: "desc" } });
+  // ต้องเรียงแบบเดียวกับ getAnnouncements() บนหน้าเว็บ — ไม่งั้นลากจัดลำดับแล้วบันทึก
+  // ลำดับที่เห็นบนจอนี้ทับลำดับจริงของหน้าเว็บไปด้วย
+  const announcements = await db.announcement.findMany({
+    orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
+  });
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
