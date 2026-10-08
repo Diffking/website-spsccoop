@@ -181,24 +181,40 @@ services:
       - -c
       - |
         apk add --no-cache curl >/dev/null 2>&1
+        # เวลาไทยใน log โดยไม่ต้องลง tzdata (รูปแบบ POSIX: UTC-7 = เร็วกว่า UTC 7 ชม.)
+        export TZ=UTC-7
         # รอ web ตั้งตัวก่อน ไม่งั้นรอบแรกยิงไปตอนยังไม่พร้อมแล้วได้ error เปล่า ๆ
         sleep 30
+        # ยิงหนึ่งเส้นทาง · พลาด (error หรือไม่มีคำตอบ) = ลองใหม่ทุก 5 นาที สูงสุด 6 ครั้ง
+        # เดิมพลาดแล้วนอนยาว 6 ชม. — รอบแรกหลังเปิดเครื่องเช้ามักพลาดเพราะเน็ตยังไม่พร้อม
+        # (เจอทุกวันตั้งแต่ 18 ก.ย. 2569) ตารางรถตู้เดือน ต.ค. เลยไม่เข้าเว็บจน 8 ต.ค.
+        # ปลอดภัยที่จะลองซ้ำ: วิ่งไปเครื่องในวงแลนกับระบบ officer เท่านั้น ไม่แตะโฮสต์ spsccoop.com
+        # $$1 ชื่อใน log · $$2 เส้นทาง · $$3 รูปคำตอบที่แปลว่า "ไม่มีอะไรเปลี่ยน" (เงียบ)
+        sync_one() {
+          n=1
+          while :; do
+            out=$$(curl -s -m 60 -X POST -H "x-sync-token: $$HOLIDAY_SYNC_TOKEN" "http://web:3000$$2")
+            case "$$out" in
+              ''|*'"error"'*) ;;
+              *) break ;;
+            esac
+            [ $$n -ge 6 ] && break
+            n=$$((n+1))
+            sleep 300
+          done
+          # เหมือนเดิม = เงียบ · เปลี่ยนหรือพลาดเมื่อไหร่ค่อยขึ้น log
+          case "$$out" in
+            $$3) ;;
+            *) echo "$$1 $$(date '+%F %H:%M') (ครั้งที่ $$n) $${out:-ไม่มีคำตอบ}" ;;
+          esac
+        }
         while true; do
           if [ -n "$$HOLIDAY_SYNC_TOKEN" ]; then
-            out=$$(curl -s -m 60 -X POST -H "x-sync-token: $$HOLIDAY_SYNC_TOKEN" http://web:3000/api/holidays/sync/)
-            # เหมือนเดิม = เงียบ · เปลี่ยนหรือพลาดเมื่อไหร่ค่อยขึ้น log
-            case "$$out" in
-              *'"added":0,"renamed":0'*) ;;
-              *) echo "วันหยุด $$(date '+%F %H:%M') $$out" ;;
-            esac
             # กิจกรรมจากระบบสำนักงาน (รถตู้ · โครงการ · สัมมนา) — ดู src/lib/officerEventSync.ts
-            # ใช้โทเคนตัวเดียวกัน ยิงในรอบเดียวกัน จะได้ไม่ต้องมีตัวตั้งเวลาสองตัว
+            # ยิงก่อนวันหยุด เพราะเครื่องวันหยุดในวงแลนปิดบ่อย ลองใหม่ครบรอบกิน ~25 นาที
             # ⚠️ แก้ entrypoint นี้แล้วต้อง `docker compose up -d holiday-sync` (restart ไม่พอ)
-            out=$$(curl -s -m 60 -X POST -H "x-sync-token: $$HOLIDAY_SYNC_TOKEN" http://web:3000/api/calendar/sync/)
-            case "$$out" in
-              *'"added":0,"changed":0,"removed":0'*) ;;
-              *) echo "กิจกรรม $$(date '+%F %H:%M') $$out" ;;
-            esac
+            sync_one "กิจกรรม" /api/calendar/sync/ '*"added":0,"changed":0,"removed":0*'
+            sync_one "วันหยุด" /api/holidays/sync/ '*"added":0,"renamed":0*'
           fi
           sleep 21600
         done
