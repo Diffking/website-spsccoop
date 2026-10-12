@@ -68,10 +68,6 @@ export const SERVICE_CATEGORIES = [
 
 export type ServiceCategory = (typeof SERVICE_CATEGORIES)[number]["key"];
 
-export const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
-  SERVICE_CATEGORIES.map((c) => [c.key, c.label]),
-);
-
 /**
  * รายการเก่าที่บันทึกไว้ก่อนมีการแบ่งกลุ่ม (category ว่าง) ให้ถือเป็นกลุ่มนี้
  * ทั้งหน้าเว็บและหลังบ้านต้องใช้ค่าเดียวกัน ไม่งั้นหลังบ้านโชว์อยู่แท็บหนึ่ง

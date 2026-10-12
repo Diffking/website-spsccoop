@@ -63,8 +63,6 @@ export type Folder =
   | `pages/${string}`
   | `home_items/${string}`;
 
-export const DEFAULT_FOLDER: Folder = "banner_slide";
-
 export const isFolder = (value: unknown): value is Folder =>
   typeof value === "string" &&
   (Object.hasOwn(FOLDERS, value) ||
