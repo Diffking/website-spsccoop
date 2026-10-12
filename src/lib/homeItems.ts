@@ -73,19 +73,6 @@ export const DEFAULTS: Record<Section, Seed[]> = {
   footerLinks: footerLinks.map((f) => ({ ...blank, title: f.label, href: f.href })),
 };
 
-export const SECTION_LABELS: Record<Section, { label: string; hint: string }> = {
-  services: { label: "บริการของเรา", hint: "แถวไอคอนบริการกลางหน้าแรก" },
-  recommends: { label: "แนะนำสมาชิก", hint: "การ์ดใหญ่ 3 ใบ เงินฝาก/เงินกู้/สวัสดิการ" },
-  memberFeatures: {
-    label: "การ์ดคิวอาร์โค้ด/โซเชียล",
-    hint: "การ์ดคิวอาร์โค้ดและลิงก์โซเชียลมีเดีย ในส่วนสำหรับสมาชิก",
-  },
-  memberLinks: { label: "ลิงก์สำหรับสมาชิก", hint: "ปุ่มคู่มือและไลน์สหกรณ์" },
-  committees: { label: "คณะกรรมการ (สไลด์หน้าแรก)", hint: "สไลด์เล็กข้างการ์ดประกาศ" },
-  officers: { label: "สำนักงานบริการสมาชิก", hint: "การ์ดสำนักงานท้ายหน้าแรก" },
-  footerLinks: { label: "ลิงก์หน่วยงานท้ายเว็บ", hint: "รายการลิงก์ในส่วนท้ายของทุกหน้า" },
-};
-
 /** อ่านรายการของส่วนนั้น — ยังไม่มีในฐานจะคืนค่าตั้งต้นให้หน้าเว็บใช้ไปก่อน */
 export async function getItems(section: Section): Promise<Item[]> {
   try {

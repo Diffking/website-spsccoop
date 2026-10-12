@@ -85,7 +85,9 @@ export default function LoginForm({
             {/*
               ลิงก์ธรรมดา ไม่ใช่ fetch — ขั้นตอนของ LINE ต้องพาเบราว์เซอร์ออกไปทั้งหน้า
               ให้เจ้าหน้าที่เห็นว่ากำลังอยู่ที่ line.me จริง ก่อนกดยินยอม
+              (<Link> จะพยายาม prefetch/นำทางฝั่ง client ซึ่งใช้กับ API route ที่ redirect ออกนอกเว็บไม่ได้)
             */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/api/auth/line/start/?mode=login"
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#06C755] px-4 py-3 font-medium text-white transition hover:bg-[#05b34c]"
@@ -130,6 +132,7 @@ export default function LoginForm({
             <div className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm leading-relaxed text-red-700">
               {error}
               {useLine && (
+                // eslint-disable-next-line @next/next/no-html-link-for-pages -- API route ที่พาออกไป LINE ต้องเป็นลิงก์ธรรมดา
                 <a
                   href="/api/auth/line/start/?mode=login"
                   className="mt-2 inline-flex items-center gap-1.5 font-medium text-[#06C755] hover:underline"

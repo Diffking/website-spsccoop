@@ -127,6 +127,8 @@ export default function LineLinkCard({
 
       {!linked && (
         <>
+          {/* ลิงก์ธรรมดา ไม่ใช่ <Link> — API route นี้พาเบราว์เซอร์ออกไป line.me ทั้งหน้า */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a
             href="/api/auth/line/start/?mode=link"
             className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#06C755] px-4 py-2.5 font-medium text-white transition hover:bg-[#05b34c]"

@@ -129,14 +129,6 @@ export type BridgeLog = {
   reads: Record<string, { at: string; ip: string; count: number }>;
 };
 
-export const DEFAULT_CONFIG: BridgeConfig = {
-  enabled: true,
-  token: "",
-  hiddenGroups: [],
-  overrides: {},
-  allowIps: [],
-};
-
 /** อ่านค่าที่ตั้งไว้ — ค่าที่หายหรืออ่านไม่ออกถอยกลับไปใช้ค่าตั้งต้น ไม่คืนก้อนว่าง */
 export function fillConfig(raw: unknown): BridgeConfig {
   const v = (raw ?? {}) as Partial<BridgeConfig>;

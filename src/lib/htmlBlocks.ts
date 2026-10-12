@@ -45,13 +45,6 @@ export function findBlock(html: string, name: string): HtmlBlock | null {
   return null;
 }
 
-/** แทนก้อนเดิมด้วยก้อนใหม่ — ไม่มีก้อนเดิมก็ต่อท้ายเนื้อหา */
-export function replaceBlock(html: string, name: string, block: string): string {
-  const found = findBlock(html, name);
-  if (!found) return html.trim() ? `${html.replace(/\s+$/, "")}\n${block}\n` : `${block}\n`;
-  return html.slice(0, found.start) + block + html.slice(found.end);
-}
-
 /** หาทุกก้อนที่ class มีคำที่ระบุ — เรียงตามตำแหน่งในเนื้อหา */
 export function findBlocks(html: string, name: string): HtmlBlock[] {
   const out: HtmlBlock[] = [];

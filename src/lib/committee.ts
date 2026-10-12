@@ -10,9 +10,3 @@ export const COMMITTEE_PHOTO_BASE = { width: 220, height: 300 };
 export const COMMITTEE_PHOTO_SCALES = [70, 80, 90, 100] as const;
 
 export const DEFAULT_COMMITTEE_PHOTO_SCALE = 70;
-
-/** ขนาดจริงเป็นพิกเซลของสเกลที่เลือก */
-export const committeePhotoSize = (scale: number) => ({
-  width: Math.round((COMMITTEE_PHOTO_BASE.width * scale) / 100),
-  height: Math.round((COMMITTEE_PHOTO_BASE.height * scale) / 100),
-});

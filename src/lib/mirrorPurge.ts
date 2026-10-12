@@ -35,12 +35,6 @@ const BACKOFF_MS = [15 * 60_000, 60 * 60_000, 6 * 3_600_000, 24 * 3_600_000];
 let consecutiveFails = 0;
 let pausedUntil = 0;
 
-/** ให้หน้าอื่นถามสถานะได้ (หน้าภาพรวมหลังบ้าน) โดยไม่ต้องรู้กลไกข้างใน */
-export function mirrorPurgeStatus(): { paused: boolean; until: Date | null; fails: number } {
-  const paused = Date.now() < pausedUntil;
-  return { paused, until: paused ? new Date(pausedUntil) : null, fails: consecutiveFails };
-}
-
 function openBreaker(reason: string): void {
   consecutiveFails += 1;
   const wait = BACKOFF_MS[Math.min(consecutiveFails - 1, BACKOFF_MS.length - 1)];
@@ -95,13 +89,6 @@ async function tell(body: PurgeBody): Promise<void> {
     // ต่อไม่ติด/หมดเวลา — หน้าตาแบบเดียวกับตอนโดนไฟร์วอลล์ทิ้งแพ็กเก็ต
     openBreaker(e instanceof Error ? e.name : "ต่อไม่ติด");
   }
-}
-
-/** ล้างสำเนาเฉพาะหน้าที่ระบุ — ใช้ตอนแก้เนื้อหาหน้าเดียว */
-export function purgePaths(paths: string[]): void {
-  const clean = paths.filter((p) => p.startsWith("/"));
-  if (clean.length === 0) return;
-  void tell({ token: "", paths: clean });
 }
 
 /**

@@ -115,12 +115,6 @@ export function canAnyPage(user: Actor): boolean {
   return user.areas.some((a) => a.startsWith(PAGE_PREFIX));
 }
 
-/** หมวดหน้าเนื้อหาที่คนนี้ดูแล — null = ทุกหมวด */
-export function allowedPageCategories(user: Actor): string[] | null {
-  if (hasFullAccess(user) || user.areas.includes("pages")) return null;
-  return user.areas.map(pageAreaCategory).filter((c): c is string => c !== null);
-}
-
 /** กรองรายการหน้าเนื้อหาให้เหลือเฉพาะที่คนนี้ดูแล */
 export function filterPages<T extends PageLike>(user: Actor, pages: T[]): T[] {
   if (hasFullAccess(user) || user.areas.includes("pages")) return pages;

@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# ของที่ถอดออกจากโปรเจกต์ รอเจ้าของเว็บตรวจแล้วลบเอง (ไม่ commit)
+/_archive/
+
 # raw data dump จาก WordPress เก่า (มีข้อมูลส่วนตัว/ขนาดใหญ่ — ไม่ commit)
 /_data/
 
