@@ -103,7 +103,7 @@ export async function POST(request: Request) {
 
     return await read(
       bytes,
-      media.mimeType as MediaType,
+      sniffType(bytes) ?? (media.mimeType as MediaType),
       target as Target,
       kind,
       media.originalName,
@@ -139,6 +139,23 @@ export async function POST(request: Request) {
     file.name,
     examples,
   );
+}
+
+/**
+ * ชนิดไฟล์จริงจากไบต์หัวไฟล์ — ห้ามเชื่อ `Media.mimeType`
+ *
+ * ⚠️ ตอนอัป รูปถูกย่อแล้วเก็บเป็น .webp แต่ตาราง Media จดชนิดของ**ต้นฉบับ** (เช่น image/jpeg)
+ * บอก AI ว่าเป็น jpeg แต่ส่งไบต์ webp ไป = ผู้ให้บริการตอบ "Provider returned error"
+ * ลองใหม่กี่ครั้งก็พัง → สไลด์ได้ชื่อไฟล์เป็นหัวข้อ ไม่มีคำอธิบาย (เจอ 16 ต.ค. 2569)
+ */
+function sniffType(bytes: Buffer): MediaType | null {
+  const ascii = (from: number, to: number) => bytes.subarray(from, to).toString("latin1");
+  if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return "image/webp";
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (bytes[0] === 0x89 && ascii(1, 4) === "PNG") return "image/png";
+  if (ascii(0, 4) === "GIF8") return "image/gif";
+  if (ascii(0, 5) === "%PDF-") return "application/pdf";
+  return null;
 }
 
 /** ชื่อรายการเดิมในตารางที่หน้าจอส่งมาเป็นตัวอย่าง — จำกัดจำนวนและความยาว กันคำขอบวม */
