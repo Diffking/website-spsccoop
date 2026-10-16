@@ -55,6 +55,11 @@ export type SlideRow = {
   eventDate: string;
   /** ประเภทบนปฏิทิน mobile | project | seminar — "" = โครงการ */
   eventType: string;
+  /**
+   * อัปมาไม่ถึง 24 ชม. — ติดป้าย "New" ให้คนอัปหาเจอ (คิวจัดเองทำให้ใบใหม่ไปแทรกกลางรายการ)
+   * ⚠️ ป้ายนี้มีเฉพาะหลังบ้าน ห้ามเอาไปใส่ Hero.tsx (เจ้าของเว็บสั่ง 16 ต.ค. 2569)
+   */
+  isNew: boolean;
 };
 
 /** ประเภทกิจกรรมบนปฏิทิน — ชื่อ/สีเดียวกับที่เมนูปฏิทินสหกรณ์ใช้ */
@@ -677,6 +682,15 @@ function SlideCard({
       >
         {position ?? "–"}
       </span>
+
+      {slide.isNew && (
+        <span
+          title="อัปมาไม่ถึง 24 ชั่วโมง"
+          className="absolute left-11 top-3 rounded-full bg-rose-500 px-2 py-0.5 text-[11px] font-bold text-white shadow"
+        >
+          New
+        </span>
+      )}
 
       <span
         className={`absolute right-3 top-3 rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow ${state.tone}`}
