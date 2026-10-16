@@ -8,6 +8,10 @@ import StorageStatus from "@/components/admin/StorageStatus";
 import { getAnnouncements } from "@/lib/content";
 import { KIND_LABEL, announcementLine, readerHref } from "@/lib/announcementKinds";
 
+/** ป้าย "New" บนสไลด์ในหลังบ้าน — อัปมาไม่ถึง 24 ชม. (เจ้าของเว็บเลือก 16 ต.ค. 2569) */
+const NEW_FOR_MS = 24 * 60 * 60 * 1000;
+const isRecent = (createdAt: Date) => Date.now() - createdAt.getTime() < NEW_FOR_MS;
+
 export default async function AdminSlidesPage() {
   const user = await currentUser();
   if (!user) redirect("/login/");
@@ -61,6 +65,7 @@ export default async function AdminSlidesPage() {
             ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(s.eventDate)
             : "",
           eventType: s.eventType ?? "",
+          isNew: isRecent(s.createdAt),
         }))}
         aiReady={AI_READY}
         docs={docs}
