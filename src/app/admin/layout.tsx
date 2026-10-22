@@ -50,10 +50,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         userCode={user.username}
         siteUrl={publicSiteUrl()}
       />
-      <div className="md:pl-64">
-        {viewing && <ViewAsBar name={user.name} code={user.username} realName={real.name} />}
-        {/* อยู่นอก .view-only ข้างล่าง — ไม่งั้นปุ่มผูกจะถูกปิดไปด้วยตอนเปิดมุมมองผู้ใช้ */}
-        {askLine && <LineNudge />}
+      <div className="md:pl-64 print:pl-0">
+        <div className="print:hidden">
+          {viewing && <ViewAsBar name={user.name} code={user.username} realName={real.name} />}
+          {/* อยู่นอก .view-only ข้างล่าง — ไม่งั้นปุ่มผูกจะถูกปิดไปด้วยตอนเปิดมุมมองผู้ใช้ */}
+          {askLine && <LineNudge />}
+        </div>
         {/*
          * มุมมองผู้ใช้ = ดูอย่างเดียว — คลาสนี้ปิดปุ่มและช่องกรอกทั้งหน้าไว้ (ดู globals.css)
          * แต่ลิงก์ยังกดได้ จะได้เดินดูได้ทั่วว่าเจ้าหน้าที่คนนั้นเห็นอะไรบ้าง

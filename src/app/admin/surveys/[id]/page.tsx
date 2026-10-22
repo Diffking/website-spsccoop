@@ -4,6 +4,8 @@ import { ADMIN_HOME, canArea } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { readItems, surveyStatus, surveyUrl } from "@/lib/survey";
 import SurveyEditor from "@/components/admin/SurveyEditor";
+import { getBrand } from "@/lib/nav";
+import { localAsset } from "@/lib/assetFallback";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -18,12 +20,15 @@ export default async function AdminSurveyEditPage({ params }: Params) {
     include: { _count: { select: { responses: true } } },
   });
   if (!survey) notFound();
+  const brand = await getBrand();
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
       <SurveyEditor
         id={survey.id}
+        code={survey.code}
         url={surveyUrl(survey.code, process.env.SURVEY_PUBLIC_URL)}
+        logoUrl={brand.logoUrl ? localAsset(brand.logoUrl) : null}
         title={survey.title}
         description={survey.description}
         items={readItems(survey.questions)}
