@@ -270,6 +270,13 @@ model Survey {
   closesAt    DateTime?
   /// กดปุ่ม "สิ้นสุดการประเมิน" เมื่อไหร่ — ว่าง = ยังไม่ได้กด · กด "เปิดรับต่อ" แล้วกลับเป็นว่าง
   closedAt    DateTime?
+  /// ลิงก์ให้กรรมการดูผลสรุป /r/<shareToken>/ — ว่าง = ยังไม่ได้เปิดลิงก์ · สร้างใหม่ = ลิงก์เดิมตายทันที
+  shareToken     String?   @unique
+  /// ลิงก์กรรมการหมดอายุเมื่อไหร่ — ว่าง = ไม่หมดอายุ (จนกว่าจะกดยกเลิก)
+  shareExpiresAt DateTime?
+  /// AI สรุปข้อเสนอแนะที่พูดซ้ำกัน — [{ topic, count }] เจ้าหน้าที่แก้ได้ก่อนกรรมการเห็น
+  feedbackSummary   Json?
+  feedbackSummaryAt DateTime?
   createdById String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

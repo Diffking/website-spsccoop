@@ -360,6 +360,12 @@ export function surveyStatus(s: Timing, now = Date.now()): SurveyStatus {
  * เปลี่ยนได้ที่ SURVEY_PUBLIC_URL ใน .env โดยไม่ต้องแก้โค้ด
  */
 export function surveyUrl(code: string, base?: string): string {
-  const root = (base || "https://www.spsccoop.com").replace(/\/+$/, "");
-  return `${root}/s/${code}/`;
+  return `${publicRoot(base)}/s/${code}/`;
 }
+
+/** ลิงก์ผลสรุปสำหรับกรรมการ — ผ่าน www.spsccoop.com เหมือนกัน (เจ้าของเว็บเลือก 22 ต.ค. 2569) */
+export function shareUrl(token: string, base?: string): string {
+  return `${publicRoot(base)}/r/${token}/`;
+}
+
+const publicRoot = (base?: string) => (base || "https://www.spsccoop.com").replace(/\/+$/, "");
