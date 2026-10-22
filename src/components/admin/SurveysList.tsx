@@ -35,7 +35,8 @@ export const STATUS_TONE: Record<SurveyStatus, string> = {
   draft: "bg-gray-100 text-gray-600",
   scheduled: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
   open: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
-  closed: "bg-slate-800 text-white",
+  // gray ไม่ใช่ slate — ธีมของโปรเจกต์ไม่มีชุด slate คลาสจะไม่ทำงาน (เจอในภาพ Dashboard 22 ต.ค. 2569)
+  closed: "bg-gray-800 text-white",
 };
 
 /** ช่วงเวลาเปิดรับเป็นข้อความเดียว */
