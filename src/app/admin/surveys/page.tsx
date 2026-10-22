@@ -5,6 +5,9 @@ import { db } from "@/lib/db";
 import { readItems, surveyStatus, surveyUrl } from "@/lib/survey";
 import { TEMPLATES } from "@/lib/surveyTemplates";
 import SurveysList from "@/components/admin/SurveysList";
+import { statusCounts } from "@/lib/surveyVerify";
+import { queueKeys } from "@/lib/surveyQueue";
+import SurveyQueueSetup from "@/components/admin/SurveyQueueSetup";
 
 export default async function AdminSurveysPage() {
   const user = await currentUser();
@@ -12,10 +15,27 @@ export default async function AdminSurveysPage() {
   // ไม่ได้ดูแลส่วนนี้ก็ไม่ต้องเห็น — เมนูซ่อนให้แล้ว ตรงนี้กันคนพิมพ์ที่อยู่เข้ามาเอง
   if (!canArea(user, "surveys")) redirect(ADMIN_HOME);
 
-  const surveys = await db.survey.findMany({
-    orderBy: { createdAt: "desc" },
-    include: { _count: { select: { responses: true } } },
-  });
+  const surveys = await db.survey.findMany({ orderBy: { createdAt: "desc" } });
+  const counts = await statusCounts(surveys.map((s) => s.id));
+
+  // ค่าตั้งของกล่องพักคำตอบบนโฮสต์ — เฉพาะ ADMIN (มีโทเคนลับ)
+  let snippet: string | null = null;
+  if (user.role === "ADMIN") {
+    const keys = await queueKeys();
+    snippet = [
+      "    // กล่องพักคำตอบแบบประเมิน — คัดลอกมาจากหลังบ้าน → แบบประเมิน",
+      "    'survey_queue' => [",
+      `        'token' => '${keys.token}',`,
+      "        'db' => [",
+      "            'host' => 'localhost',",
+      `            'name' => '${process.env.DB_Name ?? "spsccoop_cast"}',`,
+      `            'user' => '${process.env.DB_Username ?? "spsccoop_cast"}',`,
+      "            'pass' => 'ใส่รหัสฐาน spsccoop_cast',",
+      "        ],",
+      `        'public_key' => <<<'PEM'\n${keys.publicKey.trim()}\nPEM,`,
+      "    ],",
+    ].join("\n");
+  }
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-6">
@@ -23,6 +43,12 @@ export default async function AdminSurveysPage() {
       <p className="mb-5 text-sm text-gray-500">
         ตั้งคำถามความพึงพอใจ แล้วส่งลิงก์ให้สมาชิกตอบ · สมาชิกยืนยันตัวตนด้วยเบอร์มือถือหรือเลขที่สมาชิกก่อนตอบ
       </p>
+
+      {snippet && (
+        <div className="mb-4">
+          <SurveyQueueSetup snippet={snippet} />
+        </div>
+      )}
 
       <SurveysList
         templates={TEMPLATES.map((t) => ({ key: t.key, label: t.label, hint: t.hint }))}
@@ -35,7 +61,10 @@ export default async function AdminSurveysPage() {
           closesAt: s.closesAt?.toISOString() ?? null,
           closedAt: s.closedAt?.toISOString() ?? null,
           questions: readItems(s.questions).filter((q) => q.kind !== "section" && !q.hidden).length,
-          responses: s._count.responses,
+          responses: counts[s.id].verified,
+          // รายการที่ระบบตรวจไม่ลงตัว รอเจ้าหน้าที่ — โชว์เป็นป้ายเตือนในรายการ
+          toReview: counts[s.id].review,
+          pending: counts[s.id].pending,
         }))}
       />
     </main>

@@ -24,7 +24,10 @@ export type SurveyRow = {
   closesAt: string | null;
   closedAt: string | null;
   questions: number;
+  /** ผู้ตอบที่ตรวจกับฐานสมาชิกแล้ว */
   responses: number;
+  toReview: number;
+  pending: number;
 };
 
 /** สีป้ายสถานะ — ใช้ชุดเดียวกันในหน้าแก้ไข */
@@ -142,7 +145,17 @@ export default function SurveysList({
                       {s.questions} ข้อ · {period(s)}
                     </span>
                   </span>
-                  <span className="inline-flex shrink-0 items-center gap-1 text-sm text-gray-600" title="จำนวนผู้ตอบ">
+                  {s.toReview > 0 && (
+                    <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-200">
+                      รอเจ้าหน้าที่ดู {s.toReview}
+                    </span>
+                  )}
+                  {s.pending > 0 && (
+                    <span className="shrink-0 rounded-full bg-sky-50 px-2 py-0.5 text-[11px] text-sky-700 ring-1 ring-sky-200">
+                      รอตรวจ {s.pending}
+                    </span>
+                  )}
+                  <span className="inline-flex shrink-0 items-center gap-1 text-sm text-gray-600" title="ผู้ตอบที่ตรวจกับฐานสมาชิกแล้ว">
                     <Users className="h-4 w-4 text-gray-400" />
                     {s.responses.toLocaleString("th-TH")}
                   </span>

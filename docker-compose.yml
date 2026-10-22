@@ -219,6 +219,35 @@ services:
           sleep 21600
         done
 
+  # ตัวตรวจคำตอบแบบประเมินกับฐานสมาชิก — ทุก 10 นาที (ดู src/lib/surveyVerify.ts)
+  # คำตอบที่ฝากมาตอนเครื่อง/ฐานสมาชิกไม่พร้อม จะถูกตรวจเองเมื่อพร้อม ไม่ต้องรอใครกด
+  # ยิงแค่ web:3000 → ฐานสมาชิกในวงแลน · ไม่แตะโฮสต์ spsccoop.com เลย จึงถี่ได้
+  # ไม่มีอะไรรอตรวจ = เงียบ · ใช้โทเคนตัวเดียวกับ holiday-sync (ไม่ตั้ง = ไม่ทำงาน)
+  # ⚠️ แก้ entrypoint แล้วต้อง `docker compose up -d survey-verify` (restart ไม่พอ)
+  survey-verify:
+    image: alpine:3.20
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - web
+    entrypoint:
+      - sh
+      - -c
+      - |
+        apk add --no-cache curl >/dev/null 2>&1
+        export TZ=UTC-7
+        sleep 60
+        while true; do
+          if [ -n "$$HOLIDAY_SYNC_TOKEN" ]; then
+            out=$$(curl -s -m 300 -X POST -H "x-sync-token: $$HOLIDAY_SYNC_TOKEN" http://web:3000/api/survey/verify/)
+            case "$$out" in
+              *'"checked":0,'*) ;;
+              *) echo "ตรวจคำตอบ $$(date '+%F %H:%M') $${out:-ไม่มีคำตอบ}" ;;
+            esac
+          fi
+          sleep 600
+        done
+
   # Cloudflare Tunnel — ชี้โดเมนเข้า web:3000 (ตั้ง ingress ฝั่ง Cloudflare)
   # TUNNEL_TOKEN อยู่ในไฟล์ .env ข้างไฟล์นี้ (ไม่ commit)
   cloudflared:

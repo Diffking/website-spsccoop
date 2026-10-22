@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { readItems, surveyStatus, surveyUrl } from "@/lib/survey";
 import SurveyEditor from "@/components/admin/SurveyEditor";
 import { getBrand } from "@/lib/nav";
+import { statusCounts } from "@/lib/surveyVerify";
 import { localAsset } from "@/lib/assetFallback";
 
 type Params = { params: Promise<{ id: string }> };
@@ -20,7 +21,7 @@ export default async function AdminSurveyEditPage({ params }: Params) {
     include: { _count: { select: { responses: true } } },
   });
   if (!survey) notFound();
-  const brand = await getBrand();
+  const [brand, counts] = await Promise.all([getBrand(), statusCounts([survey.id])]);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
@@ -37,6 +38,7 @@ export default async function AdminSurveyEditPage({ params }: Params) {
         closedAt={survey.closedAt?.toISOString() ?? null}
         status={surveyStatus(survey)}
         responses={survey._count.responses}
+        counts={counts[survey.id]}
         updatedAt={survey.updatedAt.toISOString()}
       />
     </main>

@@ -44,7 +44,7 @@ export async function POST(request: Request, { params }: Params) {
   const found = await lookupMember({ kind: "membNo", value: membNo });
   if (!found.ok) {
     return NextResponse.json(
-      { error: "ระบบยืนยันตัวตนขัดข้องชั่วคราว คำตอบยังไม่ถูกบันทึก กรุณากดส่งอีกครั้งภายหลัง" },
+      { error: "ระบบยืนยันตัวตนขัดข้องชั่วคราว คำตอบยังไม่ถูกบันทึก", offline: true },
       { status: 503 },
     );
   }
@@ -60,6 +60,9 @@ export async function POST(request: Request, { params }: Params) {
         department: member.department,
         profile: member.profile as Prisma.InputJsonValue,
         answers: answers as Prisma.InputJsonValue,
+        // ยืนยันตัวตนสดกับฐานแล้วทั้งตอนกรอกเบอร์และตอนส่ง — ตรวจแล้วตั้งแต่ต้น
+        status: "verified",
+        checkedAt: new Date(),
       },
     });
   } catch (error) {

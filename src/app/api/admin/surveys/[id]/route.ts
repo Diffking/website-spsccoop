@@ -9,6 +9,7 @@ import {
   surveyStatus,
   validateItems,
 } from "@/lib/survey";
+import { verifyResponses } from "@/lib/surveyVerify";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -133,10 +134,24 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   const saved = await db.survey.update({ where: { id }, data });
+
+  /*
+   * กดปิดแล้วตรวจกับฐานสมาชิกซ้ำทั้งชุด — ผลสรุปกับรายชื่อจับรางวัลต้องตรงกับฐาน ณ ตอนปิด
+   * ฐานไม่พร้อมก็ไม่เป็นไร ปิดสำเร็จอยู่ดี (ที่ค้างจะถูกตรวจตอนฐานพร้อม และก่อนจับรางวัลอีกรอบ)
+   */
+  const verify =
+    action === "close"
+      ? await verifyResponses({ surveyId: id, recheck: true }).catch((e) => {
+          console.error("ตรวจคำตอบตอนปิดไม่สำเร็จ:", e);
+          return null;
+        })
+      : null;
+
   return NextResponse.json({
     ok: true,
     status: surveyStatus(saved),
     updatedAt: saved.updatedAt.toISOString(),
+    verify,
   });
 }
 

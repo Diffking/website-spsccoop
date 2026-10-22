@@ -279,25 +279,52 @@ model Survey {
 
 /// คำตอบหนึ่งชุด = สมาชิกหนึ่งคน (ตอบได้คนละครั้งต่อแบบประเมิน)
 ///
-/// ชื่อ · เบอร์ · หน่วยงาน คัดลอกมาจากฐานสมาชิกตอนยืนยันตัวตน ไม่อ่านสดทุกครั้ง
+/// ชื่อ · เบอร์ · หน่วยงาน คัดลอกมาจากฐานสมาชิก "ตอนตรวจผ่าน" ไม่อ่านสดทุกครั้ง
 /// จับรางวัลกับส่งออกจึงทำได้แม้ฐานสมาชิกต่อไม่ได้ และข้อมูลตรงกับวันที่ตอบ
+///
+/// ⚠️ **ใช้ต่อได้เฉพาะ status = "verified"** (Dashboard · ส่งออก · จับรางวัล) — เจ้าของเว็บกำหนด
+/// 22 ต.ค. 2569 ว่าข้อมูลที่เอาไปใช้ต่อต้องตรงกับฐานสมาชิก 100% (ดู src/lib/surveyVerify.ts)
 model SurveyResponse {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   surveyId    String
-  membNo      String
-  name        String
+  /// ว่าง = ยังไม่รู้ว่าเป็นใคร (ส่งมาตอนเครื่องปิด รอตรวจ / ให้เจ้าหน้าที่ดู / ตัดทิ้ง)
+  /// unique คู่กับ surveyId — Postgres ยอมให้ค่าว่างซ้ำได้ จึงกันตอบซ้ำเฉพาะคนที่รู้ตัวแล้ว
+  membNo      String?
+  /// ชื่อ · เบอร์ · หน่วยงาน "จากฐานสมาชิก" — ว่างจนกว่าจะตรวจผ่าน
+  name        String?
   phone       String?
   department  String?
   /// ข้อมูลอื่นจากฐานสมาชิก (เพศ · ช่วงอายุ · ประเภทสมาชิก · เป็นเจ้าหน้าที่) — รูปร่างกำหนดในเฟส 1
-  profile     Json     @default("{}")
+  profile     Json      @default("{}")
   /// { รหัสข้อ: คำตอบ }
-  answers     Json     @default("{}")
-  submittedAt DateTime @default(now())
+  answers     Json      @default("{}")
+  /// เวลาที่สมาชิกกดส่งจริง — ฝากไว้บนโฮสต์ = เวลาที่โฮสต์รับ ไม่ใช่เวลาที่มาถึงเครื่องนี้
+  submittedAt DateTime  @default(now())
+  /// เวลาที่มาถึงเครื่องนี้
+  receivedAt  DateTime  @default(now())
+  /// live = ตอบตอนระบบพร้อม ยืนยันตัวตนสด · queued = ฝากไว้ตอนเครื่อง/ฐานสมาชิกไม่พร้อม
+  source      String    @default("live")
+  /// รหัสรายการในกล่องพักบนโฮสต์ — กันโฮสต์ส่งรายการเดิมซ้ำ (ส่งสำเร็จแต่คำตอบหายกลางทาง)
+  queueId     String?   @unique
+  /// สิ่งที่สมาชิกพิมพ์เองตอนฝากคำตอบ — ใช้เทียบกับฐานเท่านั้น ไม่เอาไปใช้ต่อ
+  claimedPhone String?
+  claimedName  String?
+  /// verified ตรวจแล้ว · pending รอตรวจ · review ให้เจ้าหน้าที่ดู · rejected ไม่ผ่าน/ตัดทิ้ง
+  status      String    @default("verified")
+  /// เหตุผลของสถานะ เช่น "ชื่อไม่ตรงกับฐาน" "ตอบซ้ำ" — เจ้าหน้าที่ใส่เองตอนตัดทิ้ง
+  statusNote  String?
+  /// เทียบกับฐานสมาชิกครั้งล่าสุดเมื่อไหร่
+  checkedAt   DateTime?
+  /// ป้าย "ตรวจสอบโดยเจ้าหน้าที่" — ใครแก้/ตัดรายการนี้ เมื่อไหร่ (ว่าง = ระบบตรวจเอง)
+  reviewedById   String?
+  reviewedByName String?
+  reviewedAt     DateTime?
 
   survey Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
 
   @@unique([surveyId, membNo])
   @@index([membNo])
+  @@index([surveyId, status])
 }
 
 /// ไฟล์ที่อัปจากหลังบ้าน — ไฟล์จริงอยู่ใน public/uploads (mount เป็น volume)
