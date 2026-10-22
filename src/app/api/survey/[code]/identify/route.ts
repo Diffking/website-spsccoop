@@ -25,7 +25,8 @@ export async function POST(request: Request, { params }: Params) {
   }
   if (!memberSourceReady()) {
     return NextResponse.json(
-      { error: "ระบบยืนยันตัวตนยังไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลัง" },
+      // offline = ให้หน้าจอเปลี่ยนไปโหมด "ฝากคำตอบ ตรวจทีหลัง" (กรอกเบอร์ + ชื่อเอง)
+      { error: "ระบบยืนยันตัวตนยังไม่พร้อมใช้งาน", offline: true },
       { status: 503 },
     );
   }
@@ -50,7 +51,7 @@ export async function POST(request: Request, { params }: Params) {
   if (!found.ok) {
     if (found.reason === "unavailable") {
       return NextResponse.json(
-        { error: "ระบบยืนยันตัวตนขัดข้องชั่วคราว กรุณาลองใหม่ภายหลัง" },
+        { error: "ระบบยืนยันตัวตนขัดข้องชั่วคราว", offline: true },
         { status: 503 },
       );
     }

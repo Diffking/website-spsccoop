@@ -59,6 +59,15 @@ export function allowLookup(ip: string, identifier: string): boolean {
   return byIp <= LIMIT.ip && byId <= LIMIT.id;
 }
 
+/**
+ * ฝากคำตอบแบบยังไม่ยืนยันตัวตน — ไอพีละ 10 ครั้ง / 15 นาที
+ * กันคนยิงขยะเข้ามาเป็นกองรอตรวจ (ของจากกล่องพักบนโฮสต์ไม่ผ่านด่านนี้ มีโทเคนยืนยันแล้ว)
+ */
+export function allowQueue(ip: string): boolean {
+  sweep();
+  return bump(`queue:${ip}`) <= 10;
+}
+
 /** ค้นแล้วไม่เจอ — นับเข้าชั้นรวมทั้งระบบ */
 export function recordMiss(): void {
   bump("global:miss");

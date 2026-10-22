@@ -28,13 +28,17 @@ import {
   type GridAnswer,
 } from "@/lib/surveyAnswers";
 
-type Step = "identify" | "confirm" | "answer" | "done" | "already";
+type Step = "identify" | "confirm" | "offline" | "answer" | "done" | "already";
 
 /**
  * ยิงคำขอแล้วอ่านผล — ทนกรณีที่ไม่ได้ JSON กลับมา
  *
- * มาทาง www.spsccoop.com ตอนเครื่องสำนักงานปิด ตัวมิเรอร์ตอบ 204 เปล่า ๆ
- * (ดู php-frontend/index.php) ต้องไม่ถือว่า "สำเร็จ" เด็ดขาด ไม่งั้นสมาชิกนึกว่าส่งแล้ว
+ * offline = ยืนยันตัวตนสดไม่ได้ ต้องเปลี่ยนเป็นโหมด "ฝากคำตอบ ตรวจทีหลัง"
+ *   · หลังบ้านบอกมาเอง (ฐานสมาชิกไม่พร้อม → { offline: true })
+ *   · หรือไม่ได้ JSON กลับมาเลย — มาทาง www.spsccoop.com ตอนเครื่องสำนักงานปิด
+ *     ตัวมิเรอร์ตอบ 204 เปล่า หรือ Cloudflare ตอบหน้า error (ดู php-frontend/index.php)
+ *     ห้ามถือว่า "สำเร็จ" เด็ดขาด ไม่งั้นสมาชิกนึกว่าส่งแล้ว
+ * ส่วนเน็ตของสมาชิกเองหลุด (fetch throw) ไม่ใช่ offline — ให้ลองใหม่ ไม่ใช่เปลี่ยนโหมด
  */
 async function post(url: string, body: unknown) {
   try {
@@ -45,13 +49,24 @@ async function post(url: string, body: unknown) {
     });
     const data = (await response.json().catch(() => null)) as Record<string, unknown> | null;
     if (!data) {
-      return { ok: false, status: 503, data: { error: "ระบบปิดปรับปรุงชั่วคราว คำตอบยังไม่ถูกบันทึก กรุณาลองใหม่ในเวลาทำการ" } };
+      return { ok: false, offline: true, status: response.status, data: {} as Record<string, unknown> };
     }
-    return { ok: response.ok, status: response.status, data };
+    return { ok: response.ok, offline: data.offline === true, status: response.status, data };
   } catch {
-    return { ok: false, status: 0, data: { error: "เชื่อมต่อไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่" } };
+    return {
+      ok: false,
+      offline: false,
+      status: 0,
+      data: { error: "เชื่อมต่อไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่" } as Record<string, unknown>,
+    };
   }
 }
+
+/** เบอร์มือถือ 10 หลัก หรือเลขที่สมาชิก — ตรงกับ readIdentifier() ฝั่งเซิร์ฟเวอร์ */
+const idLooksOk = (v: string) => {
+  const d = v.replace(/\D/g, "");
+  return /^0[689]\d{8}$/.test(d) || /^\d{1,8}$/.test(d);
+};
 
 /** แบ่งเป็นหน้า ๆ ตามหัวตอน — เหมือน Google Form ที่กด "ถัดไป" ทีละตอน */
 function paginate(items: SurveyItem[]): { head: SurveyItem | null; items: SurveyItem[] }[] {
@@ -334,6 +349,12 @@ export default function SurveyForm({
   const [name, setName] = useState("");
   const [token, setToken] = useState("");
   const [answeredAt, setAnsweredAt] = useState("");
+  /** โหมดฝากคำตอบ — ระบบยืนยันตัวตนไม่พร้อม สมาชิกกรอกเบอร์ + ชื่อเอง แล้วตรวจกับฐานทีหลัง */
+  const [offline, setOffline] = useState(false);
+  const [claimedName, setClaimedName] = useState("");
+  /** เปลี่ยนโหมดตอนกดส่ง (ระบบล่มกลางทาง) — คำตอบกรอกไว้ครบแล้ว กรอกเบอร์+ชื่อแล้วส่งได้เลย */
+  const [answersReady, setAnswersReady] = useState(false);
+  const [queued, setQueued] = useState(false);
   const [answers, setAnswers] = useState<Answers>({});
   const [page, setPage] = useState(0);
   const [missing, setMissing] = useState<Set<string>>(new Set());
@@ -348,6 +369,11 @@ export default function SurveyForm({
     setError(null);
     const r = await post(`/api/survey/${code}/identify/`, { id: idText });
     setBusy(false);
+    if (r.offline) {
+      setOffline(true);
+      setStep("offline");
+      return;
+    }
     if (!r.ok) {
       setError(String(r.data.error ?? "ยืนยันตัวตนไม่สำเร็จ"));
       return;
@@ -417,10 +443,19 @@ export default function SurveyForm({
       setError("นี่คือหน้าตัวอย่าง — ส่งจริงไม่ได้");
       return;
     }
+    if (offline) return submitQueued();
     setBusy(true);
     setError(null);
     const r = await post(`/api/survey/${code}/submit/`, { token, answers });
     setBusy(false);
+    if (r.offline) {
+      // ระบบล่มระหว่างทำ — คำตอบยังอยู่ครบ ขอเบอร์ + ชื่อแล้วฝากไว้แทน
+      setOffline(true);
+      setAnswersReady(true);
+      setStep("offline");
+      scrollTop();
+      return;
+    }
     if (r.ok) {
       setStep("done");
       scrollTop();
@@ -445,6 +480,34 @@ export default function SurveyForm({
     }
     setError(String(r.data.error ?? "ส่งคำตอบไม่สำเร็จ"));
   }
+
+  /**
+   * ฝากคำตอบ — ไปที่ /queue/ · เครื่องสำนักงานปิดอยู่ โฮสต์จะพักไว้ให้แล้วตอบ { queued: true }
+   * ได้ JSON ที่ไม่ ok หรือไม่ได้ JSON เลย = ยังไม่ถูกเก็บที่ไหน ต้องบอกให้ลองใหม่
+   */
+  async function submitQueued() {
+    setBusy(true);
+    setError(null);
+    const r = await post(`/api/survey/${code}/queue/`, { phone: idText, name: claimedName, answers });
+    setBusy(false);
+    if (r.ok) {
+      setQueued(true);
+      setName("");
+      setStep("done");
+      scrollTop();
+      return;
+    }
+    const serverMiss = Array.isArray(r.data.missing) ? (r.data.missing as string[]) : [];
+    if (serverMiss.length) {
+      setStep("answer");
+      const at = pages.findIndex((p) => p.items.some((i) => serverMiss.includes(i.id)));
+      if (at >= 0) setPage(at);
+      return jumpToFirst(serverMiss);
+    }
+    setError(String(r.data.error ?? "ส่งคำตอบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"));
+  }
+
+  const offlineReady = idLooksOk(idText) && claimedName.trim().length >= 3;
 
   const current = pages[page];
   const last = page === pages.length - 1;
@@ -534,6 +597,75 @@ export default function SurveyForm({
                   ใช่ เริ่มทำแบบประเมิน
                 </button>
               </div>
+            </section>
+          )}
+
+          {/* ---------- โหมดฝากคำตอบ: กรอกเบอร์ + ชื่อเอง ตรวจกับทะเบียนทีหลัง ---------- */}
+          {step === "offline" && (
+            <section className={box}>
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800">
+                <ShieldCheck className="h-5 w-5 text-amber-500" /> กรอกข้อมูลผู้ตอบ
+              </h2>
+              <p className="mt-1 rounded-xl bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-800 ring-1 ring-amber-200">
+                ขณะนี้ระบบตรวจสอบทะเบียนสมาชิกยังไม่พร้อม ท่าน{answersReady ? "ส่ง" : "ตอบ"}แบบประเมินได้ตามปกติ ·
+                สหกรณ์จะตรวจสอบข้อมูลกับทะเบียนสมาชิกอีกครั้งเมื่อระบบพร้อม
+              </p>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!offlineReady || busy) return;
+                  if (answersReady) submitQueued();
+                  else {
+                    setError(null);
+                    setStep("answer");
+                    scrollTop();
+                  }
+                }}
+                className="mt-4 space-y-3"
+              >
+                <label className="block">
+                  <span className="text-sm text-gray-600">เบอร์มือถือที่ให้ไว้กับสหกรณ์ (หรือเลขที่สมาชิก)</span>
+                  <input
+                    value={idText}
+                    onChange={(e) => setIdText(e.target.value)}
+                    inputMode="numeric"
+                    autoComplete="tel"
+                    placeholder="เช่น 0812345678"
+                    className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 text-lg tracking-wider outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm text-gray-600">ชื่อ-สกุล (ตามที่ให้ไว้กับสหกรณ์)</span>
+                  <input
+                    value={claimedName}
+                    onChange={(e) => setClaimedName(e.target.value)}
+                    autoComplete="name"
+                    maxLength={200}
+                    placeholder="เช่น นางสาวสมใจ ใจดี"
+                    className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 text-lg outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={busy || !offlineReady}
+                  className={`inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold text-white shadow transition disabled:opacity-50 ${
+                    answersReady ? "bg-emerald-600 hover:bg-emerald-700" : "bg-brand-600 hover:bg-brand-700"
+                  }`}
+                >
+                  {busy ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : answersReady ? (
+                    <Send className="h-5 w-5" />
+                  ) : (
+                    <ArrowRight className="h-5 w-5" />
+                  )}
+                  {answersReady ? "ส่งคำตอบ" : "เริ่มทำแบบประเมิน"}
+                </button>
+              </form>
+              <p className="mt-4 rounded-xl bg-gray-50 px-3 py-2 text-[11px] leading-relaxed text-gray-500">
+                ข้อมูลต้องตรงกับทะเบียนสมาชิก จึงจะนับเป็นผู้ตอบแบบประเมินและมีสิทธิ์จับรางวัล ·
+                สหกรณ์ใช้ข้อมูลนี้เพื่อยืนยันตัวตน ประเมินผล และจับรางวัลเท่านั้น
+              </p>
             </section>
           )}
 
@@ -630,6 +762,11 @@ export default function SurveyForm({
                 {name && <>{name} · </>}
                 {step === "done" ? "ขอบคุณที่สละเวลาให้ความคิดเห็นกับสหกรณ์" : `ตอบไว้เมื่อ ${answeredAt}`}
               </p>
+              {queued && (
+                <p className="mx-auto mt-3 max-w-sm rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
+                  สหกรณ์ได้รับคำตอบแล้ว และจะตรวจสอบชื่อกับทะเบียนสมาชิกอีกครั้งเมื่อระบบพร้อม
+                </p>
+              )}
               <p className="mt-1 text-xs text-gray-400">ตอบได้ท่านละ 1 ครั้ง</p>
             </section>
           )}

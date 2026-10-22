@@ -13,6 +13,7 @@ export async function publicSurvey(code: string): Promise<{
   status: SurveyStatus;
   opensAt: Date | null;
   closesAt: Date | null;
+  closedAt: Date | null;
 } | null> {
   if (!/^[a-z0-9]{4,12}$/.test(code)) return null;
   const survey = await db.survey.findUnique({ where: { code } });
@@ -25,6 +26,7 @@ export async function publicSurvey(code: string): Promise<{
     status: surveyStatus(survey),
     opensAt: survey.opensAt,
     closesAt: survey.closesAt,
+    closedAt: survey.closedAt,
   };
 }
 

@@ -341,7 +341,10 @@ const time = (v: Date | string | null) => (v ? new Date(v).getTime() : null);
  */
 export function surveyStatus(s: Timing, now = Date.now()): SurveyStatus {
   if (!s.published) return "draft";
-  if (s.closedAt) return "closed";
+  // เทียบเวลาที่กดปิดด้วย ไม่ใช่แค่ "มีค่า" — คำตอบที่ฝากไว้บนโฮสต์ก่อนกดปิด
+  // มาถึงทีหลังได้ และต้องถูกตัดสินตามเวลาที่สมาชิกส่งจริง (ดู surveyQueue)
+  const closed = time(s.closedAt);
+  if (closed !== null && closed <= now) return "closed";
   const closes = time(s.closesAt);
   if (closes !== null && closes <= now) return "closed";
   const opens = time(s.opensAt);

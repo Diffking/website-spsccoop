@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 $config = require __DIR__ . '/config.php';
 require __DIR__ . '/lib/mirror.php';
+require __DIR__ . '/lib/queue.php';
 
 /*
  * เรียกผ่านเว็บได้ด้วย (cron ของโฮสต์บางเจ้าสั่งได้แค่ผ่าน URL) แต่ต้องมีรหัส
@@ -87,6 +88,12 @@ $config['down_ttl'] = 0;
 
 $mirror = new Mirror($config);
 
+/*
+ * ส่งคำตอบแบบประเมินที่พักไว้ตอนเครื่องปิด — กวาดทั้งกล่อง ไม่รอป้ายหรือรอบ 60 วินาที
+ * (ปกติทยอยส่งตอนมีคนเปิดหน้าเว็บอยู่แล้ว รอบนี้คือตาข่ายอีกชั้น) ดู lib/queue.php
+ */
+$queued = (new SurveyQueue($config))->flush(500, true);
+
 // รายชื่อหน้ามาจากหลังบ้านโดยตรง จะได้ไม่ต้องมาไล่แก้ไฟล์นี้ทุกครั้งที่เพิ่มหน้า
 $listUrl = $config['backend'] . '/api/public/pages';
 $json = @file_get_contents($listUrl);
@@ -124,6 +131,7 @@ if (empty($config['warm_assets'])) {
         'time' => time(),
         'seconds' => round(microtime(true) - $startedAt, 1),
         'pages' => ['ok' => $ok, 'skip' => $skip, 'fail' => $fail, 'total' => count($paths)],
+        'survey_queue' => $queued ? ['sent' => $queued[0], 'left' => $queued[1]] : null,
         'assets' => null,
         'bytes' => 0,
         'by' => $by,
@@ -216,6 +224,7 @@ file_put_contents($stampFile, json_encode([
     'seconds' => round(microtime(true) - $startedAt, 1),
     'pages' => ['ok' => $ok, 'skip' => $skip, 'fail' => $fail, 'total' => count($paths)],
     'assets' => ['ok' => $aOk, 'skip' => $aSkip, 'fail' => $aFail, 'total' => count($assets)],
+    'survey_queue' => $queued ? ['sent' => $queued[0], 'left' => $queued[1]] : null,
     'bytes' => $bytes,
     'by' => $by,
     'auto_time' => $by === 'auto' ? time() : ($previous['auto_time'] ?? null),

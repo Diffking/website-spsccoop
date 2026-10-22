@@ -7,7 +7,6 @@ import { localAsset } from "@/lib/assetFallback";
 import { inlineSvg } from "@/lib/inlineSvg";
 import { svgWithClass } from "@/lib/svg";
 import { NOT_OPEN, publicSurvey } from "@/lib/surveyPublic";
-import { memberSourceReady } from "@/lib/memberLookup";
 import { thaiDateTime } from "@/lib/surveyTime";
 
 /**
@@ -42,12 +41,13 @@ export default async function SurveyPage({ params }: Params) {
   const raw = await inlineSvg(localAsset(brand.logoUrl));
   const logo = raw ? svgWithClass(raw, "h-9 w-9 object-contain", brand.name) : null;
 
+  /*
+   * ปิดหน้าเฉพาะตอนยังไม่ถึงเวลา/ปิดรับแล้ว — ฐานสมาชิกไม่พร้อมไม่ปิดหน้า
+   * หน้าจอเปลี่ยนไปโหมด "ฝากคำตอบ ตรวจทีหลัง" เอง (เจ้าของเว็บสั่ง 22 ต.ค. 2569: ส่งได้ปกติ แล้วรีเช็คทีหลัง)
+   * หน้านี้ถูกเก็บสำเนาบนโฮสต์ จึงห้ามตัดสินจากสภาพของเครื่องนี้ตอน render
+   */
   const blocked =
-    survey.status === "scheduled" || survey.status === "closed"
-      ? NOT_OPEN[survey.status]
-      : !memberSourceReady()
-        ? "ระบบยืนยันตัวตนยังไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลัง"
-        : null;
+    survey.status === "scheduled" || survey.status === "closed" ? NOT_OPEN[survey.status] : null;
 
   return (
     <main className="min-h-screen bg-sky-soft">

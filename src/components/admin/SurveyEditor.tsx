@@ -56,6 +56,8 @@ export type SurveyEditorProps = {
   closedAt: string | null;
   status: SurveyStatus;
   responses: number;
+  /** ตัวนับตามสถานะการตรวจกับฐานสมาชิก (ดู src/lib/surveyVerify.ts) */
+  counts: Record<"verified" | "pending" | "review" | "rejected", number>;
   updatedAt: string;
 };
 
@@ -297,9 +299,16 @@ export default function SurveyEditor(props: SurveyEditorProps) {
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_TONE[props.status]}`}>
               {STATUS_LABEL[props.status]}
             </span>
-            <span className="inline-flex items-center gap-1 text-xs text-gray-500">
-              <Users className="h-3.5 w-3.5" /> ผู้ตอบ {props.responses.toLocaleString("th-TH")} คน
-            </span>
+            <Link
+              href={`/admin/surveys/${props.id}/responses/`}
+              title="ดูรายชื่อผู้ตอบ และตรวจรายการที่ระบบตรวจไม่ลงตัว"
+              className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-full bg-gray-50 px-2.5 py-0.5 text-xs text-gray-600 ring-1 ring-gray-200 transition hover:text-brand-700 hover:ring-brand-300"
+            >
+              <Users className="h-3.5 w-3.5" /> ตรวจแล้ว {props.counts.verified.toLocaleString("th-TH")}
+              {props.counts.pending > 0 && <span className="text-sky-700">· รอตรวจ {props.counts.pending}</span>}
+              {props.counts.review > 0 && <span className="font-semibold text-amber-700">· ให้เจ้าหน้าที่ดู {props.counts.review}</span>}
+              {props.counts.rejected > 0 && <span className="text-gray-400">· ไม่ผ่าน {props.counts.rejected}</span>}
+            </Link>
             <span className="text-xs text-gray-400">· {shownCount} ข้อ</span>
             {props.closedAt && (
               <span className="text-xs text-gray-500">· กดปิดเมื่อ {thaiDateTime(props.closedAt)}</span>
