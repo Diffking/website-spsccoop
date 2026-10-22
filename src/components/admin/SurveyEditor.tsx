@@ -11,7 +11,9 @@ import {
   CircleStop,
   Copy,
   ExternalLink,
+  Eye,
   Loader2,
+  Printer,
   Play,
   Plus,
   RotateCcw,
@@ -24,6 +26,7 @@ import {
 } from "lucide-react";
 import ThaiDatePicker from "@/components/admin/ThaiDatePicker";
 import SurveyItemCard, { type Locks } from "@/components/admin/SurveyItemCard";
+import SurveyQr from "@/components/admin/SurveyQr";
 import { STATUS_TONE } from "@/components/admin/SurveysList";
 import {
   KIND_HINT,
@@ -41,7 +44,10 @@ import { joinThai, splitThai, thaiDateTime } from "@/lib/surveyTime";
 
 export type SurveyEditorProps = {
   id: string;
+  code: string;
   url: string;
+  /** โลโก้สหกรณ์ไว้แปะกลาง QR — ไม่มีก็ได้ QR เปล่า */
+  logoUrl: string | null;
   title: string;
   description: string;
   items: SurveyItem[];
@@ -314,24 +320,45 @@ export default function SurveyEditor(props: SurveyEditorProps) {
             className={`${input} resize-y`}
           />
 
-          {/* ลิงก์ที่แจกให้สมาชิก — www.spsccoop.com เปิดได้ตลอด 24 ชม. · QR มาในเฟสถัดไป */}
-          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-gray-50 px-3 py-2">
-            <span className="text-xs text-gray-500">ลิงก์สำหรับสมาชิก</span>
-            <code className="min-w-0 flex-1 truncate text-sm text-brand-700">{props.url}</code>
-            <button
-              type="button"
-              onClick={copyLink}
-              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-gray-600 ring-1 ring-gray-200 transition hover:bg-white hover:text-brand-700"
-            >
-              {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "คัดลอกแล้ว" : "คัดลอก"}
-            </button>
+          {/* ลิงก์ + QR ที่แจกให้สมาชิก — www.spsccoop.com เปิดได้ตลอด 24 ชม. */}
+          <div className="grid gap-4 rounded-xl bg-gray-50 p-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <div className="min-w-0 space-y-2">
+              <p className="text-xs text-gray-500">ลิงก์สำหรับสมาชิก — ส่งทางไลน์ แปะในประกาศ หรือพิมพ์เป็น QR</p>
+              <div className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200">
+                <code className="min-w-0 flex-1 truncate text-sm text-brand-700">{props.url}</code>
+                <button
+                  type="button"
+                  onClick={copyLink}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs text-gray-600 ring-1 ring-gray-200 transition hover:bg-gray-50 hover:text-brand-700"
+                >
+                  {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? "คัดลอกแล้ว" : "คัดลอก"}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Link
+                  href={`/admin/surveys/${props.id}/preview/`}
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm text-gray-700 ring-1 ring-gray-200 transition hover:text-brand-700 hover:ring-brand-300"
+                >
+                  <Eye className="h-4 w-4" /> ดูตัวอย่างหน้าตอบ
+                </Link>
+                <Link
+                  href={`/admin/surveys/${props.id}/poster/`}
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm text-gray-700 ring-1 ring-gray-200 transition hover:text-brand-700 hover:ring-brand-300"
+                >
+                  <Printer className="h-4 w-4" /> พิมพ์โปสเตอร์ A4
+                </Link>
+              </div>
+              {!published && (
+                <p className="text-[11px] text-amber-700">
+                  ยังเป็นร่าง — ลิงก์และ QR นี้ใช้ได้จริงเมื่อกดเผยแพร่แล้ว (พิมพ์เตรียมไว้ก่อนได้ ลิงก์ไม่เปลี่ยน)
+                </p>
+              )}
+            </div>
+            <SurveyQr url={props.url} logoUrl={props.logoUrl} fileName={`qr-${props.code}`} />
           </div>
-          {!published && (
-            <p className="text-[11px] text-gray-400">
-              ยังเป็นร่าง — ลิงก์นี้ยังเปิดไม่ได้จนกว่าจะกดเผยแพร่ (หน้าตอบสำหรับสมาชิกมาในเฟสถัดไป)
-            </p>
-          )}
         </div>
       </section>
 

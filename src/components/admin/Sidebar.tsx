@@ -334,7 +334,7 @@ export default function Sidebar({
   return (
     <>
       {/* แถบบนสำหรับจอเล็ก — ปุ่มเปิดเมนู */}
-      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3 md:hidden">
+      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3 md:hidden print:hidden">
         <button
           onClick={() => setOpen(true)}
           aria-label="เปิดเมนู"
@@ -346,7 +346,8 @@ export default function Sidebar({
       </div>
 
       {/* เมนูค้างซ้ายบนจอใหญ่ */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-brand-800 md:flex">
+      {/* ตอนสั่งพิมพ์ (เช่น โปสเตอร์ QR แบบประเมิน) ไม่เอาเมนูติดไปบนกระดาษ */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-brand-800 md:flex print:hidden">
         {brand}
         <Nav user={user} />
         {footer}
