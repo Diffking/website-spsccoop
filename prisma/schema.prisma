@@ -250,6 +250,56 @@ model Setting {
   updatedAt DateTime @updatedAt
 }
 
+/// แบบประเมินความพึงพอใจ — เจ้าหน้าที่ตั้งคำถามเองแบบ Google Form
+///
+/// คำถามเก็บเป็น JSON ก้อนเดียว (ดูรูปร่างที่ src/lib/survey.ts) ไม่แตกเป็นตาราง
+/// เพราะต้องเรียงลำดับ ซ้อนตัวเลือก/แถว/คอลัมน์ และบันทึกทั้งชุดพร้อมกันอยู่แล้ว
+/// ทุกข้อมีรหัสถาวร คำตอบผูกกับรหัสข้อ ไม่ผูกกับลำดับ — สลับข้อแล้วคำตอบไม่หลุด
+model Survey {
+  id          String    @id @default(cuid())
+  /// รหัสในลิงก์ /s/<code>/ — สุ่ม 6 ตัว เดาไม่ได้ ไม่เปลี่ยนตลอดอายุแบบประเมิน
+  /// (QR ที่พิมพ์แจกไปแล้วต้องใช้ได้ตลอด)
+  code        String    @unique
+  title       String
+  description String    @default("")
+  questions   Json      @default("[]")
+  /// false = ร่าง ยังไม่มีใครเห็น
+  published   Boolean   @default(false)
+  /// ช่วงเปิดรับ — ว่าง = ไม่กำหนด (เปิดทันที / ปิดเมื่อกดปุ่มเอง)
+  opensAt     DateTime?
+  closesAt    DateTime?
+  /// กดปุ่ม "สิ้นสุดการประเมิน" เมื่อไหร่ — ว่าง = ยังไม่ได้กด · กด "เปิดรับต่อ" แล้วกลับเป็นว่าง
+  closedAt    DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  responses SurveyResponse[]
+}
+
+/// คำตอบหนึ่งชุด = สมาชิกหนึ่งคน (ตอบได้คนละครั้งต่อแบบประเมิน)
+///
+/// ชื่อ · เบอร์ · หน่วยงาน คัดลอกมาจากฐานสมาชิกตอนยืนยันตัวตน ไม่อ่านสดทุกครั้ง
+/// จับรางวัลกับส่งออกจึงทำได้แม้ฐานสมาชิกต่อไม่ได้ และข้อมูลตรงกับวันที่ตอบ
+model SurveyResponse {
+  id          String   @id @default(cuid())
+  surveyId    String
+  membNo      String
+  name        String
+  phone       String?
+  department  String?
+  /// ข้อมูลอื่นจากฐานสมาชิก (เพศ · ช่วงอายุ · ประเภทสมาชิก · เป็นเจ้าหน้าที่) — รูปร่างกำหนดในเฟส 1
+  profile     Json     @default("{}")
+  /// { รหัสข้อ: คำตอบ }
+  answers     Json     @default("{}")
+  submittedAt DateTime @default(now())
+
+  survey Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  @@unique([surveyId, membNo])
+  @@index([membNo])
+}
+
 /// ไฟล์ที่อัปจากหลังบ้าน — ไฟล์จริงอยู่ใน public/uploads (mount เป็น volume)
 model Media {
   id           String   @id @default(cuid())

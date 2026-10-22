@@ -6,6 +6,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Calculator,
+  ClipboardCheck,
   LayoutDashboard,
   Megaphone,
   PanelTop,
@@ -40,6 +41,7 @@ export type MenuKey =
   | "pages"
   | "designed"
   | "programs"
+  | "surveys"
   | "seo"
   | "bridge"
   | "users";
@@ -137,6 +139,14 @@ const ITEMS: {
     icon: Calculator,
     label: "หน้าโปรแกรม",
     desc: "เครื่องมือที่สมาชิกกดใช้ เช่น ตรวจสุขภาพการเงิน",
+  },
+  {
+    key: "surveys",
+    area: "surveys",
+    href: "/admin/surveys",
+    icon: ClipboardCheck,
+    label: "แบบประเมิน",
+    desc: "ตั้งคำถามความพึงพอใจ ส่งลิงก์ให้สมาชิกตอบ",
   },
   {
     key: "seo",
