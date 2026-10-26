@@ -92,3 +92,10 @@ export function maskName(full: string): string {
   const words = rest.split(/\s+/).filter(Boolean);
   return [title, ...words.map(hide)].filter(Boolean).join(" ");
 }
+
+/** "07337" → "07**7" — เห็นต้นกับท้ายพอให้เจ้าตัวจำได้ ไม่บอกเลขเต็มให้คนที่ไล่สุ่มเบอร์ */
+export function maskMembNo(membNo: string): string {
+  const s = membNo.trim();
+  if (s.length <= 3) return `${"*".repeat(Math.max(s.length - 1, 1))}${s.slice(-1)}`;
+  return `${s.slice(0, 2)}${"*".repeat(s.length - 3)}${s.slice(-1)}`;
+}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { lookupMember, maskName, memberSourceReady, readIdentifier } from "@/lib/memberLookup";
+import { lookupMember, maskMembNo, maskName, memberSourceReady, readIdentifier } from "@/lib/memberLookup";
 import { NOT_OPEN, publicSurvey } from "@/lib/surveyPublic";
 import { allowLookup, recordMiss, visitorIp } from "@/lib/surveyGuard";
 import { issueToken } from "@/lib/surveyToken";
@@ -11,8 +11,10 @@ type Params = { params: Promise<{ code: string }> };
 /**
  * ขั้นยืนยันตัวตน — สมาชิกใส่เบอร์มือถือหรือเลขที่สมาชิก
  *
- * เจอ = คืนชื่อแบบปิดบังบางส่วนให้กดยืนยันว่าใช่ตัวเอง + บัตรผ่านไว้แนบตอนส่งคำตอบ
- * ไม่คืนชื่อเต็ม เบอร์ หรือหน่วยงานออกไปเด็ดขาด — ของพวกนั้นอยู่ฝั่งเซิร์ฟเวอร์เท่านั้น
+ * เจอ = คืน "ใครคนนี้" ให้กดยืนยันว่าใช่ตัวเอง + บัตรผ่านไว้แนบตอนส่งคำตอบ
+ *   ชื่อปิดบังบางส่วน · เลขที่สมาชิกปิดบังบางส่วน · หน่วยงาน (เจ้าของเว็บเลือก 26 ต.ค. 2569)
+ *   หน้าจอโชว์ซ้ำอีกครั้งในหน้าตรวจทานก่อนส่ง
+ * ไม่คืนชื่อเต็ม เลขสมาชิกเต็ม หรือเบอร์ออกไปเด็ดขาด — ไม่งั้นช่องนี้กลายเป็นเครื่องค้นชื่อจากเบอร์
  *
  * อยู่นอก /api/admin ตั้งใจ: สมาชิกเรียกผ่าน www.spsccoop.com → ตัวมิเรอร์ส่งต่อมาที่นี่
  */
@@ -69,6 +71,7 @@ export async function POST(request: Request, { params }: Params) {
 
   const { member } = found;
   const masked = maskName(member.name);
+  const who = { membNo: maskMembNo(member.membNo), department: member.department ?? "" };
 
   const done = await db.surveyResponse.findUnique({
     where: { surveyId_membNo: { surveyId: survey.id, membNo: member.membNo } },
@@ -78,5 +81,5 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ already: true, name: masked, at: thaiDateTime(done.submittedAt) });
   }
 
-  return NextResponse.json({ name: masked, token: await issueToken(survey.id, member.membNo) });
+  return NextResponse.json({ name: masked, ...who, token: await issueToken(survey.id, member.membNo) });
 }
