@@ -60,6 +60,11 @@ const OFFLINE_HTML = `<!doctype html><html lang="th"><meta charset="utf-8"><meta
 <title>ปิดปรับปรุงชั่วคราว</title><body style="font-family:sans-serif;max-width:32rem;margin:15vh auto;padding:0 1rem;text-align:center;color:#1e3a5f">
 <h1>ระบบปิดปรับปรุงชั่วคราว</h1><p>กรุณาเปิดลิงก์นี้อีกครั้งในเวลาทำการของสหกรณ์</p></body></html>`;
 
+const CLOSED_MSG = "แบบประเมินนี้ปิดรับคำตอบแล้ว ขอบคุณที่ให้ความสนใจ";
+const CLOSED_HTML = `<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ปิดรับคำตอบแล้ว</title><body style="font-family:sans-serif;max-width:32rem;margin:15vh auto;padding:0 1rem;text-align:center;color:#1e3a5f">
+<h1>ปิดรับคำตอบแล้ว</h1><p>${CLOSED_MSG}</p></body></html>`;
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -169,7 +174,14 @@ async function handleGet(request: Request, env: Env, ctx: ExecutionContext, url:
     return new Response(request.method === "HEAD" ? null : buf, { status: 200, headers });
   }
 
-  // ต้นทางล่ม — เสิร์ฟสำเนา
+  // ต้นทางล่ม — เสิร์ฟสำเนา · เว้นแต่สำเนาเป็นฟอร์มที่เลยเวลาปิดรับไปแล้ว
+  const code = /^\/s\/([a-z0-9]{4,12})\/?$/.exec(url.pathname)?.[1];
+  if (code && (await closedBySnapshot(env, code))) {
+    return new Response(request.method === "HEAD" ? null : CLOSED_HTML, {
+      status: 200,
+      headers: { "content-type": "text/html; charset=utf-8", "x-edge": "closed", "cache-control": "no-store" },
+    });
+  }
   const stale = await snapshot(env, path, request.method, "stale");
   if (stale) return stale;
   if (PAGE.test(url.pathname)) {
@@ -195,6 +207,21 @@ async function snapshot(env: Env, path: string, method: string, state: "stale" |
       "cache-control": state === "cache" ? "public, max-age=31536000, immutable" : "no-store",
     },
   });
+}
+
+/**
+ * Worker ไม่รู้วันปิดรับเอง — อ่านจาก <meta name="survey-closes"> ที่หน้า /s/<code>/ ฝังไว้ (มิลลิวินาที)
+ * ในสำเนาล่าสุด · เลยเวลาแล้ว = ปิดรับ ไม่งั้นสมาชิกตอบหลังปิด หน้าจอบอกว่าได้รับ แล้วถูกปฏิเสธทีหลังเงียบ ๆ
+ * ไม่มีสำเนา / ไม่มีวันปิด = ไม่รู้ ถือว่ายังเปิด (เครื่องสำนักงานตัดสินซ้ำตอนดึงอยู่แล้ว)
+ */
+async function closedBySnapshot(env: Env, code: string): Promise<boolean> {
+  const snap = await env.DB.prepare("SELECT body FROM pages WHERE path = ? OR path = ? LIMIT 1")
+    .bind(`/s/${code}/`, `/s/${code}`)
+    .first<{ body: ArrayBuffer | number[] }>();
+  if (!snap) return false;
+  const bytes = snap.body instanceof ArrayBuffer ? new Uint8Array(snap.body) : Uint8Array.from(snap.body);
+  const at = /<meta name="survey-closes" content="(\d+)"/.exec(new TextDecoder().decode(bytes))?.[1];
+  return at !== undefined && Date.now() >= Number(at);
 }
 
 /**
@@ -237,6 +264,9 @@ async function handlePost(request: Request, env: Env, path: string, kind: string
 
   const res = await toOrigin(env, request, new URL(request.url), body);
   if (res) return res;
+
+  const code = API.exec(path)?.[1];
+  if (code && (await closedBySnapshot(env, code))) return json({ error: CLOSED_MSG }, 409);
 
   if (kind !== "queue") {
     // ให้หน้าจอเปลี่ยนเป็นโหมด "ฝากคำตอบ" (กรอกเบอร์ + ชื่อ) — ดู post() ใน SurveyForm.tsx

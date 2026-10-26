@@ -29,6 +29,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   return {
     title: survey?.title ?? "แบบประเมิน",
     robots: { index: false, follow: false },
+    // เวลาปิดรับ (มิลลิวินาที) ติดไปกับสำเนาที่ Worker เก็บ — เครื่องสำนักงานปิดแล้วเลยเวลา
+    // Worker จะขึ้นหน้า "ปิดรับแล้ว" และไม่รับฝากคำตอบเอง (cloudflare/survey-edge · closedBySnapshot)
+    other:
+      survey?.status === "open" && survey.closesAt ? { "survey-closes": String(survey.closesAt.getTime()) } : undefined,
   };
 }
 
