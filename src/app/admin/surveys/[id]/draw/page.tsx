@@ -23,7 +23,7 @@ export default async function DrawPage({ params }: Params) {
   if (!canArea(user, "surveys")) redirect(ADMIN_HOME);
 
   const { id } = await params;
-  if (memberSourceReady()) {
+  if (await memberSourceReady()) {
     await verifyResponses({ surveyId: id, recheck: true }).catch((e) => console.error("ตรวจซ้ำก่อนจับรางวัลไม่สำเร็จ:", e));
   }
   const state = await drawState(id);

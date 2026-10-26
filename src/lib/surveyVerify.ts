@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { lookupMember, memberSourceReady, readIdentifier, type Member } from "@/lib/memberLookup";
+import { checkMember, lookupMember, memberSourceReady, type Member } from "@/lib/memberLookup";
 
 /**
  * ตรวจคำตอบกับฐานสมาชิก — ข้อมูลที่เอาไปใช้ต่อต้องตรงกับฐาน 100% (เจ้าของเว็บกำหนด 22 ต.ค. 2569)
@@ -8,7 +8,7 @@ import { lookupMember, memberSourceReady, readIdentifier, type Member } from "@/
  * สถานะของคำตอบ:
  *   verified  ตรงกับฐาน — ใช้ต่อได้ (Dashboard · ส่งออก · จับรางวัล)
  *   pending   ฝากมาตอนระบบไม่พร้อม ยังไม่ได้เทียบ
- *   review    เทียบแล้วไม่ลงตัว (ชื่อไม่ตรง · ไม่พบเบอร์ · ไม่พบในฐานแล้ว) — ให้เจ้าหน้าที่ดูรายคน
+ *   review    เทียบแล้วไม่ลงตัว (เบอร์ไม่ตรงกับเลขสมาชิก · ไม่พบเลข · ตรวจซ้ำแล้วหายจากทะเบียน) — ให้เจ้าหน้าที่ดูรายคน
  *   rejected  ไม่ผ่าน (ตอบซ้ำ · เจ้าหน้าที่ตัดทิ้ง) — เก็บไว้ตรวจย้อนได้ ไม่ใช้ต่อ
  *
  * ⚠️ ระบบไม่เคยตัดทิ้งเอง ยกเว้น "ตอบซ้ำ" ที่ชัดเจน — เคสกำกวมทุกเคสไปที่ review
@@ -24,20 +24,6 @@ export const VERIFY_LABEL: Record<VerifyStatus, string> = {
   review: "ให้เจ้าหน้าที่ดู",
   rejected: "ไม่ผ่าน",
 };
-
-const TITLES = /^(นางสาว|น\.ส\.|นาย|นาง|ด\.ช\.|ด\.ญ\.|ว่าที่\s*ร\.?\s*ต\.?|ว่าที่ร้อยตรี|ดร\.|นพ\.|พญ\.|ทพ\.|ทพญ\.|ภก\.|ภญ\.)\s*/;
-
-/** ชื่อสำหรับเทียบ — ตัดคำนำหน้า ช่องว่าง และอักขระที่มองไม่เห็นทิ้ง */
-export function nameKey(name: string): string {
-  return name
-    .normalize("NFC")
-    .replace(/[​-‍﻿]/g, "")
-    .trim()
-    .replace(TITLES, "")
-    .replace(/\s+/g, "");
-}
-
-export const sameName = (a: string, b: string) => nameKey(a) !== "" && nameKey(a) === nameKey(b);
 
 /** ข้อมูลจากฐานที่ลงในแถวคำตอบตอนตรวจผ่าน */
 export function memberFields(m: Member) {
@@ -57,52 +43,36 @@ type Row = {
   id: string;
   surveyId: string;
   membNo: string | null;
-  claimedPhone: string | null;
-  claimedName: string | null;
+  claimedMembNo: string | null;
+  claimedPhoneHash: string | null;
   status: string;
 };
 
 /**
- * ตรวจคำตอบที่ฝากไว้หนึ่งแถว — คืนสถานะใหม่ หรือ null ถ้าฐานสมาชิกต่อไม่ได้ (ไว้ลองรอบหน้า)
+ * ตรวจคำตอบที่ฝากไว้หนึ่งแถว — เลขสมาชิกคู่กับ HMAC ของเบอร์ ต้องตรงทั้งคู่ (เหมือนยืนยันสด)
+ * คืนสถานะใหม่ หรือ null ถ้าทะเบียนไม่พร้อม (ไว้ลองรอบหน้า)
  */
 async function verifyClaim(row: Row): Promise<VerifyStatus | null> {
-  const id = readIdentifier(row.claimedPhone ?? "");
   const now = new Date();
-  if (!id) {
-    await db.surveyResponse.update({
-      where: { id: row.id },
-      data: { status: "review", statusNote: "เบอร์/เลขสมาชิกที่กรอกมาไม่ถูกรูปแบบ", checkedAt: now },
-    });
-    return "review";
+  const toReview = async (statusNote: string) => {
+    await db.surveyResponse.update({ where: { id: row.id }, data: { status: "review", statusNote, checkedAt: now } });
+    return "review" as const;
+  };
+  if (!row.claimedMembNo || !row.claimedPhoneHash) {
+    return toReview("ฝากมาแบบเดิม (เบอร์ + ชื่อ) — ไม่มีเลขสมาชิกให้เทียบ ต้องให้เจ้าหน้าที่ผูกเอง");
   }
 
-  const found = await lookupMember(id);
+  const found = await checkMember(row.claimedMembNo, row.claimedPhoneHash);
   if (!found.ok && found.reason === "unavailable") return null;
   if (!found.ok) {
-    await db.surveyResponse.update({
-      where: { id: row.id },
-      data: {
-        status: "review",
-        statusNote: id.kind === "phone" ? "ไม่พบเบอร์นี้ในทะเบียนสมาชิก" : "ไม่พบเลขที่สมาชิกนี้",
-        checkedAt: now,
-      },
-    });
-    return "review";
+    return toReview(
+      found.reason === "notfound"
+        ? `ไม่พบเลขที่สมาชิก ${row.claimedMembNo} ในทะเบียนปัจจุบัน`
+        : `เบอร์ที่กรอกไม่ตรงกับทะเบียนของสมาชิกเลขที่ ${row.claimedMembNo}`,
+    );
   }
 
   const { member } = found;
-  if (!sameName(member.name, row.claimedName ?? "")) {
-    // เก็บเลขที่เจอไว้ในหมายเหตุ เจ้าหน้าที่จะได้เทียบได้ทันที — แต่ยังไม่ผูกตัวจนกว่าคนจะยืนยัน
-    await db.surveyResponse.update({
-      where: { id: row.id },
-      data: {
-        status: "review",
-        statusNote: `ชื่อที่กรอกไม่ตรงกับฐาน — เบอร์นี้เป็นของสมาชิกเลขที่ ${member.membNo}`,
-        checkedAt: now,
-      },
-    });
-    return "review";
-  }
 
   try {
     await db.surveyResponse.update({
@@ -123,7 +93,7 @@ async function verifyClaim(row: Row): Promise<VerifyStatus | null> {
 
 /** ตรวจซ้ำคนที่ผ่านไปแล้ว — ยังอยู่ในทะเบียนไหม (เผื่อพ้นสภาพสมาชิกระหว่างเปิดรับ) */
 async function recheckVerified(row: Row): Promise<VerifyStatus | null> {
-  const found = await lookupMember({ kind: "membNo", value: row.membNo ?? "" });
+  const found = await lookupMember(row.membNo ?? "");
   if (!found.ok && found.reason === "unavailable") return null;
   const now = new Date();
   if (!found.ok) {
@@ -155,14 +125,16 @@ export type VerifyReport = {
  * ฐานสมาชิกต่อไม่ได้กลางทาง = หยุดทันที ไม่แตะแถวที่เหลือ (ไม่ตัดใครทิ้งเพราะระบบล่ม)
  */
 export async function verifyResponses(opts: { surveyId?: string; recheck?: boolean } = {}): Promise<VerifyReport> {
-  const report: VerifyReport = { ready: memberSourceReady(), checked: 0, verified: 0, review: 0, rejected: 0, stopped: false };
+  // ทะเบียนว่าง (ยังไม่เคยรับ / ลบทิ้งหลังจบการประเมิน) = ไม่พร้อม ไม่แตะใครเลย
+  // ⚠️ ห้ามตีความว่า "ไม่พบ" ไม่งั้นลบทะเบียนแล้วกดตรวจซ้ำ คนที่ผ่านแล้วจะกลายเป็น review หมด
+  const report: VerifyReport = { ready: await memberSourceReady(), checked: 0, verified: 0, review: 0, rejected: 0, stopped: false };
   if (!report.ready) return report;
 
   const statuses = opts.recheck ? ["pending", "verified"] : ["pending"];
   const rows = await db.surveyResponse.findMany({
     where: { status: { in: statuses }, ...(opts.surveyId ? { surveyId: opts.surveyId } : {}) },
     orderBy: { submittedAt: "asc" },
-    select: { id: true, surveyId: true, membNo: true, claimedPhone: true, claimedName: true, status: true },
+    select: { id: true, surveyId: true, membNo: true, claimedMembNo: true, claimedPhoneHash: true, status: true },
   });
 
   for (const row of rows) {

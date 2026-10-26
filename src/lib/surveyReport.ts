@@ -244,7 +244,8 @@ export function dimensions(items: SurveyItem[], responses: ResponseForReport[]):
     );
 
   const deps = distinct("department");
-  if (deps.length) dims.push({ key: "department", label: "หน่วยงาน", values: deps.map((v) => ({ value: v, label: v })) });
+  // dept_name จาก sync-agent คือ "กลุ่มเรียกเก็บ" ไม่ใช่ที่ทำงานจริงเสมอไป — เรียกตามจริง กรรมการจะได้ไม่อ่านผิด
+  if (deps.length) dims.push({ key: "department", label: "กลุ่มเรียกเก็บ", values: deps.map((v) => ({ value: v, label: v })) });
   for (const p of PROFILE_DIMS) {
     const vals = distinct(`profile.${p.field}`);
     if (vals.length) dims.push({ key: `profile.${p.field}`, label: p.label, values: vals.map((v) => ({ value: v, label: v })) });

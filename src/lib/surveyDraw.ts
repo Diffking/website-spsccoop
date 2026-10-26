@@ -16,7 +16,7 @@ import { surveyStatus } from "@/lib/survey";
  * จอโชว์ก่อนกด · กดแล้วเซิร์ฟเวอร์คิดใหม่ ถ้าไม่ตรง = รายชื่อเปลี่ยนระหว่างนั้น ไม่จับให้
  */
 
-/** เจ้าหน้าที่สหกรณ์ — ช่องจริงในฐานสมาชิกกำหนดตอนต่อฐาน (เฟส 1) ตอนนี้ใช้ profile.isStaff */
+/** พนักงานสหกรณ์ — is_staff จากทะเบียน sync-agent (ประเภท 3 และ A) ลงแถวคำตอบเป็น profile.isStaff */
 export const isStaff = (profile: unknown) => (profile as Record<string, unknown> | null)?.isStaff === true;
 
 export function poolHashOf(membNos: string[]): string {
@@ -82,7 +82,7 @@ export async function drawState(surveyId: string) {
   if (status !== "closed") blockers.push("ยังไม่ได้กด \"สิ้นสุดการประเมิน\"");
   if (pending > 0) blockers.push(`มีคำตอบรอตรวจกับทะเบียน ${pending} รายการ`);
   if (review > 0) blockers.push(`มีรายการให้เจ้าหน้าที่ดู ${review} รายการ`);
-  if (!memberSourceReady()) blockers.push("ยังไม่ได้เชื่อมฐานทะเบียนสมาชิก");
+  if (!(await memberSourceReady())) blockers.push("ยังไม่ได้รับทะเบียนสมาชิกจาก sync-agent");
 
   // รอบ: จับไปแล้วแต่มีการเปิดรับต่อแล้วปิดใหม่ (closedAt ใหม่กว่าการจับล่าสุด) = รอบถัดไป
   const last = draws[draws.length - 1];

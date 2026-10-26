@@ -33,6 +33,7 @@ export default async function SurveyResponsesPage({ params }: Params) {
         department: true,
         submittedAt: true,
         source: true,
+        claimedMembNo: true,
         claimedPhone: true,
         claimedName: true,
         status: true,
@@ -50,7 +51,7 @@ export default async function SurveyResponsesPage({ params }: Params) {
       <SurveyResponsesManager
         surveyId={survey.id}
         title={survey.title}
-        sourceReady={memberSourceReady()}
+        sourceReady={await memberSourceReady()}
         counts={counts[id]}
         rows={rows.map((r) => ({
           ...r,

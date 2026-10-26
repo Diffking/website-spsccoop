@@ -30,7 +30,10 @@ export type ResponseRow = {
   department: string | null;
   submittedAt: string;
   source: string;
+  claimedMembNo: string | null;
+  /** เบอร์ที่สมาชิกกรอก แบบปิดบัง (081-xxx-5678) — เบอร์เต็มไม่เก็บ */
   claimedPhone: string | null;
+  /** รูปแบบเดิมก่อนรับทะเบียนจาก sync-agent */
   claimedName: string | null;
   status: string;
   statusNote: string | null;
@@ -226,7 +229,7 @@ export default function SurveyResponsesManager({
         {!sourceReady && (
           <p className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            ยังไม่ได้เชื่อมฐานทะเบียนสมาชิก — คำตอบทุกรายการค้างที่ &quot;รอตรวจ&quot; จนกว่าจะเชื่อม แล้วระบบจะตรวจให้เอง
+            ยังไม่มีทะเบียนสมาชิกจาก sync-agent — คำตอบทุกรายการค้างที่ &quot;รอตรวจ&quot; จนกว่าจะได้รับ แล้วระบบจะตรวจให้เอง
           </p>
         )}
 
@@ -293,16 +296,16 @@ export default function SurveyResponsesManager({
                         </p>
                       ) : (
                         <p className="font-medium text-gray-800">
-                          {r.claimedName ?? r.name ?? "—"}{" "}
+                          {r.claimedMembNo ? `เลขที่ ${r.claimedMembNo}` : (r.claimedName ?? r.name ?? "—")}{" "}
                           <span className="font-normal text-gray-500">(กรอกเอง)</span>
                         </p>
                       )}
                       <p className="text-xs text-gray-500">
-                        {known ? `${r.phone ?? "ไม่มีเบอร์"} · ${r.department ?? "ไม่ระบุหน่วยงาน"}` : `กรอกเบอร์/เลข: ${r.claimedPhone ?? "—"}`}
+                        {known ? `กลุ่มเรียกเก็บ ${r.department ?? "—"}` : `เบอร์ที่กรอก: ${r.claimedPhone ?? "—"}`}
                       </p>
-                      {known && r.claimedName && (
+                      {known && r.claimedMembNo && (
                         <p className="text-xs text-gray-400">
-                          สมาชิกกรอกเอง: {r.claimedName} · {r.claimedPhone}
+                          สมาชิกกรอกเอง: เลขที่ {r.claimedMembNo} · {r.claimedPhone}
                         </p>
                       )}
                       <p className="mt-0.5 text-xs text-gray-400">
@@ -320,7 +323,7 @@ export default function SurveyResponsesManager({
                         <button
                           onClick={() => setOpen(open === r.id ? null : r.id)}
                           disabled={!sourceReady}
-                          title={sourceReady ? undefined : "ยังไม่ได้เชื่อมฐานสมาชิก"}
+                          title={sourceReady ? undefined : "ยังไม่มีทะเบียนสมาชิก"}
                           className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs text-brand-700 ring-1 ring-brand-200 transition hover:bg-brand-50 disabled:opacity-50"
                         >
                           <UserCheck className="h-3.5 w-3.5" /> แก้ให้ตรงกับระบบ

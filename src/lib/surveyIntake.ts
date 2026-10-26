@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { readIdentifier } from "@/lib/memberLookup";
+import { maskPhone, normalizePhone, phoneHash, readMembNo } from "@/lib/memberLookup";
 import { publicSurvey, NOT_OPEN } from "@/lib/surveyPublic";
 import { surveyStatus } from "@/lib/survey";
 import { checkAnswers } from "@/lib/surveyAnswers";
@@ -8,12 +8,15 @@ import { verifyResponses } from "@/lib/surveyVerify";
 
 /**
  * รับคำตอบแบบ "ฝากไว้ ตรวจทีหลัง" หนึ่งรายการ — ใช้ร่วมกันสองทาง
- *   1. POST /api/survey/<code>/queue/ — เบราว์เซอร์ส่งตรง (เครื่องเปิด แต่ฐานสมาชิกไม่พร้อม)
+ *   1. POST /api/survey/<code>/queue/ — เบราว์เซอร์ส่งตรง (เครื่องเปิด แต่ทะเบียนสมาชิกไม่พร้อม)
  *   2. POST /api/survey/pull/ — ดึงของที่ Cloudflare Worker พักไว้ตอนเครื่องปิด (src/lib/surveyEdge.ts)
+ *
+ * body = { membNo, phone, answers } — เลขสมาชิกคู่กับเบอร์ เหมือนตอนยืนยันสด (สเปก sync-agent)
+ * เบอร์ไม่เก็บตัวเต็ม: เก็บ HMAC ไว้เทียบ + แบบปิดบังไว้ให้เจ้าหน้าที่ดู
  *
  * คืน { status, body } ตามความหมายเดียวกับ HTTP:
  *   2xx = รับแล้ว (หรือเคยรับแล้ว) · 4xx = รายการเสีย ส่งซ้ำก็ไม่ผ่าน · ห้ามคืน 5xx กับของแบบนั้น
- *   (ตัวดึงจาก Worker ใช้ตัดสินว่าจะลบออกจากกล่อง / เก็บเป็นรายการเสีย / ลองใหม่)
+ *   5xx = ฝั่งเราไม่พร้อม (ยังไม่ได้ตั้ง EVAL_PHONE_PEPPER) — ตัวดึงจาก Worker เก็บไว้ลองรอบหน้า
  */
 export async function acceptQueued(
   code: string,
@@ -32,12 +35,13 @@ export async function acceptQueued(
     return { status: 409, body: { error: NOT_OPEN[statusThen as "scheduled" | "closed"] } };
   }
 
-  const phone = typeof body.phone === "string" ? body.phone : "";
-  const name = typeof body.name === "string" ? body.name.trim().slice(0, 200) : "";
-  const id = readIdentifier(phone);
-  if (!id || !name) {
-    return { status: 400, body: { error: "กรุณากรอกเบอร์มือถือ (หรือเลขที่สมาชิก) และชื่อ-สกุล" } };
+  const membNo = readMembNo(body.membNo);
+  const phone = normalizePhone(body.phone);
+  if (!membNo || !phone) {
+    return { status: 400, body: { error: "กรุณากรอกเลขที่สมาชิกและเบอร์มือถือ 10 หลักให้ครบ" } };
   }
+  const hash = phoneHash(phone);
+  if (!hash) return { status: 503, body: { error: "ระบบรับคำตอบยังไม่พร้อม กรุณาลองใหม่ภายหลัง" } };
 
   const { answers, missing } = checkAnswers(survey.items, body.answers);
   if (missing.length) {
@@ -52,8 +56,9 @@ export async function acceptQueued(
         submittedAt,
         source: "queued",
         queueId: opts.queueId ?? null,
-        claimedPhone: id.value,
-        claimedName: name,
+        claimedMembNo: membNo,
+        claimedPhone: maskPhone(phone),
+        claimedPhoneHash: hash,
         status: "pending",
       },
     });
@@ -65,7 +70,7 @@ export async function acceptQueued(
     throw e;
   }
 
-  // ลองตรวจทันที — ฐานไม่พร้อมก็แค่ค้างไว้ ไม่ทำให้การรับคำตอบล้ม
+  // ลองตรวจทันที — ทะเบียนไม่พร้อมก็แค่ค้างไว้ ไม่ทำให้การรับคำตอบล้ม
   await verifyResponses({ surveyId: survey.id }).catch((e) => console.error("ตรวจคำตอบไม่สำเร็จ:", e));
   return { status: 200, body: { ok: true, queued: true } };
 }
