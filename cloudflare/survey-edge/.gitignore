@@ -1,0 +1,4 @@
+node_modules/
+.wrangler/
+# secret สำหรับ wrangler dev บนเครื่อง — มีโทเคนจริง ห้ามขึ้น git
+.dev.vars

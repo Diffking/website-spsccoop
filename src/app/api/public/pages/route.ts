@@ -150,31 +150,8 @@ async function ebookPaths(): Promise<string[]> {
   }
 }
 
-/**
- * หน้าตอบแบบประเมิน (/s/<code>/) ที่เผยแพร่และยังไม่ปิด
- *
- * ลิงก์/QR ที่แจกชี้ www.spsccoop.com — ตอนเครื่องสำนักงานปิด โฮสต์ต้องมีสำเนาหน้านี้ไว้แล้ว
- * สมาชิกถึงจะเปิดแล้วฝากคำตอบได้ (ไม่งั้นเจอหน้าปรับปรุง) · ไม่อยู่ใน publicPaths ตั้งใจ
- * (ไม่ใช่หน้าให้กูเกิลเก็บ และไม่นับผู้เข้าชม)
- */
-async function surveyPaths(): Promise<string[]> {
-  try {
-    const now = new Date();
-    const rows = await db.survey.findMany({
-      where: { published: true, closedAt: null, OR: [{ closesAt: null }, { closesAt: { gt: now } }] },
-      select: { code: true },
-    });
-    return rows.map((r) => `/s/${r.code}/`);
-  } catch (error) {
-    console.error("อ่านรายชื่อแบบประเมินไม่ได้:", error);
-    return [];
-  }
-}
-
 export async function GET() {
-  const paths = [
-    ...new Set([...(await publicPaths()), ...WARM_ONLY_PATHS, ...(await ebookPaths()), ...(await surveyPaths())]),
-  ];
+  const paths = [...new Set([...(await publicPaths()), ...WARM_ONLY_PATHS, ...(await ebookPaths())])];
 
   // รวมสองทาง: ไล่โฟลเดอร์ (รูปทั้งหมด) + ถามฐาน (ไฟล์แนบประกาศที่ยังเผยแพร่อยู่)
   const [runtime, fromDb] = await Promise.all([runtimeFiles(), filesInDatabase()]);

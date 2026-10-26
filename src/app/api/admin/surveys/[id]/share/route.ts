@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 type Params = { params: Promise<{ id: string }> };
 
 /**
- * ลิงก์ให้กรรมการดูผลสรุป /r/<token>/ (ผ่าน www.spsccoop.com — เจ้าของเว็บเลือก 22 ต.ค. 2569)
+ * ลิงก์ให้กรรมการดูผลสรุป /r/<token>/ (ผ่าน Cloudflare Worker โดเมนเดียวกับลิงก์แบบประเมิน)
  *
  *   POST   { expiresAt? }  สร้างลิงก์ใหม่ (ลิงก์เดิมตายทันที) · ตั้ง/เปลี่ยนวันหมดอายุ
  *   DELETE                 ยกเลิกลิงก์

@@ -343,7 +343,7 @@ export default function SurveyEditor(props: SurveyEditorProps) {
             className={`${input} resize-y`}
           />
 
-          {/* ลิงก์ + QR ที่แจกให้สมาชิก — www.spsccoop.com เปิดได้ตลอด 24 ชม. */}
+          {/* ลิงก์ + QR ที่แจกให้สมาชิก — survey.spsccoop.org (Cloudflare Worker) เปิดได้ตลอด 24 ชม. */}
           <div className="grid gap-4 rounded-xl bg-gray-50 p-3 sm:grid-cols-[minmax(0,1fr)_auto]">
             <div className="min-w-0 space-y-2">
               <p className="text-xs text-gray-500">ลิงก์สำหรับสมาชิก — ส่งทางไลน์ แปะในประกาศ หรือพิมพ์เป็น QR</p>

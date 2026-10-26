@@ -219,7 +219,8 @@ services:
           sleep 21600
         done
 
-  # ตัวตรวจคำตอบแบบประเมินกับฐานสมาชิก — ทุก 10 นาที (ดู src/lib/surveyVerify.ts)
+  # ตัวตรวจคำตอบแบบประเมินกับฐานสมาชิก + ดึงคำตอบที่ Worker พักไว้ — ทุก 10 นาที
+  # (ดู src/lib/surveyVerify.ts · src/lib/surveyEdge.ts)
   # คำตอบที่ฝากมาตอนเครื่อง/ฐานสมาชิกไม่พร้อม จะถูกตรวจเองเมื่อพร้อม ไม่ต้องรอใครกด
   # ยิงแค่ web:3000 → ฐานสมาชิกในวงแลน · ไม่แตะโฮสต์ spsccoop.com เลย จึงถี่ได้
   # ไม่มีอะไรรอตรวจ = เงียบ · ใช้โทเคนตัวเดียวกับ holiday-sync (ไม่ตั้ง = ไม่ทำงาน)
@@ -239,6 +240,13 @@ services:
         sleep 60
         while true; do
           if [ -n "$$HOLIDAY_SYNC_TOKEN" ]; then
+            # ดึงคำตอบที่ Cloudflare Worker พักไว้ตอนเครื่องปิด + ให้ Worker เก็บสำเนาหน้าแบบประเมิน
+            # (ทิศ เครื่องนี้ → Cloudflare · ไม่แตะโฮสต์ spsccoop.com) — เงียบเมื่อไม่มีของใหม่
+            pull=$$(curl -s -m 300 -X POST -H "x-sync-token: $$HOLIDAY_SYNC_TOKEN" http://web:3000/api/survey/pull/)
+            case "$$pull" in
+              *'"fetched":0,'*'"error"'*|*'"fetched":0,'*) ;;
+              *) echo "ดึงคำตอบจาก Worker $$(date '+%F %H:%M') $${pull:-ไม่มีคำตอบ}" ;;
+            esac
             out=$$(curl -s -m 300 -X POST -H "x-sync-token: $$HOLIDAY_SYNC_TOKEN" http://web:3000/api/survey/verify/)
             case "$$out" in
               *'"checked":0,'*) ;;

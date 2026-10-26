@@ -2,22 +2,22 @@ import { createDecipheriv, generateKeyPairSync, privateDecrypt, randomBytes, tim
 import { db } from "@/lib/db";
 
 /**
- * กล่องพักคำตอบบนโฮสต์ — ตอนเครื่องสำนักงานปิด สมาชิกยังส่งคำตอบได้
+ * กุญแจของกล่องพักคำตอบ — Cloudflare Worker ที่ survey.spsccoop.org (cloudflare/survey-edge/)
  *
  * ```
- * เครื่องปิด:  สมาชิก → www.spsccoop.com (PHP) → เข้ารหัส → พักใน MySQL spsccoop_cast
- * เครื่องเปิด: PHP ส่งรายการที่พักไว้มาที่ /api/survey/<code>/queue/ → รอตรวจ → ลบออกจากโฮสต์
+ * เครื่องปิด:  สมาชิก → Worker → เข้ารหัส → พักใน Cloudflare D1
+ * เครื่องเปิด: เครื่องนี้ไปดึงเองทุก 10 นาที (src/lib/surveyEdge.ts) → รอตรวจ → สั่ง Worker ลบ
  * ```
  *
- * **โฮสต์อ่านคำตอบที่พักไว้ไม่ได้** — PHP ได้แค่กุญแจสาธารณะ (ล็อกได้อย่างเดียว)
- * กุญแจไขอยู่ใน Setting["surveyQueue"] บนเครื่องนี้ที่เดียว (โฮสต์เป็นเครื่องเช่าใช้ร่วมกับเว็บอื่น)
- * เข้ารหัสแบบผสม: เนื้อหาด้วย AES-256-GCM · กุญแจ AES ด้วย RSA-OAEP (SHA-1 ตามค่าตั้งต้นของ PHP)
+ * **Cloudflare อ่านคำตอบที่พักไว้ไม่ได้** — Worker ได้แค่กุญแจสาธารณะ (ล็อกได้อย่างเดียว)
+ * กุญแจไขอยู่ใน Setting["surveyQueue"] บนเครื่องนี้ที่เดียว
+ * เข้ารหัสแบบผสม: เนื้อหาด้วย AES-256-GCM · กุญแจ AES ด้วย RSA-OAEP (SHA-1)
  *
- * โทเคนของกล่อง (token) ใช้ยืนยันว่ารายการที่ส่งมามาจากโฮสต์จริง — ถึงจะเชื่อ "เวลาที่ส่ง"
- * ที่โฮสต์บอกมาได้ (คำขอจากคนทั่วไปใช้เวลาที่มาถึงเครื่องนี้เสมอ ย้อนเวลาไม่ได้)
+ * โทเคน (token) ใช้ยืนยันกันทั้งสองทาง — เครื่องนี้ขอรายการ/สั่งลบกับ Worker ได้ คนอื่นไม่ได้
+ * ทั้งกุญแจและโทเคนสร้างเองครั้งแรกที่ใช้ แล้วหน้าแบบประเมินในหลังบ้านโชว์ให้ ADMIN คัดลอกไปตั้ง
+ * เป็น secret ของ Worker · ไม่อยู่ใน .env เพราะ .env เป็นของเจ้าของเว็บ
  *
- * ทั้งกุญแจและโทเคนสร้างเองครั้งแรกที่ใช้ แล้วหน้าแบบประเมินในหลังบ้านโชว์ให้คัดลอกไปใส่
- * config.php บนโฮสต์ · ไม่อยู่ใน .env เพราะ .env เป็นของเจ้าของเว็บ
+ * ⚠️ เดิมกล่องนี้อยู่บนโฮสต์ PHP + MySQL — เจ้าของเว็บสั่งเลิกใช้ PHP 26 ต.ค. 2569 ย้ายมา Worker
  */
 
 const KEY = "surveyQueue";
@@ -51,17 +51,16 @@ export async function queueKeys(): Promise<QueueKeys> {
   return saved;
 }
 
-/** รายการนี้มาจากโฮสต์จริงไหม */
-export async function fromHost(request: Request): Promise<boolean> {
-  const given = Buffer.from(request.headers.get("x-queue-token") ?? "");
-  if (given.length === 0) return false;
+/** โทเคนตรงไหม — เทียบแบบเวลาคงที่ */
+export async function tokenOk(given: string | null | undefined): Promise<boolean> {
+  const g = Buffer.from(given ?? "");
   const expected = Buffer.from((await queueKeys()).token);
-  return given.length === expected.length && timingSafeEqual(given, expected);
+  return g.length === expected.length && g.length > 0 && timingSafeEqual(g, expected);
 }
 
 export type Sealed = { k: string; iv: string; tag: string; data: string };
 
-/** ไขของที่โฮสต์ล็อกไว้ — คืน null ถ้าไม่ใช่ของเรา หรือถูกแก้กลางทาง (GCM ตรวจให้) */
+/** ไขของที่ Worker ล็อกไว้ — คืน null ถ้าไม่ใช่ของเรา หรือถูกแก้กลางทาง (GCM ตรวจให้) */
 export async function openSealed(sealed: unknown): Promise<string | null> {
   const s = sealed as Partial<Sealed> | null;
   if (!s?.k || !s.iv || !s.tag || !s.data) return null;
