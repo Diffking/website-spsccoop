@@ -1249,6 +1249,22 @@ npm run check:blocks -- pages.json out.txt      # ผลออกเป็นไ
 - ตรวจเมื่อไหร่: รับคำตอบฝาก · service `survey-verify` ทุก 10 นาที · **กด "สิ้นสุดการประเมิน" = ตรวจซ้ำทั้งชุด** · ปุ่มในหน้าผู้ตอบ
 - ฐานต่อไม่ได้กลางทาง = หยุดทันที ไม่ตัดใครทิ้งเพราะระบบล่ม
 
+### ⚠️ กันเว็บเชลล์ (PHP2Shell) บนโฮสต์ — เจ้าของเว็บสั่งให้ระวัง 26 ต.ค. 2569
+
+ตรวจ `php-frontend/` ทั้งหมดแล้ว: ไม่มี `eval/system/exec/shell_exec/passthru/backtick/unserialize/include ตัวแปร`
+· ชื่อไฟล์แคชเป็น `sha1(ที่อยู่)` + นามสกุลตายตัว คนนอกตั้งชื่อ/นามสกุลไฟล์บนโฮสต์ไม่ได้ · SQL เป็น prepared ทุกคำสั่ง
+
+ชั้นป้องกันเพิ่ม (ทดสอบกับ Apache + PHP 8.2 จริงแล้ว เว็บเชลล์ปลอมทุกตัวได้ 403 ไม่ได้รัน):
+
+- `.htaccess` **รัน PHP ได้แค่ `index.php` · `warm.php` · `purge.php`** ไฟล์ `.php/.phtml/.phar/...` อื่นถูกปฏิเสธหมด
+  ⚠️ **เพิ่มไฟล์ PHP ใหม่ที่ต้องเรียกผ่านเว็บ ต้องเติมชื่อใน `FilesMatch` บรรทัด `Require all granted`** ไม่งั้นได้ 403
+- `cache/.htaccess` (Require all denied + ปิด PHP engine) — `Mirror` สร้างให้เองถ้ายังไม่มี
+- `Mirror::strongToken()` — โทเคนว่าง · สั้นกว่า 24 ตัว · หรือยังเป็นข้อความตัวอย่างใน `config.sample.php`
+  = purge/warm/กล่องพักคำตอบไม่ทำงาน (โค้ดอยู่ใน git ใครก็อ่านค่าตัวอย่างได้) · โทเคนจริงตอนนี้ยาว 48 ผ่าน
+- `lib/*.php` มีด่าน `realpath(SCRIPT_FILENAME) === __FILE__` กันเปิดตรง ๆ เผื่อโฮสต์ไม่อ่าน `.htaccess`
+- ทดสอบซ้ำได้โดยไม่แตะโฮสต์: `docker run -p 127.0.0.1:8098:80 -v <สำเนา>:/var/www/html php:8.2-apache`
+  (เปิด `a2enmod rewrite` + `AllowOverride All`) ชี้ `backend` ไปพอร์ตตาย แล้ววางไฟล์ `shell.php` ลองเรียก
+
 ### กล่องพักคำตอบบนโฮสต์ (`php-frontend/lib/queue.php`)
 
 ```
