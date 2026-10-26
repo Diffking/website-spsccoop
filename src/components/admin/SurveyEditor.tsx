@@ -21,6 +21,7 @@ import {
   Save,
   Send,
   Trash2,
+  Trophy,
   Undo2,
   Users,
   X,
@@ -315,6 +316,12 @@ export default function SurveyEditor(props: SurveyEditorProps) {
               className="inline-flex items-center gap-1 rounded-full bg-brand-600 px-2.5 py-0.5 text-xs font-medium text-white transition hover:bg-brand-700"
             >
               <BarChart3 className="h-3.5 w-3.5" /> Dashboard สรุปผล
+            </Link>
+            <Link
+              href={`/admin/surveys/${props.id}/prizes/`}
+              className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-medium text-white transition hover:bg-amber-600"
+            >
+              <Trophy className="h-3.5 w-3.5" /> จับรางวัล
             </Link>
             <span className="text-xs text-gray-400">· {shownCount} ข้อ</span>
             {props.closedAt && (

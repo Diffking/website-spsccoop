@@ -282,6 +282,59 @@ model Survey {
   updatedAt   DateTime  @updatedAt
 
   responses SurveyResponse[]
+  prizes    SurveyPrize[]
+  draws     SurveyDraw[]
+}
+
+/// ของรางวัลของแบบประเมินหนึ่งชุด — จับรางวัลเล็กก่อน รางวัลใหญ่ท้ายสุด (sortOrder)
+model SurveyPrize {
+  id        String   @id @default(cuid())
+  surveyId  String
+  name      String
+  quantity  Int
+  /// one = จับทีละคนให้ลุ้น · batch = กดครั้งเดียวได้ทั้งชุด (รางวัลปลอบใจหลายสิบรางวัล)
+  mode      String   @default("one")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  survey Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  draws  SurveyDraw[]
+
+  @@index([surveyId, sortOrder])
+}
+
+/// ผลจับรางวัล หนึ่งแถว = ผู้โชคดีหนึ่งคน — **แก้ย้อนหลังไม่ได้** สละสิทธิ์ใช้ voided ไม่ลบแถว
+///
+/// คัดลอกชื่อ เบอร์ หน่วยงาน มาไว้ตอนจับ — ผลจับต้องอยู่ครบแม้คำตอบถูกแก้/ตัดทิ้งทีหลัง
+/// poolSize + poolHash = ผู้มีสิทธิ์ ณ ตอนกด (ลายนิ้วมือรายชื่อ) ไว้ตรวจย้อนว่าไม่มีใครแอบเพิ่ม/ลบชื่อ
+model SurveyDraw {
+  id           String    @id @default(cuid())
+  surveyId     String
+  prizeId      String
+  /// รอบจับรางวัล — เปิดรับต่อแล้วปิดใหม่หลังจับไปแล้ว = รอบถัดไป (คนที่ได้แล้วไม่มีสิทธิ์ซ้ำ)
+  round        Int       @default(1)
+  responseId   String
+  membNo       String
+  name         String
+  phone        String?
+  department   String?
+  poolSize     Int
+  poolHash     String
+  drawnAt      DateTime  @default(now())
+  drawnById    String?
+  drawnByName  String?
+  /// กรรมการที่เป็นคนกดปุ่มจริง (พิมพ์ชื่อไว้บนจอจับรางวัล)
+  pressedBy    String?
+  voided       Boolean   @default(false)
+  voidReason   String?
+  voidedAt     DateTime?
+  voidedByName String?
+
+  survey Survey      @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  prize  SurveyPrize @relation(fields: [prizeId], references: [id], onDelete: Restrict)
+
+  @@index([surveyId, voided])
+  @@index([prizeId])
 }
 
 /// คำตอบหนึ่งชุด = สมาชิกหนึ่งคน (ตอบได้คนละครั้งต่อแบบประเมิน)
