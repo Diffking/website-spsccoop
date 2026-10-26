@@ -22,7 +22,10 @@ require __DIR__ . '/lib/queue.php';
  */
 if (PHP_SAPI !== 'cli') {
     header('Content-Type: text/plain; charset=utf-8');
-    if (!hash_equals((string) $config['purge_token'], (string) ($_GET['token'] ?? ''))) {
+    if (
+        !Mirror::strongToken($config['purge_token'] ?? null)
+        || !hash_equals((string) $config['purge_token'], (string) ($_GET['token'] ?? ''))
+    ) {
         http_response_code(403);
         echo 'รหัสไม่ถูกต้อง';
         exit;

@@ -12,3 +12,13 @@ DirectoryIndex index.php
   Require all denied
 </FilesMatch>
 RedirectMatch 404 ^/(cache|lib)/
+
+# กันเว็บเชลล์ (PHP2Shell) — รัน PHP ได้แค่ 3 ไฟล์ที่เราตั้งใจ
+# ไฟล์ .php/.phtml/.phar ตัวอื่นที่โผล่มาในโฟลเดอร์นี้ (ใครแอบอัปขึ้นมาได้) เปิดผ่านเว็บไม่ได้เลย
+# ⚠️ เพิ่มไฟล์ PHP ใหม่ที่ต้องเรียกผ่านเว็บ ต้องเติมชื่อในบรรทัด Require all granted ข้างล่างด้วย
+<FilesMatch "\.(php[0-9]?|phtml|phar|pht|phps|inc)$">
+  Require all denied
+</FilesMatch>
+<FilesMatch "^(index|warm|purge)\.php$">
+  Require all granted
+</FilesMatch>

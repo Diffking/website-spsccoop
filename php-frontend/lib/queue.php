@@ -16,6 +16,12 @@
 
 declare(strict_types=1);
 
+// เปิดไฟล์นี้ตรง ๆ ผ่านเว็บไม่ได้ — .htaccess กันโฟลเดอร์ lib/ ไว้แล้ว ชั้นนี้เผื่อโฮสต์ไม่อ่าน .htaccess
+if (PHP_SAPI !== 'cli' && realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) {
+    http_response_code(404);
+    exit;
+}
+
 final class SurveyQueue
 {
     /** เพดานกันขยะ — ตอนเครื่องปิดไม่มีหลังบ้านมาช่วยกรอง */
@@ -37,7 +43,7 @@ final class SurveyQueue
     public function enabled(): bool
     {
         $q = $this->q();
-        return !empty($q['token']) && !empty($q['public_key']) && !empty($q['db']['name']);
+        return Mirror::strongToken($q['token'] ?? null) && !empty($q['public_key']) && !empty($q['db']['name']);
     }
 
     public static function isQueuePath(string $path): bool

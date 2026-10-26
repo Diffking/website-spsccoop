@@ -19,9 +19,28 @@ final class Mirror
 {
     public function __construct(private array $config)
     {
-        if (!is_dir($this->config['cache_dir'])) {
-            @mkdir($this->config['cache_dir'], 0775, true);
+        $dir = $this->config['cache_dir'];
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
         }
+        /*
+         * ปิดโฟลเดอร์แคชอีกชั้นด้วย .htaccess ของมันเอง — กันเว็บเชลล์ (PHP2Shell)
+         * กฎที่ root ปิดไว้แล้ว ชั้นนี้เผื่อวันที่ .htaccess หลักถูกแก้/หาย (ไฟล์ในนี้มาจากภายนอกทั้งนั้น)
+         * เนื้อหาตายตัว ไม่มีอะไรจากคำขอปนเข้ามา
+         */
+        $guard = $dir . '/.htaccess';
+        if (is_dir($dir) && !is_file($guard)) {
+            @file_put_contents($guard, "Require all denied\n<IfModule mod_php.c>\n  php_flag engine off\n</IfModule>\n");
+        }
+    }
+
+    /**
+     * โทเคนใช้ได้จริงไหม — ว่าง สั้น หรือยังเป็นข้อความตัวอย่างใน config.sample.php = ไม่รับ
+     * (โค้ดอยู่ใน git ใครก็อ่านค่าตัวอย่างได้ ถ้าเผลอขึ้นโฮสต์ทั้งอย่างนั้น คนนอกสั่งงานได้ทันที)
+     */
+    public static function strongToken(mixed $token): bool
+    {
+        return is_string($token) && strlen($token) >= 24 && !str_contains($token, 'เปลี่ยน');
     }
 
     /**
