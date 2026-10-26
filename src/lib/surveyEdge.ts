@@ -52,6 +52,8 @@ export async function pullQueue(limit = 100): Promise<PullReport> {
     try {
       const res = await acceptQueued(code, body as Record<string, unknown>, { submittedAt, queueId: `edge:${item.id}` });
       if (res.status < 300) done.push(item.id);
+      // 5xx = ฝั่งเรายังไม่พร้อม (เช่น ยังไม่ได้ตั้ง pepper) ไม่ใช่ของเสีย — ค้างในกล่องไว้รอบหน้า
+      else if (res.status >= 500) report.retry += 1;
       else dead.push({ id: item.id, error: String(res.body.error ?? res.status).slice(0, 250) });
     } catch (e) {
       // ฐานของเราสะดุด — ไม่ลบจากกล่อง รอบหน้าค่อยลองใหม่

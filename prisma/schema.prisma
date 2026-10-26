@@ -244,6 +244,31 @@ model Page {
 
 /// ค่าต่างๆ ของหน้าแรกที่ไม่ใช่รายการ เช่น ที่อยู่/เบอร์โทร/อัตราดอกเบี้ย
 /// เก็บเป็น key -> JSON เพื่อเพิ่มช่องใหม่ได้โดยไม่ต้อง migrate ทุกครั้ง
+/// ทะเบียนสมาชิกปัจจุบัน — sync-agent ส่งมาแทนที่ทั้งชุดวันละ 2 รอบ (POST /api/eval/members/)
+/// ใช้ยืนยันตัวตนผู้ตอบแบบประเมินเท่านั้น · ไม่มีเบอร์จริง มีแค่ HMAC (pepper อยู่ใน .env ไม่ใช่ที่นี่)
+/// จบการประเมินแล้วลบทิ้งได้ (หลังบ้าน → แบบประเมิน) — คำตอบที่ตรวจแล้วเก็บข้อมูลของตัวเองไว้ในแถวคำตอบ
+model Member {
+  /// เลขสมาชิกตัดเลข 0 นำหน้า — "07337" กับ "7337" คือคนเดียวกัน
+  key            String   @id
+  membNo         String
+  name           String
+  deptCode       String   @default("")
+  /// "กลุ่มเรียกเก็บ" จากทะเบียน — ไม่ใช่ที่ทำงานจริงเสมอไป
+  deptName       String   @default("")
+  memberTypeCode String   @default("")
+  memberType     String   @default("")
+  /// พนักงานสหกรณ์ — ตัดสิทธิ์ลุ้นรางวัล
+  isStaff        Boolean  @default(false)
+  /// M / F / "" (ไม่ระบุ)
+  sex            String   @default("")
+  /// <30 · 30-39 · … · 70+ · "" (วันเกิดในทะเบียนผิด)
+  ageGroup       String   @default("")
+  /// HMAC-SHA256(เบอร์ 10 หลัก, EVAL_PHONE_PEPPER) เป็น hex · 0–2 ค่า
+  phoneHashes    String[]
+
+  @@index([phoneHashes], type: Gin)
+}
+
 model Setting {
   key       String   @id
   value     Json
@@ -367,8 +392,12 @@ model SurveyResponse {
   /// รหัสรายการในกล่องพักบนโฮสต์ — กันโฮสต์ส่งรายการเดิมซ้ำ (ส่งสำเร็จแต่คำตอบหายกลางทาง)
   queueId     String?   @unique
   /// สิ่งที่สมาชิกพิมพ์เองตอนฝากคำตอบ — ใช้เทียบกับฐานเท่านั้น ไม่เอาไปใช้ต่อ
-  claimedPhone String?
-  claimedName  String?
+  /// claimedPhone = เบอร์แบบปิดบัง (ไว้ให้เจ้าหน้าที่ดู) · ตัวเทียบจริงคือ claimedPhoneHash
+  claimedMembNo    String?
+  claimedPhone     String?
+  claimedPhoneHash String?
+  /// รูปแบบเดิม (กรอกเบอร์ + ชื่อ) — ไม่ใช้แล้วตั้งแต่รับทะเบียนจาก sync-agent
+  claimedName      String?
   /// verified ตรวจแล้ว · pending รอตรวจ · review ให้เจ้าหน้าที่ดู · rejected ไม่ผ่าน/ตัดทิ้ง
   status      String    @default("verified")
   /// เหตุผลของสถานะ เช่น "ชื่อไม่ตรงกับฐาน" "ตอบซ้ำ" — เจ้าหน้าที่ใส่เองตอนตัดทิ้ง

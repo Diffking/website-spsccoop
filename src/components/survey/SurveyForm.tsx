@@ -67,11 +67,64 @@ async function post(url: string, body: unknown) {
   }
 }
 
-/** เบอร์มือถือ 10 หลัก หรือเลขที่สมาชิก — ตรงกับ readIdentifier() ฝั่งเซิร์ฟเวอร์ */
-const idLooksOk = (v: string) => {
-  const d = v.replace(/\D/g, "");
-  return /^0[689]\d{8}$/.test(d) || /^\d{1,8}$/.test(d);
+/** เลขสมาชิก + เบอร์ครบรูปแบบ — ตรงกับ readMembNo() / normalizePhone() ฝั่งเซิร์ฟเวอร์ (หยาบกว่าได้ เซิร์ฟเวอร์ตรวจซ้ำ) */
+const membLooksOk = (v: string) => /^\d{1,8}$/.test(v.replace(/\D/g, ""));
+const phoneLooksOk = (v: string) => {
+  let d = v.replace(/\D/g, "");
+  if (d.startsWith("66") && d.length === 11) d = `0${d.slice(2)}`;
+  return /^0\d{9}$/.test(d);
 };
+
+const inputCls =
+  "mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 text-lg tracking-wider outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
+
+/**
+ * สองช่องยืนยันตัวตน — เลขที่สมาชิก **คู่กับ** เบอร์มือถือ (สเปก sync-agent: ห้ามใส่อย่างเดียวแล้วเห็นชื่อ)
+ * ใช้ทั้งโหมดยืนยันสดและโหมดฝากคำตอบ
+ */
+function IdFields({
+  membNo,
+  phone,
+  onMembNo,
+  onPhone,
+}: {
+  membNo: string;
+  phone: string;
+  onMembNo: (v: string) => void;
+  onPhone: (v: string) => void;
+}) {
+  return (
+    <>
+      <label className="block">
+        <span className="text-sm text-gray-600">เลขที่สมาชิก</span>
+        <input
+          value={membNo}
+          onChange={(e) => onMembNo(e.target.value)}
+          inputMode="numeric"
+          autoComplete="off"
+          maxLength={10}
+          placeholder="เช่น 07337"
+          className={inputCls}
+        />
+      </label>
+      <label className="block">
+        <span className="text-sm text-gray-600">เบอร์มือถือที่ให้ไว้กับสหกรณ์</span>
+        <input
+          value={phone}
+          onChange={(e) => onPhone(e.target.value)}
+          inputMode="tel"
+          autoComplete="tel"
+          maxLength={16}
+          placeholder="เช่น 0812345678"
+          className={inputCls}
+        />
+      </label>
+      <p className="text-xs leading-relaxed text-gray-500">
+        จำเลขที่สมาชิกไม่ได้ · ดูได้จากสมุดบัญชีเงินฝาก ใบเสร็จรับเงินรายเดือน หรือสอบถามเจ้าหน้าที่สหกรณ์
+      </p>
+    </>
+  );
+}
 
 /** แบ่งเป็นหน้า ๆ ตามหัวตอน — เหมือน Google Form ที่กด "ถัดไป" ทีละตอน */
 function paginate(items: SurveyItem[]): { head: SurveyItem | null; items: SurveyItem[] }[] {
@@ -366,14 +419,14 @@ export default function SurveyForm({
 }) {
   const pages = useMemo(() => paginate(items), [items]);
   const [step, setStep] = useState<Step>(preview ? "answer" : "identify");
-  const [idText, setIdText] = useState("");
+  const [membText, setMembText] = useState("");
+  const [phoneText, setPhoneText] = useState("");
   const [name, setName] = useState("");
   const [who, setWho] = useState<Omit<Who, "name">>({ membNo: "", department: "" });
   const [token, setToken] = useState("");
   const [answeredAt, setAnsweredAt] = useState("");
-  /** โหมดฝากคำตอบ — ระบบยืนยันตัวตนไม่พร้อม สมาชิกกรอกเบอร์ + ชื่อเอง แล้วตรวจกับฐานทีหลัง */
+  /** โหมดฝากคำตอบ — ระบบยืนยันตัวตนไม่พร้อม เก็บเลขสมาชิก + เบอร์ไว้ แล้วตรวจกับทะเบียนทีหลัง */
   const [offline, setOffline] = useState(false);
-  const [claimedName, setClaimedName] = useState("");
   /** เปลี่ยนโหมดตอนกดส่ง (ระบบล่มกลางทาง) — คำตอบกรอกไว้ครบแล้ว กรอกเบอร์+ชื่อแล้วส่งได้เลย */
   const [answersReady, setAnswersReady] = useState(false);
   const [queued, setQueued] = useState(false);
@@ -389,7 +442,7 @@ export default function SurveyForm({
   async function identify() {
     setBusy(true);
     setError(null);
-    const r = await post(`/api/survey/${code}/identify/`, { id: idText });
+    const r = await post(`/api/survey/${code}/identify/`, { membNo: membText, phone: phoneText });
     setBusy(false);
     if (r.offline) {
       setOffline(true);
@@ -415,7 +468,8 @@ export default function SurveyForm({
     setToken("");
     setName("");
     setWho({ membNo: "", department: "" });
-    setIdText("");
+    setMembText("");
+    setPhoneText("");
     setStep("identify");
   }
 
@@ -537,7 +591,7 @@ export default function SurveyForm({
   async function submitQueued() {
     setBusy(true);
     setError(null);
-    const r = await post(`/api/survey/${code}/queue/`, { phone: idText, name: claimedName, answers });
+    const r = await post(`/api/survey/${code}/queue/`, { membNo: membText, phone: phoneText, answers });
     setBusy(false);
     if (r.ok) {
       setQueued(true);
@@ -556,7 +610,7 @@ export default function SurveyForm({
     setError(String(r.data.error ?? "ส่งคำตอบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"));
   }
 
-  const offlineReady = idLooksOk(idText) && claimedName.trim().length >= 3;
+  const idReady = membLooksOk(membText) && phoneLooksOk(phoneText);
 
   const current = pages[page];
   const last = page === pages.length - 1;
@@ -589,25 +643,18 @@ export default function SurveyForm({
               <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800">
                 <ShieldCheck className="h-5 w-5 text-brand-600" /> ยืนยันตัวตนสมาชิก
               </h2>
-              <p className="mt-1 text-sm text-gray-500">ใส่เบอร์มือถือที่ให้ไว้กับสหกรณ์ หรือเลขที่สมาชิก</p>
+              <p className="mt-1 text-sm text-gray-500">ใส่เลขที่สมาชิกและเบอร์มือถือที่ให้ไว้กับสหกรณ์ ให้ครบทั้งสองช่อง</p>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  if (!busy && idText.trim()) identify();
+                  if (!busy && idReady) identify();
                 }}
                 className="mt-4 space-y-3"
               >
-                <input
-                  value={idText}
-                  onChange={(e) => setIdText(e.target.value)}
-                  inputMode="numeric"
-                  autoComplete="tel"
-                  placeholder="เช่น 0812345678 หรือ 07337"
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 text-center text-lg tracking-wider outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-                />
+                <IdFields membNo={membText} phone={phoneText} onMembNo={setMembText} onPhone={setPhoneText} />
                 <button
                   type="submit"
-                  disabled={busy || !idText.trim()}
+                  disabled={busy || !idReady}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white shadow transition hover:bg-brand-700 disabled:opacity-50"
                 >
                   {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
@@ -630,7 +677,7 @@ export default function SurveyForm({
                 <WhoCard
                   rows={[
                     ["เลขที่สมาชิก", who.membNo],
-                    ["หน่วยงาน", who.department],
+                    ["กลุ่มเรียกเก็บ", who.department],
                   ]}
                 />
               </div>
@@ -657,7 +704,7 @@ export default function SurveyForm({
             </section>
           )}
 
-          {/* ---------- โหมดฝากคำตอบ: กรอกเบอร์ + ชื่อเอง ตรวจกับทะเบียนทีหลัง ---------- */}
+          {/* ---------- โหมดฝากคำตอบ: กรอกเลขสมาชิก + เบอร์ ตรวจกับทะเบียนทีหลัง ---------- */}
           {step === "offline" && (
             <section className={box}>
               <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800">
@@ -670,7 +717,7 @@ export default function SurveyForm({
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  if (!offlineReady || busy) return;
+                  if (!idReady || busy) return;
                   // ตอบครบแล้ว (ระบบล่มตอนกดส่ง หรือกลับมาแก้ชื่อจากหน้าตรวจทาน) → กลับหน้าตรวจทาน
                   setError(null);
                   setStep(answersReady ? "review" : "answer");
@@ -678,31 +725,10 @@ export default function SurveyForm({
                 }}
                 className="mt-4 space-y-3"
               >
-                <label className="block">
-                  <span className="text-sm text-gray-600">เบอร์มือถือที่ให้ไว้กับสหกรณ์ (หรือเลขที่สมาชิก)</span>
-                  <input
-                    value={idText}
-                    onChange={(e) => setIdText(e.target.value)}
-                    inputMode="numeric"
-                    autoComplete="tel"
-                    placeholder="เช่น 0812345678"
-                    className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 text-lg tracking-wider outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-sm text-gray-600">ชื่อ-สกุล (ตามที่ให้ไว้กับสหกรณ์)</span>
-                  <input
-                    value={claimedName}
-                    onChange={(e) => setClaimedName(e.target.value)}
-                    autoComplete="name"
-                    maxLength={200}
-                    placeholder="เช่น นางสาวสมใจ ใจดี"
-                    className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 text-lg outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-                  />
-                </label>
+                <IdFields membNo={membText} phone={phoneText} onMembNo={setMembText} onPhone={setPhoneText} />
                 <button
                   type="submit"
-                  disabled={busy || !offlineReady}
+                  disabled={busy || !idReady}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white shadow transition hover:bg-brand-700 disabled:opacity-50"
                 >
                   {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowRight className="h-5 w-5" />}
@@ -809,13 +835,13 @@ export default function SurveyForm({
                     rows={
                       offline
                         ? [
-                            ["ชื่อ-สกุล", claimedName.trim()],
-                            ["เบอร์ / เลขสมาชิก", idText.replace(/\D/g, "")],
+                            ["เลขที่สมาชิก", membText.replace(/\D/g, "")],
+                            ["เบอร์มือถือ", phoneText.replace(/\D/g, "")],
                           ]
                         : [
                             ["ชื่อ-สกุล", preview ? "(ตัวอย่าง)" : name],
                             ["เลขที่สมาชิก", who.membNo],
-                            ["หน่วยงาน", who.department],
+                            ["กลุ่มเรียกเก็บ", who.department],
                           ]
                     }
                   />

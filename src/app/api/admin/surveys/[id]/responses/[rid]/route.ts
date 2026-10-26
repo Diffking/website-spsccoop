@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { requireWrite } from "@/lib/apiAuth";
 import { db } from "@/lib/db";
-import { lookupMember, memberSourceReady } from "@/lib/memberLookup";
+import { lookupMember, memberSourceReady, readMembNo } from "@/lib/memberLookup";
 import { memberFields } from "@/lib/surveyVerify";
 
 type Params = { params: Promise<{ id: string; rid: string }> };
@@ -30,11 +30,11 @@ export async function PATCH(request: Request, { params }: Params) {
   const tag = { reviewedById: auth.user.id, reviewedByName: auth.user.name, reviewedAt: new Date() };
 
   if (body.action === "assign") {
-    if (!memberSourceReady()) return NextResponse.json({ error: "ยังไม่ได้เชื่อมฐานสมาชิก" }, { status: 503 });
-    const membNo = typeof body.membNo === "string" ? body.membNo.replace(/\D/g, "") : "";
+    if (!(await memberSourceReady())) return NextResponse.json({ error: "ยังไม่ได้รับทะเบียนสมาชิก" }, { status: 503 });
+    const membNo = readMembNo(body.membNo);
     if (!membNo) return NextResponse.json({ error: "ใส่เลขที่สมาชิก" }, { status: 400 });
 
-    const found = await lookupMember({ kind: "membNo", value: membNo });
+    const found = await lookupMember(membNo);
     if (!found.ok) {
       return NextResponse.json(
         { error: found.reason === "unavailable" ? "ฐานสมาชิกขัดข้อง ลองใหม่อีกครั้ง" : "ไม่พบเลขที่สมาชิกนี้ในทะเบียน" },

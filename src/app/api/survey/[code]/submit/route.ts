@@ -11,7 +11,7 @@ type Params = { params: Promise<{ code: string }> };
 /**
  * ส่งคำตอบ — ต้องมีบัตรผ่านจากขั้นยืนยันตัวตนเสมอ
  *
- * ค้นสมาชิกซ้ำอีกรอบจากเลขในบัตร เพื่อเอาชื่อ · เบอร์ · หน่วยงานล่าสุดมาเก็บคู่กับคำตอบ
+ * ค้นสมาชิกซ้ำอีกรอบจากเลขในบัตร เพื่อเอาชื่อ · กลุ่มเรียกเก็บ · เพศ/อายุ/ประเภท ล่าสุดมาเก็บคู่กับคำตอบ
  * (ข้อมูลชุดนี้ใช้ตอนจับรางวัลและแยกผลตามหน่วยงาน ไม่เคยส่งกลับไปให้หน้าจอ)
  *
  * ตอบซ้ำไม่ได้ — ฐานกันไว้ที่ unique(surveyId, membNo) ต่อให้กดส่งพร้อมกันสองแท็บก็ตาม
@@ -41,7 +41,7 @@ export async function POST(request: Request, { params }: Params) {
     );
   }
 
-  const found = await lookupMember({ kind: "membNo", value: membNo });
+  const found = await lookupMember(membNo);
   if (!found.ok) {
     return NextResponse.json(
       { error: "ระบบยืนยันตัวตนขัดข้องชั่วคราว คำตอบยังไม่ถูกบันทึก", offline: true },

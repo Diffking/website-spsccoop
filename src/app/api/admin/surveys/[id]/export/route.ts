@@ -46,7 +46,7 @@ export async function GET(request: Request, { params }: Params) {
   const lines: string[] = [];
   if (kind === "raw") {
     const cols = items.filter((i) => i.kind !== "section" && !i.hidden);
-    const head = ["เลขที่สมาชิก", "ชื่อ-สกุล", "เบอร์โทร", "หน่วยงาน", "วันเวลาที่ส่ง", "ช่องทาง"];
+    const head = ["เลขที่สมาชิก", "ชื่อ-สกุล", "เบอร์โทร", "กลุ่มเรียกเก็บ", "วันเวลาที่ส่ง", "ช่องทาง"];
     for (const it of cols) {
       const n = numberOf(items, it.id);
       if (it.kind === "grid") for (const r of it.rows) head.push(`ข้อ ${n} ${shortTitle(it.title)} — ${r.label}`);

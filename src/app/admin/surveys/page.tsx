@@ -8,6 +8,9 @@ import SurveysList from "@/components/admin/SurveysList";
 import { statusCounts } from "@/lib/surveyVerify";
 import { queueKeys } from "@/lib/surveyQueue";
 import SurveyQueueSetup from "@/components/admin/SurveyQueueSetup";
+import MemberSyncPanel from "@/components/admin/MemberSyncPanel";
+import { syncStatus } from "@/lib/memberSync";
+import { thaiDateTime } from "@/lib/surveyTime";
 
 export default async function AdminSurveysPage() {
   const user = await currentUser();
@@ -32,12 +35,30 @@ export default async function AdminSurveysPage() {
     ].join("\n");
   }
 
+  const sync = await syncStatus();
+  const received = sync.state ? new Date(sync.state.receivedAt) : null;
+  // generated_at ของ sync-agent เป็นเวลาไทยไม่มีโซน ("2026-10-26T08:50:01") — มีโซนมาแล้วก็ไม่เติมซ้ำ
+  const genRaw = sync.state?.generatedAt ?? "";
+  const generated = genRaw ? new Date(/(Z|[+-]\d\d:?\d\d)$/.test(genRaw) ? genRaw : `${genRaw}+07:00`) : null;
+
   return (
     <main className="mx-auto max-w-4xl px-4 py-6">
       <h1 className="mb-1 text-xl font-bold text-gray-800">แบบประเมิน</h1>
       <p className="mb-5 text-sm text-gray-500">
-        ตั้งคำถามความพึงพอใจ แล้วส่งลิงก์ให้สมาชิกตอบ · สมาชิกยืนยันตัวตนด้วยเบอร์มือถือหรือเลขที่สมาชิกก่อนตอบ
+        ตั้งคำถามความพึงพอใจ แล้วส่งลิงก์ให้สมาชิกตอบ · สมาชิกยืนยันตัวตนด้วยเลขที่สมาชิกคู่กับเบอร์มือถือก่อนตอบ
       </p>
+
+      <div className="mb-4">
+        <MemberSyncPanel
+          count={sync.count}
+          receivedAt={received ? thaiDateTime(received) : null}
+          generatedAt={generated && !Number.isNaN(generated.getTime()) ? thaiDateTime(generated) : genRaw || null}
+          canClear={user.role === "ADMIN"}
+          stale={sync.stale}
+          configured={sync.configured}
+          endpoint={`${(process.env.PUBLIC_SITE_URL || "https://spsccoop.org").replace(/\/+$/, "")}/api/eval/members/`}
+        />
+      </div>
 
       {snippet && (
         <div className="mb-4">
