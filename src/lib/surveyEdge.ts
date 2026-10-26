@@ -90,9 +90,16 @@ const safeJson = (s: string): unknown => {
  */
 export async function warmEdge(): Promise<{ pages: number; error?: string }> {
   const now = new Date();
+  // ปิดไปไม่เกิน 30 วันก็ยังอุ่นต่อ — สำเนาบน Worker จะได้กลายเป็นหน้า "ปิดรับแล้ว"
+  // ไม่งั้นกด "สิ้นสุดการประเมิน" แล้ว สำเนาเก่าที่ยังเป็นฟอร์มค้างอยู่ตอนเครื่องปิด
+  const recent = new Date(now.getTime() - 30 * 86400_000);
   const [surveys, shared] = await Promise.all([
     db.survey.findMany({
-      where: { published: true, closedAt: null, OR: [{ closesAt: null }, { closesAt: { gt: now } }] },
+      where: {
+        published: true,
+        OR: [{ closedAt: null }, { closedAt: { gt: recent } }],
+        AND: [{ OR: [{ closesAt: null }, { closesAt: { gt: recent } }] }],
+      },
       select: { code: true },
     }),
     db.survey.findMany({
