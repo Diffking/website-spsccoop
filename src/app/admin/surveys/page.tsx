@@ -18,22 +18,17 @@ export default async function AdminSurveysPage() {
   const surveys = await db.survey.findMany({ orderBy: { createdAt: "desc" } });
   const counts = await statusCounts(surveys.map((s) => s.id));
 
-  // ค่าตั้งของกล่องพักคำตอบบนโฮสต์ — เฉพาะ ADMIN (มีโทเคนลับ)
+  // ค่าที่ต้องตั้งเป็น secret ของ Cloudflare Worker (cloudflare/survey-edge/) — เฉพาะ ADMIN (มีโทเคนลับ)
   let snippet: string | null = null;
   if (user.role === "ADMIN") {
     const keys = await queueKeys();
     snippet = [
-      "    // กล่องพักคำตอบแบบประเมิน — คัดลอกมาจากหลังบ้าน → แบบประเมิน",
-      "    'survey_queue' => [",
-      `        'token' => '${keys.token}',`,
-      "        'db' => [",
-      "            'host' => 'localhost',",
-      `            'name' => '${process.env.DB_Name ?? "spsccoop_cast"}',`,
-      `            'user' => '${process.env.DB_Username ?? "spsccoop_cast"}',`,
-      "            'pass' => 'ใส่รหัสฐาน spsccoop_cast',",
-      "        ],",
-      `        'public_key' => <<<'PEM'\n${keys.publicKey.trim()}\nPEM,`,
-      "    ],",
+      "# รันในโฟลเดอร์ cloudflare/survey-edge/ — ระบบถามค่า ให้วางทีละค่า",
+      "npx wrangler secret put QUEUE_TOKEN",
+      keys.token,
+      "",
+      "npx wrangler secret put PUBLIC_KEY",
+      keys.publicKey.trim(),
     ].join("\n");
   }
 

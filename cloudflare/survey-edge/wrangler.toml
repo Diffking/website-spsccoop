@@ -1,0 +1,17 @@
+name = "survey-edge"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# โดเมนลิงก์แบบประเมิน — ต้องมีระเบียน DNS survey.spsccoop.org แบบ Proxied ก่อน (ดู README.md)
+routes = [{ pattern = "survey.spsccoop.org/*", zone_name = "spsccoop.org" }]
+
+[vars]
+ORIGIN = "https://spsccoop.org"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "survey-edge"
+# ได้จาก `npx wrangler d1 create survey-edge` — แทนค่าตัวอย่างนี้ก่อน deploy
+database_id = "00000000-0000-0000-0000-000000000000"
+
+# QUEUE_TOKEN กับ PUBLIC_KEY เป็น secret — ตั้งด้วย `npx wrangler secret put` (ค่าจากหลังบ้าน → แบบประเมิน)

@@ -6,3 +6,4 @@ backups
 uploads
 .env
 *.log
+cloudflare

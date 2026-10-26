@@ -10,10 +10,8 @@ declare(strict_types=1);
 
 $config = require __DIR__ . '/config.php';
 require __DIR__ . '/lib/mirror.php';
-require __DIR__ . '/lib/queue.php';
 
 $mirror = new Mirror($config);
-$queue = new SurveyQueue($config);
 $path = $mirror->path();
 
 // หลังบ้านไม่ให้ผ่านทางนี้เด็ดขาด
@@ -42,30 +40,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
     $visitorIp = preg_replace('/[^0-9a-fA-F.:]/', '', (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
     $visitorAgent = substr(preg_replace('/[^\x20-\x7E]/', '', (string) ($_SERVER['HTTP_USER_AGENT'] ?? '')), 0, 200);
     $contentType = preg_replace('/[^\x20-\x7E]/', '', (string) ($_SERVER['CONTENT_TYPE'] ?? '')) ?: 'application/json';
-    $input = (string) file_get_contents('php://input');
-
-    /*
-     * ฝากคำตอบแบบประเมิน — หลังบ้านไม่พร้อม (เครื่องสำนักงานปิด) ให้พักไว้ในกล่องแทน
-     * แล้วตอบสมาชิกว่า "ได้รับแล้ว" · เพิ่งรู้ว่าหลังบ้านดับ (ป้าย down) ไม่ต้องลองส่งให้รอ 5 วินาที
-     * ดู lib/queue.php
-     */
-    $queueable = SurveyQueue::isQueuePath($path) && $queue->enabled();
-    $reply = static function (int $code, array $body): void {
-        http_response_code($code);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($body, JSON_UNESCAPED_UNICODE);
-        exit;
-    };
-    if ($queueable && $mirror->backendDown()) {
-        [$code, $body] = $queue->store($path, $input, $visitorIp);
-        $reply($code, $body);
-    }
 
     $ch = curl_init($config['backend'] . $path);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => $input,
+        CURLOPT_POSTFIELDS => file_get_contents('php://input'),
         CURLOPT_USERAGENT => $visitorAgent === '' ? 'unknown' : $visitorAgent,
         CURLOPT_HTTPHEADER => [
             'Content-Type: ' . $contentType,
@@ -77,15 +57,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
     $out = curl_exec($ch);
     $code = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
     curl_close($ch);
-
-    /*
-     * ส่งไม่ถึง หรือได้ 5xx กลับมา (เครื่องปิด Cloudflare ตอบ 530/502 เป็นหน้า HTML) — พักไว้แทน
-     * หลังบ้านเองไม่ตอบ 5xx กับคำตอบที่ฝาก (ดู route queue) จึงไม่มีทางพักซ้ำของที่รับไปแล้ว
-     */
-    if ($queueable && ($out === false || $code === 0 || $code >= 500)) {
-        [$qcode, $qbody] = $queue->store($path, $input, $visitorIp);
-        $reply($qcode, $qbody);
-    }
 
     http_response_code($code ?: 204);
     header('Content-Type: application/json; charset=utf-8');
@@ -113,14 +84,6 @@ if ($cached !== null && $cached['age'] < $ttl) {
 $fresh = $mirror->fetch($path);
 if ($fresh !== null) {
     $mirror->send($fresh, $cached === null ? 'miss' : 'refresh');
-    /*
-     * หลังบ้านตอบได้ = เครื่องสำนักงานเปิดแล้ว — ส่งคำตอบแบบประเมินที่พักไว้ตามไป
-     * ปิดการเชื่อมต่อกับคนอ่านก่อน (PHP-FPM) จะได้ไม่ต้องรอ · ไม่มีของค้าง = ไม่แตะ MySQL เลย
-     */
-    if (function_exists('fastcgi_finish_request')) {
-        fastcgi_finish_request();
-    }
-    $queue->flush(10);
     exit;
 }
 

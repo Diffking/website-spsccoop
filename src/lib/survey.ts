@@ -355,7 +355,7 @@ export function surveyStatus(s: Timing, now = Date.now()): SurveyStatus {
 /* ------------------------------------------------------------------ ลิงก์ */
 
 /**
- * ที่อยู่ที่แจกให้สมาชิก — www.spsccoop.com ซึ่งเปิดได้ตลอด 24 ชม.
+ * ที่อยู่ที่แจกให้สมาชิก — survey.spsccoop.org (Cloudflare Worker) เปิดได้ตลอด 24 ชม.
  * (spsccoop.org ปิดตามเครื่องสำนักงาน เจ้าของเว็บตัดสินใจ 22 ต.ค. 2569)
  * เปลี่ยนได้ที่ SURVEY_PUBLIC_URL ใน .env โดยไม่ต้องแก้โค้ด
  */
@@ -363,9 +363,14 @@ export function surveyUrl(code: string, base?: string): string {
   return `${publicRoot(base)}/s/${code}/`;
 }
 
-/** ลิงก์ผลสรุปสำหรับกรรมการ — ผ่าน www.spsccoop.com เหมือนกัน (เจ้าของเว็บเลือก 22 ต.ค. 2569) */
+/** ลิงก์ผลสรุปสำหรับกรรมการ — ผ่าน Worker โดเมนเดียวกับลิงก์แบบประเมิน เปิดได้ตลอด */
 export function shareUrl(token: string, base?: string): string {
   return `${publicRoot(base)}/r/${token}/`;
 }
 
-const publicRoot = (base?: string) => (base || "https://www.spsccoop.com").replace(/\/+$/, "");
+/**
+ * โดเมนของลิงก์แบบประเมิน — survey.spsccoop.org วิ่งผ่าน Cloudflare Worker (cloudflare/survey-edge/)
+ * เปิดได้ 24 ชม. โดยไม่ต้องพึ่ง PHP บนโฮสต์ (เจ้าของเว็บสั่งเลิกใช้ PHP กับแบบประเมิน 26 ต.ค. 2569)
+ * เปลี่ยนได้ที่ SURVEY_PUBLIC_URL ใน .env
+ */
+export const publicRoot = (base?: string) => (base || "https://survey.spsccoop.org").replace(/\/+$/, "");

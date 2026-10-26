@@ -16,11 +16,7 @@ require __DIR__ . '/lib/mirror.php';
 header('Content-Type: application/json; charset=utf-8');
 
 $body = json_decode((string) file_get_contents('php://input'), true);
-if (
-    !is_array($body)
-    || !Mirror::strongToken($config['purge_token'] ?? null)
-    || !hash_equals((string) $config['purge_token'], (string) ($body['token'] ?? ''))
-) {
+if (!is_array($body) || !hash_equals((string) $config['purge_token'], (string) ($body['token'] ?? ''))) {
     http_response_code(403);
     echo json_encode(['error' => 'รหัสไม่ถูกต้อง'], JSON_UNESCAPED_UNICODE);
     exit;
