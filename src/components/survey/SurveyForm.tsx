@@ -7,9 +7,11 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
+  ClipboardCheck,
   Eye,
   Loader2,
   LogIn,
+  Pencil,
   Send,
   ShieldCheck,
   UserCheck,
@@ -28,7 +30,10 @@ import {
   type GridAnswer,
 } from "@/lib/surveyAnswers";
 
-type Step = "identify" | "confirm" | "offline" | "answer" | "done" | "already";
+type Step = "identify" | "confirm" | "offline" | "answer" | "review" | "done" | "already";
+
+/** ข้อมูลผู้ตอบที่โชว์ให้ยืนยัน — ปิดบังบางส่วนมาจากเซิร์ฟเวอร์แล้ว (ดู identify/route.ts) */
+type Who = { name: string; membNo: string; department: string };
 
 /**
  * ยิงคำขอแล้วอ่านผล — ทนกรณีที่ไม่ได้ JSON กลับมา
@@ -84,6 +89,22 @@ function paginate(items: SurveyItem[]): { head: SurveyItem | null; items: Survey
 }
 
 const box = "rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5";
+
+/** บัตรผู้ตอบ — ใช้ทั้งขั้นยืนยันตัวตนและหน้าตรวจทานก่อนส่ง ให้เห็นหน้าตาเดียวกันสองที่ */
+function WhoCard({ rows }: { rows: [string, string][] }) {
+  return (
+    <dl className="divide-y divide-gray-100 rounded-xl bg-gray-50 px-4 text-left ring-1 ring-gray-100">
+      {rows
+        .filter(([, v]) => v)
+        .map(([k, v]) => (
+          <div key={k} className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-2 py-2.5 text-sm">
+            <dt className="text-gray-500">{k}</dt>
+            <dd className="font-semibold text-gray-800">{v}</dd>
+          </div>
+        ))}
+    </dl>
+  );
+}
 
 /* ------------------------------------------------------------ ชนิดคำถาม */
 
@@ -347,6 +368,7 @@ export default function SurveyForm({
   const [step, setStep] = useState<Step>(preview ? "answer" : "identify");
   const [idText, setIdText] = useState("");
   const [name, setName] = useState("");
+  const [who, setWho] = useState<Omit<Who, "name">>({ membNo: "", department: "" });
   const [token, setToken] = useState("");
   const [answeredAt, setAnsweredAt] = useState("");
   /** โหมดฝากคำตอบ — ระบบยืนยันตัวตนไม่พร้อม สมาชิกกรอกเบอร์ + ชื่อเอง แล้วตรวจกับฐานทีหลัง */
@@ -384,6 +406,7 @@ export default function SurveyForm({
       setStep("already");
       return;
     }
+    setWho({ membNo: String(r.data.membNo ?? ""), department: String(r.data.department ?? "") });
     setToken(String(r.data.token ?? ""));
     setStep("confirm");
   }
@@ -391,6 +414,7 @@ export default function SurveyForm({
   function notMe() {
     setToken("");
     setName("");
+    setWho({ membNo: "", department: "" });
     setIdText("");
     setStep("identify");
   }
@@ -436,9 +460,31 @@ export default function SurveyForm({
     scrollTop();
   }
 
-  async function submit() {
+  /** หน้าสุดท้ายตอบครบแล้ว → หน้าตรวจทาน (ข้อมูลผู้ตอบ + ตอบไปแล้วกี่ข้อ) ก่อนกดส่งจริง */
+  function review() {
     const miss = missingOn(page);
     if (miss.length) return jumpToFirst(miss);
+    setError(null);
+    setStep("review");
+    scrollTop();
+  }
+
+  function editPage(index: number) {
+    setError(null);
+    setPage(index);
+    setStep("answer");
+    scrollTop();
+  }
+
+  async function submit() {
+    // ตรวจทั้งชุดอีกรอบ — กันกรณีกลับไปแก้แล้วลบคำตอบข้อบังคับทิ้งในหน้าอื่น
+    const miss = checkAnswers(items, answers).missing;
+    if (miss.length) {
+      const at = pages.findIndex((p) => p.items.some((i) => miss.includes(i.id)));
+      if (at >= 0) setPage(at);
+      setStep("answer");
+      return jumpToFirst(miss);
+    }
     if (preview) {
       setError("นี่คือหน้าตัวอย่าง — ส่งจริงไม่ได้");
       return;
@@ -467,6 +513,8 @@ export default function SurveyForm({
     }
     if (r.data.restart) {
       // บัตรผ่านหมดอายุ — คำตอบที่กรอกไว้ยังอยู่ใน state ยืนยันตัวตนใหม่แล้วส่งต่อได้เลย
+      // (กด "ใช่" แล้วกลับมาหน้าสุดท้าย → "ตรวจทานก่อนส่ง" อีกครั้ง)
+      setPage(pages.length - 1);
       setToken("");
       setStep("identify");
       setError(String(r.data.error));
@@ -476,6 +524,7 @@ export default function SurveyForm({
     if (serverMiss.length) {
       const at = pages.findIndex((p) => p.items.some((i) => serverMiss.includes(i.id)));
       if (at >= 0) setPage(at);
+      setStep("answer");
       return jumpToFirst(serverMiss);
     }
     setError(String(r.data.error ?? "ส่งคำตอบไม่สำเร็จ"));
@@ -577,7 +626,15 @@ export default function SurveyForm({
               <UserCheck className="mx-auto h-10 w-10 text-brand-600" />
               <p className="mt-3 text-sm text-gray-500">พบข้อมูลสมาชิก</p>
               <p className="mt-1 text-2xl font-bold text-gray-800">{name}</p>
-              <p className="mt-2 text-sm text-gray-500">ใช่ท่านหรือไม่</p>
+              <div className="mt-4">
+                <WhoCard
+                  rows={[
+                    ["เลขที่สมาชิก", who.membNo],
+                    ["หน่วยงาน", who.department],
+                  ]}
+                />
+              </div>
+              <p className="mt-3 text-sm text-gray-500">ใช่ท่านหรือไม่</p>
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -614,12 +671,10 @@ export default function SurveyForm({
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (!offlineReady || busy) return;
-                  if (answersReady) submitQueued();
-                  else {
-                    setError(null);
-                    setStep("answer");
-                    scrollTop();
-                  }
+                  // ตอบครบแล้ว (ระบบล่มตอนกดส่ง หรือกลับมาแก้ชื่อจากหน้าตรวจทาน) → กลับหน้าตรวจทาน
+                  setError(null);
+                  setStep(answersReady ? "review" : "answer");
+                  scrollTop();
                 }}
                 className="mt-4 space-y-3"
               >
@@ -648,18 +703,10 @@ export default function SurveyForm({
                 <button
                   type="submit"
                   disabled={busy || !offlineReady}
-                  className={`inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold text-white shadow transition disabled:opacity-50 ${
-                    answersReady ? "bg-emerald-600 hover:bg-emerald-700" : "bg-brand-600 hover:bg-brand-700"
-                  }`}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white shadow transition hover:bg-brand-700 disabled:opacity-50"
                 >
-                  {busy ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : answersReady ? (
-                    <Send className="h-5 w-5" />
-                  ) : (
-                    <ArrowRight className="h-5 w-5" />
-                  )}
-                  {answersReady ? "ส่งคำตอบ" : "เริ่มทำแบบประเมิน"}
+                  {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowRight className="h-5 w-5" />}
+                  {answersReady ? "ตรวจทานก่อนส่ง" : "เริ่มทำแบบประเมิน"}
                 </button>
               </form>
               <p className="mt-4 rounded-xl bg-gray-50 px-3 py-2 text-[11px] leading-relaxed text-gray-500">
@@ -731,12 +778,10 @@ export default function SurveyForm({
                 {last ? (
                   <button
                     type="button"
-                    onClick={submit}
-                    disabled={busy}
-                    className="ml-auto inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow transition hover:bg-emerald-700 disabled:opacity-60"
+                    onClick={review}
+                    className="ml-auto inline-flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-3 font-semibold text-white shadow transition hover:bg-brand-700"
                   >
-                    {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                    ส่งคำตอบ
+                    ตรวจทานก่อนส่ง <ArrowRight className="h-5 w-5" />
                   </button>
                 ) : (
                   <button
@@ -747,6 +792,103 @@ export default function SurveyForm({
                     ถัดไป <ArrowRight className="h-5 w-5" />
                   </button>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* ---------- ตรวจทานก่อนส่ง: ใครเป็นคนตอบ + ตอบครบแต่ละตอนไหม ---------- */}
+          {step === "review" && (
+            <div className="space-y-3">
+              <section className={box}>
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800">
+                  <ClipboardCheck className="h-5 w-5 text-brand-600" /> ตรวจทานก่อนส่ง
+                </h2>
+                <p className="mt-1 text-sm text-gray-500">ข้อมูลผู้ตอบแบบประเมิน</p>
+                <div className="mt-3">
+                  <WhoCard
+                    rows={
+                      offline
+                        ? [
+                            ["ชื่อ-สกุล", claimedName.trim()],
+                            ["เบอร์ / เลขสมาชิก", idText.replace(/\D/g, "")],
+                          ]
+                        : [
+                            ["ชื่อ-สกุล", preview ? "(ตัวอย่าง)" : name],
+                            ["เลขที่สมาชิก", who.membNo],
+                            ["หน่วยงาน", who.department],
+                          ]
+                    }
+                  />
+                </div>
+                {offline && (
+                  <p className="mt-2 text-xs leading-relaxed text-amber-700">
+                    สหกรณ์จะตรวจข้อมูลนี้กับทะเบียนสมาชิกอีกครั้ง — พิมพ์ผิดแก้ได้ที่ปุ่มด้านล่าง
+                  </p>
+                )}
+                {offline && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAnswersReady(true);
+                      setStep("offline");
+                      scrollTop();
+                    }}
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 hover:underline"
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> แก้ข้อมูลผู้ตอบ
+                  </button>
+                )}
+              </section>
+
+              <section className={box}>
+                <p className="text-sm text-gray-500">คำตอบของท่าน</p>
+                <ul className="mt-2 grid grid-cols-1 divide-y divide-gray-100">
+                  {pages.map((p, i) => {
+                    const qs = p.items.filter(answerable);
+                    const done = qs.filter((q) => answers[q.id] !== undefined).length;
+                    return (
+                      <li key={p.head?.id ?? i} className="flex min-w-0 items-center gap-3 py-2.5">
+                        <CheckCircle2
+                          className={`h-5 w-5 shrink-0 ${done === qs.length ? "text-emerald-500" : "text-gray-300"}`}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-gray-800">
+                            {p.head?.title ?? `ตอนที่ ${i + 1}`}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            ตอบ {done}/{qs.length} ข้อ
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => editPage(i)}
+                          className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-brand-700 ring-1 ring-brand-200 transition hover:bg-brand-50"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> แก้ไข
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => editPage(pages.length - 1)}
+                  className="inline-flex items-center gap-1.5 rounded-xl px-4 py-3 text-sm font-medium text-gray-600 ring-1 ring-gray-200 transition hover:bg-white"
+                >
+                  <ArrowLeft className="h-4 w-4" /> ย้อนกลับ
+                </button>
+                <button
+                  type="button"
+                  onClick={submit}
+                  disabled={busy}
+                  className="ml-auto inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow transition hover:bg-emerald-700 disabled:opacity-60"
+                >
+                  {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                  ยืนยันส่งคำตอบ
+                </button>
               </div>
             </div>
           )}
