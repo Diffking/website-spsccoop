@@ -138,7 +138,7 @@ services:
   #
   # ไม่ตั้ง MIRROR_PURGE_TOKEN ใน .env = ไม่ทำอะไร
   mirror-warm:
-    image: alpine:3.20
+    image: alpine:3.22
     restart: unless-stopped
     env_file: .env
     environment:
@@ -171,7 +171,7 @@ services:
   # เขียนเป็นบล็อก (|) ไม่ใช่บรรทัดเดียวเหมือน mirror-warm เพราะคำสั่งมี ": " อยู่
   # ซึ่ง YAML จะอ่านเป็น key: value แล้วพังทั้งไฟล์
   holiday-sync:
-    image: alpine:3.20
+    image: alpine:3.22
     restart: unless-stopped
     env_file: .env
     depends_on:
@@ -226,7 +226,7 @@ services:
   # ไม่มีอะไรรอตรวจ = เงียบ · ใช้โทเคนตัวเดียวกับ holiday-sync (ไม่ตั้ง = ไม่ทำงาน)
   # ⚠️ แก้ entrypoint แล้วต้อง `docker compose up -d survey-verify` (restart ไม่พอ)
   survey-verify:
-    image: alpine:3.20
+    image: alpine:3.22
     restart: unless-stopped
     env_file: .env
     depends_on:

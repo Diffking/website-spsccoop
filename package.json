@@ -17,19 +17,19 @@
     "reread:slides": "tsx scripts/slide-reread-all.mts"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.9.1",
-    "@prisma/client": "^7.9.1",
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
     "bcryptjs": "^3.0.3",
     "lucide-react": "^1.23.0",
     "motion": "^12.42.2",
-    "next": "16.2.10",
+    "next": "16.4.3",
     "pdfjs-dist": "^6.2.108",
     "pg": "^8.23.0",
-    "prisma": "^7.9.1",
+    "prisma": "^7.10.1",
     "qrcode": "^1.5.4",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "sharp": "^0.35.3"
+    "react": "19.2.9",
+    "react-dom": "19.2.9",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -41,7 +41,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "16.4.3",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
