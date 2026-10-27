@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Calculator,
@@ -24,6 +24,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
+import CommandPalette, { type PaletteEntry } from "@/components/admin/CommandPalette";
 import {
   canAnyPage,
   canArea,
@@ -51,7 +52,10 @@ const ITEMS: {
   href: string;
   icon: typeof LayoutDashboard;
   label: string;
+  /** คำอธิบาย — โชว์ตอนชี้เมาส์และในช่องค้นหา (เดิมโชว์เป็นบรรทัดที่สอง เมนูเลยยาวเกินจอ) */
   desc: string;
+  /** หัวกลุ่มบนเมนู — เรียงตาม GROUPS ไม่ใช่ตามลำดับในอาร์เรย์ */
+  group?: string;
   /** พื้นที่ที่ต้องดูแลถึงจะเห็นเมนูนี้ — ไม่ระบุ = ทุกคนเห็น (ภาพรวม) */
   area?: AreaKey;
   /** ส่วนย่อยของหน้านั้น — โผล่ใต้เมนูแม่เมื่อกำลังอยู่ในหมวดนี้ */
@@ -66,6 +70,7 @@ const ITEMS: {
   },
   {
     key: "home",
+    group: "เนื้อหาเว็บ",
     href: "/admin/home",
     icon: Megaphone,
     label: "หน้าแรก",
@@ -86,6 +91,7 @@ const ITEMS: {
   },
   {
     key: "header",
+    group: "ส่วนประกอบเว็บ",
     area: "header",
     href: "/admin/header",
     icon: PanelTop,
@@ -94,6 +100,7 @@ const ITEMS: {
   },
   {
     key: "footer",
+    group: "ส่วนประกอบเว็บ",
     area: "footer",
     href: "/admin/footer",
     icon: PanelBottom,
@@ -102,6 +109,7 @@ const ITEMS: {
   },
   {
     key: "splash",
+    group: "ส่วนประกอบเว็บ",
     area: "splash",
     href: "/admin/splash",
     icon: Crown,
@@ -110,6 +118,7 @@ const ITEMS: {
   },
   {
     key: "holidays",
+    group: "ส่วนประกอบเว็บ",
     area: "holidays",
     href: "/admin/holidays",
     icon: CalendarOff,
@@ -118,6 +127,7 @@ const ITEMS: {
   },
   {
     key: "pages",
+    group: "เนื้อหาเว็บ",
     area: "pages",
     href: "/admin/pages",
     icon: FileStack,
@@ -126,6 +136,7 @@ const ITEMS: {
   },
   {
     key: "designed",
+    group: "เนื้อหาเว็บ",
     area: "designed",
     href: "/admin/designed",
     icon: Sparkles,
@@ -134,6 +145,7 @@ const ITEMS: {
   },
   {
     key: "programs",
+    group: "บริการสมาชิก",
     area: "programs",
     href: "/admin/programs",
     icon: Calculator,
@@ -142,6 +154,7 @@ const ITEMS: {
   },
   {
     key: "surveys",
+    group: "บริการสมาชิก",
     area: "surveys",
     href: "/admin/surveys",
     icon: ClipboardCheck,
@@ -150,6 +163,7 @@ const ITEMS: {
   },
   {
     key: "seo",
+    group: "ตั้งค่าระบบ",
     area: "seo",
     href: "/admin/seo",
     icon: Search,
@@ -158,6 +172,7 @@ const ITEMS: {
   },
   {
     key: "bridge",
+    group: "ตั้งค่าระบบ",
     area: "bridge",
     href: "/admin/bridge",
     icon: Share2,
@@ -166,6 +181,7 @@ const ITEMS: {
   },
   {
     key: "users",
+    group: "ตั้งค่าระบบ",
     href: "/admin/users",
     icon: Users,
     label: "ผู้ใช้งาน",
@@ -179,6 +195,12 @@ const ITEMS: {
  * เมนูแม่ "หน้าแรก" ยังโผล่ถ้ามีเมนูย่อยเหลืออยู่ แม้จะแก้การจัดวางหน้าแรกไม่ได้ —
  * แต่ให้กดแล้วไปหน้าย่อยหน้าแรกแทน จะได้ไม่พาไปหน้าที่เปิดไม่ได้
  */
+/**
+ * ลำดับหัวกลุ่มบนเมนู (เจ้าของเว็บขอ 27 ต.ค. 2569: หลังบ้านใช้ยาก เมนู 13 อันเรียงยาวไม่มีกลุ่ม)
+ * เพิ่มเมนูใหม่ต้องใส่ `group` ด้วย ไม่งั้นไปกองอยู่บนสุดกับ "ภาพรวม"
+ */
+const GROUPS = ["", "เนื้อหาเว็บ", "ส่วนประกอบเว็บ", "บริการสมาชิก", "ตั้งค่าระบบ"];
+
 function visibleItems(user: Actor) {
   return ITEMS.flatMap((item) => {
     if (item.key === "users") return user.role === "ADMIN" ? [item] : [];
@@ -192,16 +214,35 @@ function visibleItems(user: Actor) {
     }
 
     return !item.area || canArea(user, item.area) ? [item] : [];
-  });
+  }).sort((a, b) => GROUPS.indexOf(a.group ?? "") - GROUPS.indexOf(b.group ?? ""));
 }
 
-function Nav({ user, onNavigate }: { user: Actor; onNavigate?: () => void }) {
+/** รายการให้ช่องค้นหาด่วน — เมนูกับเมนูย่อยที่คนนี้เปิดได้ */
+function menuEntries(user: Actor): PaletteEntry[] {
+  return visibleItems(user).flatMap((item) => [
+    { label: item.label, sub: item.desc, href: item.href, kind: "menu" as const },
+    ...(item.children ?? []).map((c) => ({ label: c.label, sub: `${item.label} › ${c.label}`, href: c.href, kind: "menu" as const })),
+  ]);
+}
+
+function Nav({ user, onNavigate, onSearch }: { user: Actor; onNavigate?: () => void; onSearch: () => void }) {
   const pathname = usePathname();
   const items = visibleItems(user);
 
   return (
-    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
-      {items.map((item) => {
+    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
+      <button
+        type="button"
+        onClick={onSearch}
+        className="mb-2 flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-left text-sm text-brand-50/80 ring-1 ring-white/10 transition hover:bg-white/15 hover:text-white"
+      >
+        <Search className="h-4 w-4 shrink-0" />
+        <span className="min-w-0 flex-1 truncate">ค้นหาเมนู / หน้า</span>
+        <kbd className="hidden shrink-0 rounded bg-white/10 px-1.5 py-0.5 font-sans text-[10px] md:inline">Ctrl K</kbd>
+      </button>
+      {items.map((item, index) => {
+        // หัวกลุ่ม — ขึ้นเมื่อกลุ่มเปลี่ยนจากเมนูก่อนหน้า
+        const heading = item.group && item.group !== items[index - 1]?.group ? item.group : null;
         // เทียบจากที่อยู่ของหมวด ไม่ใช่ item.href เพราะเมนูแม่อาจถูกชี้ไปหน้าย่อยแทน
         const root = ITEMS.find((i) => i.key === item.key)!.href;
         // /admin ต้องเทียบแบบเป๊ะ ไม่งั้นจะค้างสว่างตลอดเพราะทุกหน้าขึ้นต้นด้วย /admin
@@ -216,11 +257,14 @@ function Nav({ user, onNavigate }: { user: Actor; onNavigate?: () => void }) {
 
         return (
           <div key={item.key}>
+            {heading && (
+              <p className="px-3 pb-1 pt-3 text-[11px] font-medium tracking-wide text-brand-100/50">{heading}</p>
+            )}
             <Link
               href={item.href}
               onClick={onNavigate}
               title={item.desc}
-              className={`relative flex items-start gap-3 rounded-xl px-3 py-2.5 transition ${
+              className={`relative flex items-center gap-3 rounded-xl px-3 py-2 transition ${
                 active ? "text-white" : "text-brand-50/80 hover:bg-white/10 hover:text-white"
               }`}
             >
@@ -231,13 +275,8 @@ function Nav({ user, onNavigate }: { user: Actor; onNavigate?: () => void }) {
                   className="absolute inset-0 rounded-xl bg-white/15 ring-1 ring-white/20"
                 />
               )}
-              <item.icon className="relative mt-0.5 h-5 w-5 shrink-0" />
-              <span className="relative min-w-0">
-                <span className="block text-sm font-medium leading-tight">{item.label}</span>
-                <span className="mt-0.5 block text-[11px] leading-snug text-brand-100/70">
-                  {item.desc}
-                </span>
-              </span>
+              <item.icon className="relative h-5 w-5 shrink-0" />
+              <span className="relative min-w-0 truncate text-sm font-medium">{item.label}</span>
             </Link>
 
             {/* ส่วนย่อย — คลี่ออกเมื่อกำลังอยู่ในหมวดนี้ */}
@@ -285,6 +324,7 @@ export default function Sidebar({
   userName,
   userCode,
   siteUrl,
+  pages,
 }: {
   role: "ADMIN" | "EDITOR";
   areas: string[];
@@ -292,9 +332,25 @@ export default function Sidebar({
   userCode: string;
   /** ที่อยู่เว็บสาธารณะ — คนละโดเมนกับหลังบ้าน ต้องส่งมาเต็ม ๆ ไม่ใช่ "/" */
   siteUrl: string;
+  /** หน้าเนื้อหาที่คนนี้ดูแล (กรองสิทธิ์แล้วใน layout) — ให้ช่องค้นหาด่วนพาไปหน้าแก้ไขได้ตรง ๆ */
+  pages: PaletteEntry[];
 }) {
   const user: Actor = { role, areas };
   const [open, setOpen] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const entries = useMemo(() => [...menuEntries({ role, areas }), ...pages], [role, areas, pages]);
+
+  // Ctrl+K / ⌘K เปิดค้นหาได้จากทุกหน้าในหลังบ้าน
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearching((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const brand = (
     <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-4">
@@ -342,14 +398,23 @@ export default function Sidebar({
         >
           <Menu className="h-5 w-5" />
         </button>
-        <p className="truncate font-semibold text-gray-800">หลังบ้านเว็บไซต์</p>
+        <p className="min-w-0 flex-1 truncate font-semibold text-gray-800">หลังบ้านเว็บไซต์</p>
+        <button
+          onClick={() => setSearching(true)}
+          aria-label="ค้นหาเมนูหรือหน้า"
+          className="rounded-lg p-1.5 text-gray-600 transition hover:bg-gray-100"
+        >
+          <Search className="h-5 w-5" />
+        </button>
       </div>
+
+      <CommandPalette entries={entries} open={searching} onClose={() => setSearching(false)} />
 
       {/* เมนูค้างซ้ายบนจอใหญ่ */}
       {/* ตอนสั่งพิมพ์ (เช่น โปสเตอร์ QR แบบประเมิน) ไม่เอาเมนูติดไปบนกระดาษ */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-brand-800 md:flex print:hidden">
         {brand}
-        <Nav user={user} />
+        <Nav user={user} onSearch={() => setSearching(true)} />
         {footer}
       </aside>
 
@@ -381,7 +446,7 @@ export default function Sidebar({
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <Nav user={user} onNavigate={() => setOpen(false)} />
+              <Nav user={user} onNavigate={() => setOpen(false)} onSearch={() => { setOpen(false); setSearching(true); }} />
               {footer}
             </motion.aside>
           </>

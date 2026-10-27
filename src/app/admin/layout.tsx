@@ -6,6 +6,8 @@ import LineNudge from "@/components/admin/LineNudge";
 import { publicSiteUrl } from "@/lib/siteUrl";
 import { lineReady } from "@/lib/line";
 import { db } from "@/lib/db";
+import { canAnyPage, filterPages } from "@/lib/permissions";
+import { designedPageOf } from "@/lib/designedPages";
 
 export const metadata: Metadata = {
   title: "หลังบ้าน",
@@ -41,6 +43,23 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         .catch(() => null)
     )?.lineUserId;
 
+  // หน้าเนื้อหาสำหรับช่องค้นหาด่วน (Ctrl+K) — เฉพาะหน้าที่คนนี้ดูแล · หน้าออกแบบอัตโนมัติแก้จากเมนูของมันเอง ไม่ใส่
+  const pages = canAnyPage(user)
+    ? filterPages(
+        user,
+        await db.page
+          .findMany({ select: { id: true, title: true, slug: true, category: true }, orderBy: { title: "asc" } })
+          .catch(() => []),
+      )
+        .filter((p) => !designedPageOf(p.slug))
+        .map((p) => ({
+          label: p.title,
+          sub: `หน้าเนื้อหา · /${p.slug}/`,
+          href: `/admin/pages/${p.id}/`,
+          kind: "page" as const,
+        }))
+    : [];
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar
@@ -49,6 +68,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         userName={user.name}
         userCode={user.username}
         siteUrl={publicSiteUrl()}
+        pages={pages}
       />
       <div className="md:pl-64 print:pl-0">
         <div className="print:hidden">
