@@ -12,23 +12,30 @@
 - Cloudflare อ่านคำตอบที่พักไม่ได้ — Worker มีแค่กุญแจสาธารณะ กุญแจไขอยู่ที่เครื่องสำนักงาน
 - ไม่แตะโฮสต์ `spsccoop.com` เลย ทั้งตอนรับและตอนดึง
 
-## ขึ้นจริงครั้งแรก (ผู้ดูแลระบบ · ทำครั้งเดียว)
+## สถานะขึ้นจริง (27 ต.ค. 2569)
 
-ต้องมีสิทธิ์จัดการโซน `spsccoop.org` ใน Cloudflare · แพ็กเกจฟรีพอ
+| ขั้น | สถานะ |
+|---|---|
+| ล็อกอิน wrangler (บัญชี rahanmay@gmail.com · โซน `spsccoop.org`) | ✅ |
+| ฐาน D1 `survey-edge` (APAC · id ใน `wrangler.toml`) + `schema.sql` | ✅ |
+| `npx wrangler deploy` + Custom Domain `survey.spsccoop.org` (DNS/ใบรับรองสร้างเอง) | ✅ `/__health` = `{"ok":true}` |
+| secret `QUEUE_TOKEN` · `PUBLIC_KEY` | ⏳ **รอขึ้นเว็บหลักก่อน** |
 
-1. **DNS** — Cloudflare → `spsccoop.org` → DNS → เพิ่มระเบียน
-   `AAAA` · ชื่อ `survey` · ค่า `100::` · **Proxied (เมฆส้ม)**
-   (ที่อยู่ปลอมตามธรรมเนียมของ Worker — คำขอไม่เคยไปถึงที่อยู่นี้ Worker รับไปก่อน)
-2. **ล็อกอิน** — ในโฟลเดอร์นี้ `npm install` แล้ว `npx wrangler login`
-   (หรือตั้ง `CLOUDFLARE_API_TOKEN` ที่มีสิทธิ์ Workers Scripts + D1 + Workers Routes ของโซนนี้)
-3. **ฐาน D1** — `npx wrangler d1 create survey-edge` เอา `database_id` ที่ได้ไปแทนใน `wrangler.toml`
-   แล้ว `npx wrangler d1 execute survey-edge --remote --file schema.sql`
-4. **secret** — หลังบ้าน → แบบประเมิน → "ตั้งค่ากล่องพักคำตอบ" (เห็นเฉพาะ ADMIN) มีค่าให้คัดลอก
+ระหว่างยังไม่มี secret: กล่องพักคำตอบตอบ 503 "ยังไม่พร้อม" · `/__queue` ตอบ 404 · ไม่มีอะไรเสียหาย
+
+### ขั้นที่เหลือ — หลังขึ้นเว็บหลักแล้ว
+
+1. **secret** — หลังบ้าน → แบบประเมิน → "ตั้งค่ากล่องพักคำตอบ" (เห็นเฉพาะ ADMIN) มีค่าให้คัดลอก
    `npx wrangler secret put QUEUE_TOKEN` · `npx wrangler secret put PUBLIC_KEY`
-   ⚠️ **ต้องขึ้นเว็บหลัก (เฟส 2–6) ก่อน** กุญแจถูกสร้างในฐานจริงตอนเปิดหน้านั้นครั้งแรก
-5. **ขึ้น Worker** — `npx wrangler deploy`
-6. **ตรวจ** — เปิด `https://survey.spsccoop.org/__health` ต้องได้ `{"ok":true}`
-   · `docker compose logs survey-verify` ไม่มี error จากการดึง
+   ⚠️ กุญแจถูกสร้างในฐานจริงตอนเปิดหน้านั้นครั้งแรก — ต้องขึ้นเว็บหลักก่อน
+2. **ตรวจ** — `docker compose logs survey-verify` ไม่มี error จากการดึง
+
+### ขึ้นใหม่ตั้งแต่ศูนย์ (เผื่อย้ายบัญชี)
+
+`npm install` · `npx wrangler login` · `npx wrangler d1 create survey-edge --location apac` → ใส่ id ใน `wrangler.toml`
+· `npx wrangler d1 execute survey-edge --remote --file schema.sql` · `npx wrangler deploy` · ตั้ง secret สองตัว
+· ⚠️ Custom Domain ต้องไม่มีระเบียน DNS ชื่อ `survey` ค้างอยู่ก่อน
+· แก้ `src/index.ts` แล้วต้อง `npx wrangler deploy` เอง — ไม่มีระบบ deploy อัตโนมัติ
 
 ## ทดสอบบนเครื่องโดยไม่ต้องมีบัญชี Cloudflare
 
