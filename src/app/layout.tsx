@@ -1,6 +1,7 @@
 import { Sarabun } from "next/font/google";
 import { connection } from "next/server";
 import { db } from "@/lib/db";
+import HideVersion from "@/components/site/HideVersion";
 import "./globals.css";
 
 const sarabun = Sarabun({
@@ -44,6 +45,7 @@ export default async function RootLayout({
         <meta name="mirror-data" content={ready ? "ok" : "down"} />
       </head>
       <body className="min-h-full flex flex-col bg-white text-gray-800">
+        <HideVersion />
         {children}
       </body>
     </html>

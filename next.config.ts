@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   // คงรูปแบบ URL เดิม /path/ ไว้ ไม่ให้ลิงก์เก่าเสีย
   trailingSlash: true,
+  // ไม่บอกชื่อเฟรมเวิร์กในหัวคำขอ (เจ้าของเว็บขอ 27 ต.ค. 2569 — ลดสิ่งที่ Wappalyzer อ่านได้) · คู่กับ HideVersion
+  poweredByHeader: false,
   experimental: {
     // โปรเจกต์นี้มี proxy/middleware ทุก request จึงถูกจำกัดขนาด body ไว้ที่ 10MB ตามค่าเริ่มต้นของ Next
     // ประกาศที่สแกนมาหลายหน้าเกิน 10MB บ่อย แล้วอัปไม่ขึ้นโดยไม่บอกว่าเพราะไฟล์ใหญ่
