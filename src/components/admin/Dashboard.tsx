@@ -52,7 +52,6 @@ const TILES: { key: keyof Counts; label: string; unit: string; href: string; ico
 
 export default function Dashboard({
   counts,
-  backup,
   visits,
   popular,
   total,
@@ -61,7 +60,6 @@ export default function Dashboard({
   tiles,
 }: {
   counts: Counts;
-  backup: BackupStatus;
   visits: YearPoint[];
   popular: PagePoint[];
   /** ยอดสะสมที่โชว์ท้ายเว็บ (ครั้ง) = ยอดยกมาจากเว็บเดิม + ที่ระบบนี้นับได้ */
@@ -154,12 +152,14 @@ export default function Dashboard({
         </motion.div>
       </div>
 
-      {/* การสำรองข้อมูล — ของจริง อ่านจากโฟลเดอร์ backups */}
-      <motion.section
-        {...rise}
-        transition={{ duration: 0.45, delay: 0.34, ease: "easeOut" }}
-        className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5"
-      >
+    </div>
+  );
+}
+
+/** การสำรองข้อมูล — ของจริง อ่านจากโฟลเดอร์ backups · อยู่ในกล่อง "สถานะระบบ" ที่พับได้ของหน้าภาพรวม */
+export function BackupPanel({ backup }: { backup: BackupStatus }) {
+  return (
+      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
@@ -222,7 +222,6 @@ export default function Dashboard({
             ด้วยคำสั่ง <code className="font-mono">docker compose logs db-backup</code>
           </p>
         )}
-      </motion.section>
-    </div>
+      </section>
   );
 }

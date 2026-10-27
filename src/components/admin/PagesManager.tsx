@@ -257,10 +257,11 @@ export default function PagesManager({
 
             <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
               {group.pages.map((page) => (
-                <li key={page.id}>
+                // แถวละบรรทัดเดียว — เดิมช่องเลือกหมวดอยู่อีกบรรทัด รายการ 31 หน้ายาวสามสี่จอ (27 ต.ค. 2569)
+                <li key={page.id} className="flex flex-wrap items-center transition hover:bg-gray-50 sm:flex-nowrap">
                   <Link
                     href={`/admin/pages/${page.id}/`}
-                    className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-gray-50"
+                    className="flex min-w-0 flex-1 basis-full items-center gap-3 px-4 py-2.5 sm:basis-auto"
                   >
                     {page.published ? (
                       <CircleDot className="h-4 w-4 shrink-0 text-emerald-500" />
@@ -273,19 +274,19 @@ export default function PagesManager({
                         /{page.slug}/
                       </span>
                     </span>
-                    <span className="shrink-0 text-xs text-gray-400">
+                    <span className={`shrink-0 text-xs ${page.published ? "text-gray-400" : "font-medium text-amber-600"}`}>
                       {page.published ? "เผยแพร่" : "ฉบับร่าง"}
                     </span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" />
                   </Link>
 
-                  {/* ย้ายหมวดจากตรงนี้ได้เลย ไม่ต้องเปิดเข้าไปในหน้าแก้ไข */}
-                  <div className="flex items-center gap-1.5 border-t border-gray-50 px-4 py-1.5">
-                    <span className="text-[11px] text-gray-400">หมวด</span>
+                  {/* ย้ายหมวดจากตรงนี้ได้เลย ไม่ต้องเปิดเข้าไปในหน้าแก้ไข — อยู่นอกลิงก์ เลือกแล้วไม่พาเปิดหน้า */}
+                  <div className="flex items-center gap-1.5 pb-2 pl-11 pr-2 sm:pb-0 sm:pl-0">
+                    <span className="text-[11px] text-gray-400 sm:hidden">หมวด</span>
                     <select
                       value={allCategories.includes(page.category ?? "") ? page.category ?? "" : ""}
                       onChange={(e) => void movePage(page.id, e.target.value)}
-                      className="rounded-lg border border-gray-200 bg-white px-2 py-0.5 text-[11px] text-gray-600 outline-none focus:border-brand-400"
+                      title="ย้ายหน้านี้ไปหมวดอื่น"
+                      className="max-w-40 rounded-lg border border-gray-200 bg-white px-2 py-0.5 text-[11px] text-gray-600 outline-none focus:border-brand-400"
                     >
                       <option value="">— ตามที่อยู่หน้า —</option>
                       {allCategories.map((c) => (
@@ -295,6 +296,9 @@ export default function PagesManager({
                       ))}
                     </select>
                   </div>
+                  <Link href={`/admin/pages/${page.id}/`} aria-hidden tabIndex={-1} className="hidden px-3 py-3 sm:block">
+                    <ChevronRight className="h-4 w-4 text-gray-300" />
+                  </Link>
                 </li>
               ))}
             </ul>

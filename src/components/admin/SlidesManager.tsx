@@ -14,7 +14,9 @@ import {
   ImagePlus,
   // Infinity ชนกับ Infinity ของ JS ต้องเปลี่ยนชื่อ ไม่งั้นมันจะบังค่าจริงทั้งไฟล์
   Infinity as InfinityIcon,
+  LayoutGrid,
   Link2,
+  List,
   ListOrdered,
   Loader2,
   Settings2,
@@ -153,6 +155,13 @@ export default function SlidesManager({
    * ถ้าฝั่งเซิร์ฟเวอร์ส่งข้อมูลชุดใหม่มา (แก้ช่องอื่น เพิ่ม ลบ) ให้ยึดของเซิร์ฟเวอร์เสมอ
    */
   const [list, setList] = useState(items);
+  /**
+   * มุมมองรายการย่อ (เจ้าของเว็บขอ 27 ต.ค. 2569: สไลด์ใบละครึ่งจอ เลื่อนหายาว จัดลำดับยาก)
+   * ค่าตั้งต้น = การ์ดเต็มเหมือนเดิม · **หน้าตาการ์ดไม่เปลี่ยน** (ต้องเหมือนหน้าแรกจริง) แค่มีทางเลือกเพิ่ม
+   * กดที่แถวไหนก็ขยายเป็นการ์ดเต็มเฉพาะใบนั้นให้แก้ได้ตามปกติ
+   */
+  const [compact, setCompact] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [fromServer, setFromServer] = useState(() => JSON.stringify(items));
   const incoming = JSON.stringify(items);
   if (incoming !== fromServer) {
@@ -404,8 +413,99 @@ export default function SlidesManager({
     router.refresh();
   }
 
+  /** แถวย่อ — ภาพเล็ก หัวข้อ สถานะ ปุ่มขึ้น/ลง/ซ่อน · กดที่แถวเพื่อขยายเป็นการ์ดเต็มไปแก้ */
+  const compactRow = (slide: SlideRow, i: number) => {
+    const state = scheduleState(slide);
+    const position = positions[i];
+    return (
+      <motion.div
+        key={slide.id}
+        layout
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0, height: 0 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        className={`flex min-w-0 items-center gap-3 rounded-xl bg-white p-2 pr-3 shadow-sm ring-1 ring-gray-200 ${
+          isLive(slide) ? "" : "opacity-70"
+        }`}
+      >
+        <span
+          title={position ? `ขึ้นเป็นลำดับที่ ${position} บนหน้าเว็บ` : "ยังไม่ขึ้นบนหน้าเว็บ"}
+          className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${
+            position ? "bg-brand-600 text-white" : "bg-gray-200 text-gray-500"
+          }`}
+        >
+          {position ?? "–"}
+        </span>
+        <button
+          type="button"
+          onClick={() => setExpanded(slide.id)}
+          title="ขยายเพื่อแก้ไข"
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
+          <span className="h-12 w-20 shrink-0 overflow-hidden rounded-lg bg-sky-50 ring-1 ring-black/5">
+            <AssetImage src={slide.imageUrl} alt={slide.title} className="h-full w-full object-contain" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium text-gray-800">{slide.title || "(ยังไม่มีหัวข้อ)"}</span>
+            <span className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${state.tone}`}>
+              {state.label}
+            </span>
+          </span>
+        </button>
+        <div className="flex shrink-0 items-center gap-0.5 text-gray-500">
+          <button
+            type="button"
+            title="เลื่อนขึ้น"
+            disabled={busy !== null || i === 0}
+            onClick={() => patch(slide.id, { move: "up" })}
+            className="rounded-lg p-1.5 transition hover:bg-gray-100 disabled:opacity-25"
+          >
+            <ChevronUp className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            title="เลื่อนลง"
+            disabled={busy !== null || i === list.length - 1}
+            onClick={() => patch(slide.id, { move: "down" })}
+            className="rounded-lg p-1.5 transition hover:bg-gray-100 disabled:opacity-25"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            title={slide.published ? "ซ่อนจากหน้าเว็บ" : "แสดงบนหน้าเว็บ"}
+            disabled={busy !== null}
+            onClick={() => patch(slide.id, { published: !slide.published })}
+            className="rounded-lg p-1.5 transition hover:bg-gray-100"
+          >
+            {slide.published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          </button>
+        </div>
+      </motion.div>
+    );
+  };
+
+  /** สไลด์หนึ่งใบ — โหมดรายการย่อวาดเป็นแถวเล็ก เว้นใบที่กดขยายไว้ */
+  const slideRow = (slide: SlideRow, i: number) => {
+    if (!compact) return fullRow(slide, i);
+    if (expanded !== slide.id) return compactRow(slide, i);
+    return (
+      <div key={slide.id} className="space-y-1.5">
+        <button
+          type="button"
+          onClick={() => setExpanded(null)}
+          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50"
+        >
+          <ChevronUp className="h-3.5 w-3.5" /> ย่อกลับเป็นแถว
+        </button>
+        {fullRow(slide, i)}
+      </div>
+    );
+  };
+
   /** สไลด์หนึ่งใบพร้อมปุ่มจัดการ — แยกมาเป็นฟังก์ชันเพราะตอนนี้วาดสองกลุ่ม ไม่ใช่ก้อนเดียวอีกต่อไป */
-  const slideRow = (slide: SlideRow, i: number) => (
+  const fullRow = (slide: SlideRow, i: number) => (
       <motion.div
         key={slide.id}
         layout
@@ -552,6 +652,30 @@ export default function SlidesManager({
         <p className="rounded-xl bg-gray-50 py-8 text-center text-sm text-gray-400">
           ยังไม่มีสไลด์ — หน้าเว็บจะใช้ภาพชุดเดิมที่ติดมากับโค้ดไปก่อน
         </p>
+      )}
+
+      {list.length > 0 && (
+        <div className="flex items-center justify-end gap-1 text-xs">
+          <span className="mr-1 text-gray-400">มุมมอง</span>
+          {[
+            { on: false, label: "การ์ดเต็ม", icon: LayoutGrid },
+            { on: true, label: "รายการย่อ", icon: List },
+          ].map((v) => (
+            <button
+              key={v.label}
+              type="button"
+              onClick={() => {
+                setCompact(v.on);
+                setExpanded(null);
+              }}
+              className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 font-medium ring-1 transition ${
+                compact === v.on ? "bg-brand-600 text-white ring-brand-600" : "bg-white text-gray-600 ring-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              <v.icon className="h-3.5 w-3.5" /> {v.label}
+            </button>
+          ))}
+        </div>
       )}
 
       {/*
