@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSession, purgeExpiredSessions, verifyPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { lineReady } from "@/lib/line";
+import { logSecurity } from "@/lib/securityLog";
 
 /**
  * เข้าสู่ระบบหลังบ้าน
@@ -79,6 +80,7 @@ export async function POST(request: Request) {
   // ต้องเช็คชั้นชื่อผู้ใช้ด้วย จึงอ่าน body ก่อนแล้วค่อยตัดสิน
   const wait = Math.max(blockedFor(`ip:${ip}`), blockedFor(`user:${username.toLowerCase()}`));
   if (wait > 0) {
+    await logSecurity("login_locked", { username, ip, note: `รออีก ${wait} นาที` });
     return NextResponse.json(
       { error: `ใส่รหัสผิดหลายครั้งเกินไป กรุณารออีก ${wait} นาที` },
       { status: 429 },
@@ -89,6 +91,7 @@ export async function POST(request: Request) {
   if (!user) {
     recordFailure(`ip:${ip}`);
     recordFailure(`user:${username.toLowerCase()}`);
+    await logSecurity("login_fail", { username, ip });
     return NextResponse.json({ error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }, { status: 401 });
   }
 
@@ -112,6 +115,7 @@ export async function POST(request: Request) {
       select: { lineUserId: true },
     });
     if (row?.lineUserId) {
+      await logSecurity("login_fail", { username, ip, note: "รหัสถูก แต่บัญชีผูก LINE แล้ว ต้องเข้าด้วย LINE" });
       return NextResponse.json(
         { error: "บัญชีนี้ผูกกับ LINE แล้ว กรุณากดปุ่ม “เข้าสู่ระบบด้วย LINE”", useLine: true },
         { status: 403 },
@@ -123,6 +127,7 @@ export async function POST(request: Request) {
   attempts.delete(`user:${username.toLowerCase()}`);
   await createSession(user.id);
   await purgeExpiredSessions();
+  await logSecurity("login_ok", { username, ip, note: onThisMachine ? "เครื่องนี้ (localhost)" : "รหัสผ่าน" });
 
   return NextResponse.json({ user });
 }

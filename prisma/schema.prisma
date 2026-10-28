@@ -269,6 +269,22 @@ model Member {
   @@index([phoneHashes], type: Gin)
 }
 
+/// บันทึกเหตุการณ์ด้านความปลอดภัย — ให้หน้า "ความปลอดภัย" ในหลังบ้านอ่าน (เจ้าของเว็บขอ 27 ต.ค. 2569)
+/// ไม่เก็บรหัสผ่านหรือข้อมูลที่ส่งมา · ลบเองเมื่อเกิน 90 วัน (src/lib/securityLog.ts)
+model SecurityEvent {
+  id       String   @id @default(cuid())
+  at       DateTime @default(now())
+  /// login_ok · login_fail · login_locked · line_ok · line_fail · survey_blocked · eval_bad_sig · eval_rejected · eval_ok
+  kind     String
+  /// ชื่อผู้ใช้ที่พิมพ์มา (อาจเป็นชื่อที่ไม่มีจริง) · เลขสมาชิกที่ถูกกันในแบบประเมิน
+  username String?
+  ip       String?
+  note     String?
+
+  @@index([at])
+  @@index([kind, at])
+}
+
 model Setting {
   key       String   @id
   value     Json

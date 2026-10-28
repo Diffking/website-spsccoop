@@ -13,6 +13,7 @@ import { NOT_OPEN, publicSurvey } from "@/lib/surveyPublic";
 import { allowLookup, recordMiss, visitorIp } from "@/lib/surveyGuard";
 import { issueToken } from "@/lib/surveyToken";
 import { thaiDateTime } from "@/lib/surveyTime";
+import { logSecurity } from "@/lib/securityLog";
 
 type Params = { params: Promise<{ code: string }> };
 
@@ -52,6 +53,7 @@ export async function POST(request: Request, { params }: Params) {
 
   const ip = visitorIp(request);
   if (!allowLookup(ip, membNo.replace(/^0+/, ""))) {
+    await logSecurity("survey_blocked", { username: membNo, ip, note: code });
     return NextResponse.json({ error: "ลองหลายครั้งเกินไป กรุณารอสัก 15 นาทีแล้วลองใหม่" }, { status: 429 });
   }
 
