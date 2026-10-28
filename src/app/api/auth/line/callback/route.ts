@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createSession, currentView, purgeExpiredSessions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { hashToken, identityFromCode, lineConfig, redirectWithin, sameToken } from "@/lib/line";
+import { logSecurity } from "@/lib/securityLog";
 import { LINE_FLOW_COOKIE, unpackFlow } from "@/lib/lineFlow";
 
 /**
@@ -63,7 +64,10 @@ export async function GET(request: NextRequest) {
     request.headers.get("cf-connecting-ip") ??
     request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     "unknown";
-  if (tooMany(ip)) return back("login", "toomany");
+  if (tooMany(ip)) {
+    await logSecurity("line_fail", { ip, note: "ลองพลาดหลายครั้ง ถูกพักไว้" });
+    return back("login", "toomany");
+  }
 
   const flow = unpackFlow(request.cookies.get(LINE_FLOW_COOKIE)?.value);
   if (!flow) return back("login", "expired");
@@ -78,12 +82,14 @@ export async function GET(request: NextRequest) {
   const code = params.get("code") ?? "";
   if (!state || !code || !sameToken(hashToken(state), flow.s)) {
     noteFail(ip);
+    await logSecurity("line_fail", { ip, note: "state ไม่ตรง" });
     return back(where, "state");
   }
 
   const identity = await identityFromCode(cfg, code, flow.n);
   if (!identity) {
     noteFail(ip);
+    await logSecurity("line_fail", { ip, note: "ตรวจ id_token ไม่ผ่าน" });
     return back(where, "verify");
   }
 
@@ -96,11 +102,13 @@ async function loginWithLine(sub: string, ip: string) {
   const user = await db.user.findUnique({ where: { lineUserId: sub } });
   if (!user || !user.active) {
     noteFail(ip);
+    await logSecurity("line_fail", { ip, note: user ? "บัญชีถูกปิดใช้งาน" : "บัญชี LINE นี้ยังไม่ได้ผูกกับผู้ใช้คนไหน" });
     return back("login", "nolink");
   }
 
   await createSession(user.id);
   await purgeExpiredSessions();
+  await logSecurity("line_ok", { username: user.username, ip });
   const res = redirectWithin("/admin/");
   res.cookies.delete(LINE_FLOW_COOKIE);
   return res;

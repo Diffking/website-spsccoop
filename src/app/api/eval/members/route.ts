@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { importMembers, signatureOk } from "@/lib/memberSync";
+import { logSecurity, requestIp } from "@/lib/securityLog";
 
 /**
  * POST https://spsccoop.org/api/eval/members/ — sync-agent ส่งทะเบียนสมาชิกทั้งชุดมาวันละ 2 รอบ
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
   // อ่าน raw ก่อนทำอะไรทั้งนั้น — ลายเซ็นคิดจาก byte ตามที่ส่งมา
   const raw = Buffer.from(await request.arrayBuffer());
   if (!signatureOk(request.headers.get("x-eval-timestamp"), request.headers.get("x-eval-signature"), raw)) {
+    await logSecurity("eval_bad_sig", { ip: requestIp(request), note: `${raw.length} ไบต์` });
     return NextResponse.json({ error: "ลายเซ็นไม่ถูกต้องหรือหมดอายุ" }, { status: 401 });
   }
 
@@ -22,6 +24,10 @@ export async function POST(request: Request) {
     const result = await importMembers(raw);
     if (result.status === 200) console.log(`รับทะเบียนสมาชิก: ${result.body.rows} คน`);
     else console.warn(`ปฏิเสธทะเบียนสมาชิก: ${result.body.error}`);
+    await logSecurity(result.status === 200 ? "eval_ok" : "eval_rejected", {
+      ip: requestIp(request),
+      note: result.status === 200 ? `${result.body.rows} คน` : String(result.body.error),
+    });
     return NextResponse.json(result.body, { status: result.status });
   } catch (e) {
     // ฐานของเราสะดุด — 5xx ให้ sync-agent ลองใหม่ (ไม่พิมพ์ body)

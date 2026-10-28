@@ -1738,6 +1738,23 @@ next/eslint-config-next 16.4.3 · react 19.2.9 · sharp 0.35.5 · prisma 7.10.1 
 - image ช่วย (`mirror-warm` · `holiday-sync` · `survey-verify`) ใช้ `alpine:3.22` · **3.20 หมดซัพพอร์ต เม.ย. 2569**
 - build ทุกครั้งใช้ `docker compose build --pull` ให้ได้ `node:22-alpine` แพตช์ล่าสุด
 
+### หน้า "ความปลอดภัย" ในหลังบ้าน (`/admin/security` · ADMIN เท่านั้น · 28 ต.ค. 2569)
+
+`src/lib/securityReport.ts` รวบรวม · `src/lib/securityLog.ts` บันทึกลงตาราง `SecurityEvent` (ลบเองเกิน 90 วัน)
+
+| ส่วน | มาจาก |
+|---|---|
+| การเข้าสู่ระบบ 7/30 วัน · ไอพี/ชื่อที่พลาดบ่อย · 20 รายการล่าสุด | `SecurityEvent` |
+| บัญชีผู้ใช้ (รหัสตั้งต้น · ผูก LINE · session ค้าง) | ตาราง `User` |
+| เวอร์ชันที่รันจริง (Next · React · Node · Postgres · sharp · Prisma) | อ่านตอนเปิดหน้า |
+| ระบบเชื่อมต่อ (สำรอง · sync-agent · Worker) | ของเดิม + `/__health` ของ Worker — **ไม่ถามโฮสต์ .com** |
+| รายการค้างบนเครื่อง Windows | `MACHINE_ITEMS` + ติ๊กเก็บใน `Setting["securityChecklist"]` |
+
+- จุดที่บันทึก: `login` (สำเร็จ/ผิด/ล็อก/รหัสถูกแต่ต้องใช้ LINE) · LINE callback (สำเร็จ/ไม่สำเร็จ) ·
+  identify แบบประเมินที่ถูกกัน (429) · `/api/eval/members` (ลายเซ็นผิด/ถูกปฏิเสธ/รับแล้ว)
+- ⚠️ **ห้ามบันทึกรหัสผ่าน · body ที่ส่งมา · เบอร์โทร** · บันทึกพลาดต้องไม่ทำให้ล็อกอินพัง (`logSecurity` กลืน error)
+- ⚠️ เพิ่มรายการใน `MACHINE_ITEMS` ได้ แต่ **ห้ามเปลี่ยน `id` เดิม** ไม่งั้นสถานะที่ติ๊กไว้หลุด
+
 ### หัวคำขอด้านความปลอดภัย
 
 ตั้งไว้ที่ `next.config.ts` (`headers()`) ครอบทุกหน้า: `nosniff` · `X-Frame-Options:

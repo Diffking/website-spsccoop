@@ -18,6 +18,7 @@ import {
   Users,
   Search,
   Share2,
+  ShieldCheck,
   KeyRound,
   Menu,
   X,
@@ -45,6 +46,7 @@ export type MenuKey =
   | "surveys"
   | "seo"
   | "bridge"
+  | "security"
   | "users";
 
 const ITEMS: {
@@ -180,6 +182,14 @@ const ITEMS: {
     desc: "ข้อมูลที่แบ่งปันให้ระบบอื่นในสำนักงานอ่าน",
   },
   {
+    key: "security",
+    group: "ตั้งค่าระบบ",
+    href: "/admin/security",
+    icon: ShieldCheck,
+    label: "ความปลอดภัย",
+    desc: "การเข้าสู่ระบบ บัญชีผู้ใช้ เวอร์ชัน และระบบเชื่อมต่อ (ผู้ดูแลระบบ)",
+  },
+  {
     key: "users",
     group: "ตั้งค่าระบบ",
     href: "/admin/users",
@@ -203,7 +213,7 @@ const GROUPS = ["", "เนื้อหาเว็บ", "ส่วนประ�
 
 function visibleItems(user: Actor) {
   return ITEMS.flatMap((item) => {
-    if (item.key === "users") return user.role === "ADMIN" ? [item] : [];
+    if (item.key === "users" || item.key === "security") return user.role === "ADMIN" ? [item] : [];
     if (item.key === "pages") return canAnyPage(user) ? [item] : [];
 
     const children = item.children?.filter((child) => canArea(user, child.area));
