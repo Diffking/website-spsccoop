@@ -7,6 +7,7 @@ import {
   KeyRound,
   Link2,
   ListChecks,
+  Gauge,
   ScrollText,
   ShieldAlert,
   Users,
@@ -18,11 +19,14 @@ import {
   MACHINE_ITEMS,
   accountSummary,
   checklistState,
+  dailyLogins,
   eventSummary,
   integrationSummary,
   runtimeVersions,
+  securityScore,
 } from "@/lib/securityReport";
 import SecurityChecklist from "@/components/admin/SecurityChecklist";
+import { DailyLoginChart, ScoreGauge, ScoreMeters } from "@/components/admin/SecurityCharts";
 
 /**
  * Dashboard ความปลอดภัย — ADMIN เท่านั้น (เจ้าของเว็บขอ 27 ต.ค. 2569)
@@ -77,12 +81,13 @@ export default async function SecurityPage() {
   if (!user) redirect("/login/");
   if (user.role !== "ADMIN") redirect(ADMIN_HOME);
 
-  const [versions, events, accounts, links, checklist] = await Promise.all([
+  const [versions, events, accounts, links, checklist, daily] = await Promise.all([
     runtimeVersions(),
     eventSummary(),
     accountSummary(),
     integrationSummary(),
     checklistState(),
+    dailyLogins(30),
   ]);
 
   const c = events.counts;
@@ -94,8 +99,16 @@ export default async function SecurityPage() {
     { label: "LINE ไม่สำเร็จ", kind: "line_fail", warn: true },
     { label: "แบบประเมิน: ถูกกันไล่สุ่ม", kind: "survey_blocked", warn: true },
   ];
-  const openItems = MACHINE_ITEMS.filter((i) => !checklist[i.id]?.done).length;
-  const weakAccounts = accounts.filter((a) => a.active && !a.ownPassword && !a.line).length;
+  const machineDone = MACHINE_ITEMS.filter((i) => checklist[i.id]?.done).length;
+  const score = securityScore({
+    accounts,
+    backupAt: links.backup.latestAt,
+    fails7: c.login_fail.d7 + c.line_fail.d7,
+    locked7: c.login_locked.d7,
+    worker: links.worker,
+    machineDone,
+    machineTotal: MACHINE_ITEMS.length,
+  });
 
   return (
     <main className="mx-auto max-w-5xl space-y-5 px-4 py-6">
@@ -106,15 +119,12 @@ export default async function SecurityPage() {
         </p>
       </div>
 
-      {/* สรุปบนสุด — มีอะไรต้องดูไหม */}
-      <div className="flex flex-wrap gap-2">
-        <Pill ok={c.login_locked.d7 === 0 && c.line_fail.d7 < 5}>
-          7 วัน: ผิด {c.login_fail.d7} · ล็อก {c.login_locked.d7}
-        </Pill>
-        <Pill ok={weakAccounts === 0}>บัญชีที่ยังใช้รหัสตั้งต้น {weakAccounts} คน</Pill>
-        <Pill ok={!links.backup.stale}>สำรองข้อมูล {links.backup.stale ? "เก่าเกิน 2 วัน" : "ปกติ"}</Pill>
-        <Pill ok={openItems === 0}>รายการค้างบนเครื่อง {openItems} เรื่อง</Pill>
-      </div>
+      <Card icon={Gauge} title="คะแนนความปลอดภัย" hint="คิดสดทุกครั้งที่เปิดหน้า จาก 6 เกณฑ์ด้านล่าง · ชี้ที่หลอดเพื่อดูเกณฑ์">
+        <ScoreGauge score={score.score} status={score.status} parts={score.parts} />
+        <div className="mt-5 border-t border-gray-100 pt-5">
+          <ScoreMeters parts={score.parts} />
+        </div>
+      </Card>
 
       <Card
         icon={ScrollText}
@@ -125,7 +135,12 @@ export default async function SecurityPage() {
             : "ยังไม่มีเหตุการณ์ — เริ่มเก็บตั้งแต่ขึ้นหน้านี้ · ไม่เก็บรหัสผ่าน"
         }
       >
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <p className="text-xs font-medium text-gray-500">รายวัน 30 วันล่าสุด</p>
+        <div className="mt-2">
+          <DailyLoginChart data={daily} since={events.since ? dShort.format(events.since) : null} />
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {tiles.map((t) => (
             <div
               key={t.kind}
