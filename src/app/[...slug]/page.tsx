@@ -14,6 +14,8 @@ import { repairStructure } from "@/lib/htmlStructure";
 import { LIVE_DEPOSIT_RATES, LIVE_LOAN_RATES, splitAtRates } from "@/lib/liveRates";
 import { LIVE_VAN_SCHEDULE, fillVanSchedule, getVanSchedule } from "@/lib/liveVan";
 import RateSections from "@/components/site/RateSections";
+import DirectoryNav from "@/components/site/DirectoryNav";
+import { directorySections } from "@/lib/directoryNav";
 import WelfareSections from "@/components/site/WelfareSections";
 import { readWelfare } from "@/lib/welfareGroups";
 import { readDocTables } from "@/lib/pageDocs";
@@ -95,13 +97,16 @@ export default async function ContentPage({ params }: Params) {
     : null;
   // สวัสดิการ: อ่านตารางในเนื้อหาไปทำเป็นการ์ด — อ่านไม่ออกก็คืน null แล้วแสดงแบบเดิม
   const welfare = groups ? null : readWelfare(html);
+  // หน้าทำเนียบที่แบ่งกลุ่มด้วย <h2> (เช่น เจ้าหน้าที่) → มีแถบนำทางชื่อฝ่ายด้านซ้าย
+  const dir = groups || welfare ? null : directorySections(split.before);
 
   return (
     <>
       <PageTracker />
       <Header />
       {/* กว้างเท่าหัวเว็บกับหน้าแรก (max-w-6xl) — ทำเนียบ 4 คนต่อแถวกับตารางจะได้ไม่อึดอัด */}
-      <main className="mx-auto w-full max-w-6xl px-4 py-8">
+      {/* หน้าที่มีแถบนำทางซ้ายกว้างขึ้นหนึ่งขั้น (max-w-7xl) เนื้อหาจะได้กว้างเท่าเดิมโดยประมาณ */}
+      <main className={`mx-auto w-full ${dir ? "max-w-7xl" : "max-w-6xl"} px-4 py-8`}>
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-brand-600"
@@ -145,6 +150,15 @@ export default async function ContentPage({ params }: Params) {
             <PageContent html={welfare.before} />
             <WelfareSections groups={welfare.groups} tables={welfare.tables} />
             {welfare.after && <PageContent html={welfare.after} />}
+          </div>
+        ) : dir ? (
+          /* minmax(0,…) ทั้งสองช่อง — กันชื่อไทยยาว ๆ ดันคอลัมน์ (ดูกฎกริดใน AGENTS.md) */
+          <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:items-start">
+            <DirectoryNav sections={dir.sections} />
+            <PageContent
+              html={dir.html}
+              className="dir-page min-w-0 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 md:p-8"
+            />
           </div>
         ) : (
           <PageContent

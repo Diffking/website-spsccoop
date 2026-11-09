@@ -167,6 +167,10 @@ body {
   margin-top: 2.25rem; padding-left: .75rem; border-left: 4px solid #1c7fca;
   clear: both;
 }
+/* หน้าทำเนียบที่มีแถบนำทางซ้าย (DirectoryNav) — กดแล้วหัวข้อไม่โดนแถบเมนูที่ปักหัวจอบัง
+   หัวข้อแรกไม่ต้องเว้นบน การ์ดขาวมี padding อยู่แล้ว */
+.dir-page h2[id] { scroll-margin-top: 6rem; }
+.dir-page > h2:first-child { margin-top: 0; }
 .prose-page h3 {
   font-size: 1.125rem; font-weight: 600; color: #1f2937; line-height: 1.6;
   margin-top: 1.75rem; clear: both;
@@ -373,7 +377,9 @@ body {
 .prose-page .person figcaption,
 .prose-page .people figure figcaption {
   margin: .55rem auto 0;
-  max-width: 13rem;
+  /* min(…, 100%) — ชื่อห้ามตัดบรรทัด (nowrap) ป้ายจึงยืดตามชื่อได้ ต้องไม่ให้ยืดเกินช่องของคนนั้น
+     ไม่งั้นจอแคบป้ายล้นทับคนข้าง ๆ และ fitPersonNames() ไม่รู้ว่าต้องย่อ (เจอ 9 พ.ย. 2569) */
+  max-width: min(13rem, 100%);
   border-radius: .5rem;
   padding: .45rem .55rem .5rem;
   text-align: center;
@@ -409,6 +415,11 @@ body {
 .prose-page .person-name {
   display: block; font-weight: 600; color: var(--color-brand-800); line-height: 1.45; font-size: .95rem;
 }
+/* ⚠️ ชื่อกับนามสกุลต้องอยู่บรรทัดเดียวกันเสมอ — เจ้าของเว็บสั่ง 9 พ.ย. 2569
+   (ภาษาไทยไม่มีช่องว่างระหว่างพยางค์ เบราว์เซอร์จึงตัดกลางนามสกุลได้ เช่น "สมบัติยานุ / ชิต")
+   ชื่อยาวเกินป้าย → fitPersonNames() ใน PageContent.tsx ย่อตัวอักษร/ขยายป้ายให้พอดีเอง
+   ใน EditUI ไม่มีตัวย่อ — ยอมให้ล้นป้ายได้ ดีกว่าตัดกลางนามสกุล */
+.prose-page .person-name { white-space: nowrap; }
 /* ตำแหน่งใช้น้ำเงินอ่อนลงมาหนึ่งขั้น ไม่ใช่เทา — เทาบนพื้นฟ้าอ่อนดูซีดจนอ่านยาก
    สีนี้ผ่านเกณฑ์ contrast 4.5:1 บนพื้น brand-50 แล้ว (ตัวอักษรเล็กกว่าปกติจึงต้องเช็ค) */
 .prose-page .person-role {

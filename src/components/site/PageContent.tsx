@@ -17,6 +17,43 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 /** useLayoutEffect ทำงานก่อนวาดจอ — ซ่อนก้อนเนื้อหาได้ทันก่อนผู้อ่านเห็น ไม่มีอาการวาบ */
 const useBeforePaint = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
+/**
+ * ทำเนียบ: ชื่อ-นามสกุลต้องอยู่บรรทัดเดียว (CSS ห้ามตัดบรรทัดไว้แล้ว) — ชื่อที่ยาวเกินป้าย ทำตามลำดับ
+ *   1. ย่อตัวอักษรลงได้ถึง NAME_SOFT_MIN (ยังอ่านสบาย)
+ *   2. ยังไม่พอ → ให้ป้ายกว้างกว่ารูปได้ แต่ไม่เกินช่องของคนนั้น
+ *   3. ยังไม่พออีก (จอแคบมาก) → ย่อต่อจนพอดี ไม่ต่ำกว่า NAME_HARD_MIN
+ * เจ้าของเว็บสั่ง 9 พ.ย. 2569 หลังเห็น "สมบัติยานุ / ชิต" ตกบรรทัด
+ */
+const NAME_SOFT_MIN = 13;
+const NAME_HARD_MIN = 9;
+
+function fitPersonNames(root: HTMLElement) {
+  root.querySelectorAll<HTMLElement>(".people figure").forEach((fig) => {
+    const cap = fig.querySelector<HTMLElement>("figcaption");
+    const name = fig.querySelector<HTMLElement>(".person-name");
+    if (!cap || !name) return;
+    name.style.fontSize = "";
+    cap.style.maxWidth = "";
+    cap.style.width = "";
+    const over = () => name.scrollWidth > name.clientWidth + 0.5;
+    if (!over()) return;
+
+    let size = parseFloat(getComputedStyle(name).fontSize);
+    while (over() && size > NAME_SOFT_MIN) {
+      size -= 0.5;
+      name.style.fontSize = `${size}px`;
+    }
+    if (!over()) return;
+
+    cap.style.width = "max-content";
+    cap.style.maxWidth = "100%";
+    while (over() && size > NAME_HARD_MIN) {
+      size -= 0.5;
+      name.style.fontSize = `${size}px`;
+    }
+  });
+}
+
 /** หน่วงทีละก้อน (มิลลิวินาที) — ก้อนที่เข้ามาพร้อมกันจะไล่กันทีละนิด ไม่ขึ้นพร้อมกันหมด */
 const STAGGER = 70;
 const MAX_STAGGER = 6;
@@ -134,8 +171,25 @@ export default function PageContent({ html, className = "" }: { html: string; cl
       show(0);
     });
 
+    // ทำเนียบ: ชื่อยาวให้พอดีป้ายบรรทัดเดียว — ทำซ้ำตอนฟอนต์โหลดเสร็จและตอนจอเปลี่ยนขนาด
+    fitPersonNames(root);
+    let fitQueued = 0;
+    const refit = () => {
+      if (fitQueued) return;
+      fitQueued = requestAnimationFrame(() => {
+        fitQueued = 0;
+        fitPersonNames(root);
+      });
+    };
+    document.fonts?.ready.then(refit);
+    window.addEventListener("resize", refit);
+    const stopFit = () => {
+      window.removeEventListener("resize", refit);
+      if (fitQueued) cancelAnimationFrame(fitQueued);
+    };
+
     // เครื่องที่ตั้งค่าลดการเคลื่อนไหวไว้ ให้แสดงทันทีไม่ต้องมีอนิเมชัน
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return stopFit;
 
     const blocks = Array.from(root.children) as HTMLElement[];
     blocks.forEach((el) => el.classList.add("reveal-item"));
@@ -157,7 +211,10 @@ export default function PageContent({ html, className = "" }: { html: string; cl
     );
 
     blocks.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      stopFit();
+    };
   }, [html]);
 
   return (
