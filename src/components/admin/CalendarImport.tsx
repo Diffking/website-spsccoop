@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, CloudDownload, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import PublishDelayNote from "./PublishDelayNote";
 
 /**
  * ดึงกิจกรรมจากระบบสำนักงาน — เห็นก่อนว่ามีอะไร แล้ว **ติ๊กเลือกเป็นรายรายการ**
@@ -213,6 +214,9 @@ export default function CalendarImport({ from }: { from: string }) {
         <p className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           <Check className="h-4 w-4 shrink-0" /> {done}
         </p>
+      )}
+      {done && (
+        <PublishDelayNote compact />
       )}
 
       {items && missing.length > 0 && (

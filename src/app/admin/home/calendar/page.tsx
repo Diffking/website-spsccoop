@@ -4,6 +4,7 @@ import { ADMIN_HOME, canArea } from "@/lib/permissions";
 import { getCalendarEventsForAdmin } from "@/lib/homeItems";
 import CalendarEventsManager from "@/components/admin/CalendarEventsManager";
 import CalendarImport from "@/components/admin/CalendarImport";
+import PublishDelayNote from "@/components/admin/PublishDelayNote";
 import { officerSourceLabel, officerSourceUrl } from "@/lib/officerEvents";
 
 export default async function Page() {
@@ -17,7 +18,8 @@ export default async function Page() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
       <h1 className="mb-1 text-xl font-bold text-gray-800">ปฏิทินสหกรณ์</h1>
-      <p className="mb-5 text-sm text-gray-500">กิจกรรมที่ขึ้นบนปฏิทินหน้าแรก</p>
+      <p className="mb-3 text-sm text-gray-500">กิจกรรมที่ขึ้นบนปฏิทินหน้าแรก</p>
+      <PublishDelayNote />
 
       {/* ไม่ได้ตั้ง OFFICER_EVENT_SOURCE_URL ก็ไม่ต้องโชว์ปุ่มที่กดแล้วพังแน่ ๆ */}
       {officerSourceUrl() && <CalendarImport from={officerSourceLabel()} />}
