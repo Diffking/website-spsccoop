@@ -337,6 +337,9 @@ model Survey {
   title       String
   description String    @default("")
   questions   Json      @default("[]")
+  /// verify = ยืนยันเลขสมาชิก + เบอร์กับทะเบียน (แบบประเมินความพึงพอใจ)
+  /// self = สมาชิกพิมพ์เลขสมาชิก + ชื่อเอง ไม่เทียบทะเบียน มีด่านกันบอท (คำทักท้วงรายงานประชุมใหญ่ · 16 พ.ย. 2569)
+  identityMode String   @default("verify")
   /// false = ร่าง ยังไม่มีใครเห็น
   published   Boolean   @default(false)
   /// ช่วงเปิดรับ — ว่าง = ไม่กำหนด (เปิดทันที / ปิดเมื่อกดปุ่มเอง)
