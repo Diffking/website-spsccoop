@@ -94,6 +94,12 @@ export async function getItems(section: Section): Promise<Item[]> {
         published: r.published,
       }));
     }
+    /*
+      กรรมการ: ซ่อนครบทุกคนในหลังบ้าน = ไม่มีใครให้โชว์ ห้ามถอยไปใช้รายชื่อชุดที่ 45 ที่ฝังในโค้ด
+      (16 พ.ย. 2569 ตอนเปลี่ยนเป็นชุดที่ 46 · ชุดเก่าจะโผล่กลับมาเองโดยไม่มีใครตั้งใจ)
+      ค่าตั้งต้นในโค้ดใช้เฉพาะตอนฐานยังไม่เคยมีรายการของส่วนนี้เลย
+    */
+    if (section === "committees" && (await db.homeItem.count({ where: { section } })) > 0) return [];
   } catch (error) {
     console.error(`อ่านรายการ "${section}" ไม่ได้:`, error);
   }

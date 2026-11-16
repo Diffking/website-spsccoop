@@ -20,6 +20,7 @@ import { SECTION_SHORT, orderedSections, resolveTones, type HomeSectionKey } fro
 import {
   getCommitteePhotoScale,
   getCommitteeSet,
+  getCommitteeUpdating,
   getHomeOrder,
   getHomeSections,
   getHomeTones,
@@ -63,6 +64,7 @@ export default async function Home() {
     welfare,
     hours,
     albums,
+    committeeUpdating,
   ] = await Promise.all([
     getSiteInfo(),
     getRates(),
@@ -86,6 +88,7 @@ export default async function Home() {
     getWelfareBrief(),
     getOfficeHours(),
     getHomeAlbums(),
+    getCommitteeUpdating(),
   ]);
 
   /*
@@ -113,9 +116,11 @@ export default async function Home() {
     news: (
       <NewsSection
         announcements={announcements}
-        committees={committees}
+        // กำลังอัปเดต = ไม่ส่งรายชื่อเก่าลงหน้าเลย (ไม่งั้นยังติดอยู่ในข้อมูลของหน้า แค่ไม่ได้วาด)
+        committees={committeeUpdating ? [] : committees}
         committeeSet={committeeSet}
         committeePhotoScale={committeePhotoScale}
+        committeeUpdating={committeeUpdating}
         bg={bg.news}
       />
     ),
