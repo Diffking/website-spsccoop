@@ -336,7 +336,7 @@ function CommitteeCard({
       </div>
       <div className="mt-4 text-center">
         {/*
-          ไปหน้าเนื้อหา "คณะกรรมการดำเนินการ ชุดที่ 45" ที่เจ้าหน้าที่แก้เองได้ในหลังบ้าน
+          ไปหน้าเนื้อหา "คณะกรรมการดำเนินการ ชุดที่ 46" ที่เจ้าหน้าที่แก้เองได้ในหลังบ้าน
           (เจ้าของเว็บกำหนดปลายทางนี้เอง 17 ก.ย. 2569) — ของเดิมชี้ /about/directory/board
           ซึ่งเป็นหน้าที่ฝังรูปกรรมการไว้ในโค้ด แก้ชื่อหรือสลับคนทีต้อง deploy ใหม่ทุกครั้ง
 
@@ -346,7 +346,7 @@ function CommitteeCard({
           กลางคัน และตอนตรวจงานที่ .org ตามกฎข้อ 3 ก็จะกดแล้วหลุดออกไปทุกครั้ง
         */}
         <Link
-          href="/about/directory/board45/"
+          href="/about/directory/board46/"
           className="inline-flex items-center gap-1 rounded-full bg-accent-amber px-5 py-2 text-sm font-semibold text-white shadow transition hover:brightness-105"
         >
           ดูทั้งหมด →
