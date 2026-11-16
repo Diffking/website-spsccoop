@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { ADMIN_HOME, canArea } from "@/lib/permissions";
 import { getItemsForAdmin } from "@/lib/homeItems";
-import { getCommitteePhotoScale, getCommitteeSet } from "@/lib/settings";
+import { getCommitteePhotoScale, getCommitteeSet, getCommitteeUpdating } from "@/lib/settings";
+import CommitteeUpdatingSwitch from "@/components/admin/CommitteeUpdatingSwitch";
 import { committeeFolder } from "@/lib/assetFolders";
 import HomeItemsManager from "@/components/admin/HomeItemsManager";
 import CommitteeSetForm from "@/components/admin/CommitteeSetForm";
@@ -13,10 +14,11 @@ export default async function Page() {
   // ไม่ได้ดูแลส่วนนี้ก็ไม่ต้องเห็น — เมนูซ่อนให้แล้ว ตรงนี้กันคนพิมพ์ที่อยู่เข้ามาเอง
   if (!canArea(user, "home.committees")) redirect(ADMIN_HOME);
 
-  const [items, set, scale] = await Promise.all([
+  const [items, set, scale, updating] = await Promise.all([
     getItemsForAdmin("committees"),
     getCommitteeSet(),
     getCommitteePhotoScale(),
+    getCommitteeUpdating(),
   ]);
 
   return (
@@ -25,6 +27,7 @@ export default async function Page() {
       <p className="mb-5 text-sm text-gray-500">สไลด์เล็กข้างการ์ดประกาศบนหน้าแรก</p>
 
       <div className="space-y-5">
+        <CommitteeUpdatingSwitch initial={updating} />
         <CommitteeSetForm initial={set} initialScale={scale} />
 
         {/* รูปกรรมการลงโฟลเดอร์ของชุดที่ตั้งไว้ เช่น assets/committees/set45 */}

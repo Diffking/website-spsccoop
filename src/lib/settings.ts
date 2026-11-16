@@ -208,6 +208,12 @@ export async function getHomeTones(): Promise<HomeTones> {
 }
 
 /** ขนาดรูปกรรมการบนการ์ดหน้าแรก (%) — ค่าคงที่อยู่ที่ src/lib/committee.ts เพราะฝั่ง client ก็ใช้ */
+/**
+ * การ์ดคณะกรรมการบนหน้าแรก "กำลังอัปเดตข้อมูล" อยู่ไหม (เจ้าของเว็บขอ 16 พ.ย. 2569)
+ * true = สมาชิกเห็นกล่องแจ้งแทนรายชื่อ · ระหว่างนั้นแก้ชื่อ/รูป/ลำดับในหลังบ้านได้ตามปกติ
+ */
+export const getCommitteeUpdating = () => getSetting<boolean>("committeeUpdating", false);
+
 export const getCommitteePhotoScale = () =>
   getSetting<number>("committeePhotoScale", DEFAULT_COMMITTEE_PHOTO_SCALE);
 

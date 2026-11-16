@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
-import { FileText, BookOpen, CalendarDays, ChevronLeft, ChevronRight, UserRound } from "lucide-react";
+import { FileText, BookOpen, CalendarDays, ChevronLeft, ChevronRight, UserRound, Wrench } from "lucide-react";
 import Reveal from "@/components/ui/Reveal";
 import SectionHeading from "@/components/ui/SectionHeading";
 import MaybeLink from "@/components/ui/MaybeLink";
@@ -233,11 +233,14 @@ function CommitteeCard({
   members,
   set,
   photoScale,
+  updating = false,
 }: {
   members: Item[];
   set: number;
   /** % ของกรอบเต็ม 220x300 — เลือกได้ที่ /admin/home/committees */
   photoScale: number;
+  /** กำลังอัปเดตข้อมูล — โชว์กล่องแจ้งแทนรายชื่อ (สวิตช์ที่ /admin/home/committees) */
+  updating?: boolean;
 }) {
   const [i, setI] = useState(0);
   const n = members.length;
@@ -251,7 +254,25 @@ function CommitteeCard({
     ms: SLIDE_TIMING.committee.every,
   });
 
-  if (n === 0) return null;
+  /*
+    กำลังอัปเดต หรือยังไม่มีรายชื่อ — โชว์กล่องแจ้งแบบเดียวกับหน้าที่ปิดเพื่ออัปเดต
+    การ์ดยังอยู่ที่เดิม ช่องข้างการ์ดประกาศจึงไม่โหว่
+  */
+  if (updating || n === 0) {
+    return (
+      <div className={`${CARD_SHELL} items-center justify-center p-6 text-center`}>
+        <CardGlow />
+        <p className="text-sm font-semibold text-brand-700">คณะกรรมการดำเนินการชุดที่ {set}</p>
+        <span className="mt-6 grid h-16 w-16 place-items-center rounded-2xl bg-amber-50 text-amber-600 ring-1 ring-amber-200">
+          <Wrench className="h-8 w-8" aria-hidden="true" />
+        </span>
+        <p className="mt-5 text-lg font-bold text-brand-800">อยู่ระหว่างอัปเดตข้อมูล</p>
+        <p className="mt-2 text-sm leading-6 text-gray-600">
+          ขณะนี้เจ้าหน้าที่กำลังอัปเดตข้อมูลคณะกรรมการดำเนินการ · ขออภัยในความไม่สะดวก
+        </p>
+      </div>
+    );
+  }
 
   return (
     // min-w-0 + overflow-hidden ด้วยเหตุผลเดียวกับการ์ดประกาศ — ชื่อกรรมการยาว ๆ
@@ -361,12 +382,14 @@ export default function NewsSection({
   committees,
   committeeSet,
   committeePhotoScale,
+  committeeUpdating = false,
   bg = "bg-white",
 }: {
   announcements: AnnouncementItem[];
   committees: Item[];
   committeeSet: number;
   committeePhotoScale: number;
+  committeeUpdating?: boolean;
   /** คลาสพื้นหลังของส่วนนี้ — กำหนดได้ที่ /admin/home */
   bg?: string;
 }) {
@@ -399,6 +422,7 @@ export default function NewsSection({
               members={committees}
               set={committeeSet}
               photoScale={committeePhotoScale}
+              updating={committeeUpdating}
             />
           </Reveal>
         </div>

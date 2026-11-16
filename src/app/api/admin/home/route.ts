@@ -33,6 +33,7 @@ const FIELD_AREA: Record<string, AreaKey> = {
   ticker: "home.ticker",
   committeeSet: "home.committees",
   committeePhotoScale: "home.committees",
+  committeeUpdating: "home.committees",
   homeSections: "home.layout",
   homeTones: "home.layout",
   homeOrder: "home.layout",
@@ -49,6 +50,7 @@ export async function PUT(request: Request) {
     ticker?: Partial<TickerSettings>;
     committeeSet?: number;
     committeePhotoScale?: number;
+    committeeUpdating?: boolean;
     homeSections?: Record<string, unknown>;
     homeTones?: Record<string, unknown>;
     homeOrder?: unknown;
@@ -133,6 +135,10 @@ export async function PUT(request: Request) {
       );
     }
     await saveSetting("committeePhotoScale", scale);
+  }
+
+  if (body.committeeUpdating !== undefined) {
+    await saveSetting("committeeUpdating", body.committeeUpdating === true);
   }
 
   if (body.homeSections) {
