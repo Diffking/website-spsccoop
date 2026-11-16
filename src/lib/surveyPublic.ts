@@ -14,8 +14,6 @@ export async function publicSurvey(code: string): Promise<{
   opensAt: Date | null;
   closesAt: Date | null;
   closedAt: Date | null;
-  /** verify = ยืนยันกับทะเบียน · self = สมาชิกระบุตัวตนเอง (ดู src/lib/surveyBot.ts) */
-  identityMode: "verify" | "self";
 } | null> {
   if (!/^[a-z0-9]{4,12}$/.test(code)) return null;
   const survey = await db.survey.findUnique({ where: { code } });
@@ -29,7 +27,6 @@ export async function publicSurvey(code: string): Promise<{
     opensAt: survey.opensAt,
     closesAt: survey.closesAt,
     closedAt: survey.closedAt,
-    identityMode: survey.identityMode === "self" ? "self" : "verify",
   };
 }
 

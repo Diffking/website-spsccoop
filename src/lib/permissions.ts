@@ -25,6 +25,7 @@ export type AreaKey =
   | "home.calendar"
   | "home.officers"
   | "gallery"
+  | "objections"
   | "header"
   | "footer"
   | "splash"
@@ -58,6 +59,7 @@ export const AREAS: { key: AreaKey; href: string; label: string; group: string }
   { key: "bridge", href: "/admin/bridge", label: "เชื่อมต่อระบบ (CoopBridge)", group: "ทั้งเว็บ" },
   { key: "surveys", href: "/admin/surveys", label: "แบบประเมินความพึงพอใจ", group: "ทั้งเว็บ" },
   { key: "gallery", href: "/admin/gallery", label: "ภาพกิจกรรม (แกลเลอรี)", group: "ทั้งเว็บ" },
+  { key: "objections", href: "/admin/objections", label: "คำทักท้วงรายงานประชุมใหญ่", group: "ทั้งเว็บ" },
   { key: "pages", href: "/admin/pages", label: "หน้าเนื้อหา — ทุกหมวด", group: "หน้าเนื้อหา" },
 ];
 

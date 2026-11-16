@@ -24,6 +24,7 @@ import {
   X,
   ExternalLink,
   Images,
+  MessageSquareWarning,
 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
 import CommandPalette, { type PaletteEntry } from "@/components/admin/CommandPalette";
@@ -38,6 +39,7 @@ export type MenuKey =
   | "dashboard"
   | "home"
   | "gallery"
+  | "objections"
   | "header"
   | "footer"
   | "splash"
@@ -164,6 +166,15 @@ const ITEMS: {
     icon: Calculator,
     label: "หน้าโปรแกรม",
     desc: "เครื่องมือที่สมาชิกกดใช้ เช่น ตรวจสุขภาพการเงิน",
+  },
+  {
+    key: "objections",
+    group: "บริการสมาชิก",
+    area: "objections",
+    href: "/admin/objections",
+    icon: MessageSquareWarning,
+    label: "คำทักท้วงรายงานประชุมใหญ่",
+    desc: "รับคำทักท้วงรายงานการประชุมใหญ่จากสมาชิก แยกตามปี",
   },
   {
     key: "surveys",

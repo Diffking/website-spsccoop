@@ -162,6 +162,45 @@ model GalleryAlbum {
   @@index([published, eventDate])
 }
 
+/// รอบรับคำทักท้วงรายงานการประชุมใหญ่ — ปีละรอบ (หน้า /point-order/ · 16 พ.ย. 2569)
+/// ระบบแยกต่างหาก ไม่เกี่ยวกับแบบประเมิน · ดู src/lib/objection.ts
+model ObjectionRound {
+  id        String   @id @default(cuid())
+  /// ปี พ.ศ. ของการประชุมใหญ่ที่ทักท้วง เช่น 2569
+  year      Int      @unique
+  /// หัวเรื่องบนหน้าเว็บ เช่น "คำทักท้วงรายงานการประชุมใหญ่ ปี 2569"
+  title     String
+  /// ช่วงรับคำทักท้วง — เช่น 14 พ.ย. 2569 + 90 วัน
+  opensAt   DateTime
+  closesAt  DateTime
+  /// ชื่อระเบียบวาระ [{ no: 1, title: "..." }] — เจ้าหน้าที่ตั้งชื่อเองได้ ว่าง = "ระเบียบวาระที่ N" เฉย ๆ
+  agendas   Json     @default("[]")
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  objections Objection[]
+}
+
+/// คำทักท้วงหนึ่งรายการ — สมาชิกพิมพ์เลขที่สมาชิก + ชื่อเอง (ไม่เทียบทะเบียน) ส่งได้เลขละครั้งต่อรอบ
+model Objection {
+  id        String   @id @default(cuid())
+  roundId   String
+  /// เลขที่สมาชิกตามที่พิมพ์ (ตัวเลขล้วน)
+  membNo    String
+  /// เลขที่ตัด 0 นำหน้า — "07337" กับ "7337" คือคนเดียวกัน ใช้กันส่งซ้ำ
+  membKey   String
+  name      String
+  /// [{ no: 1, detail: "..." }] — ระเบียบวาระที่ทักท้วงกับรายละเอียดที่ต้องการแก้ไข
+  items     Json     @default("[]")
+  createdAt DateTime @default(now())
+
+  round ObjectionRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, membKey])
+  @@index([roundId, createdAt])
+}
+
 model CalendarEvent {
   id        String   @id @default(cuid())
   /// วันที่ในเดือน 1-31 — คิดจาก date ให้เอง ปฏิทินหน้าแรกใช้ค่านี้วางลงช่องวัน
@@ -337,9 +376,6 @@ model Survey {
   title       String
   description String    @default("")
   questions   Json      @default("[]")
-  /// verify = ยืนยันเลขสมาชิก + เบอร์กับทะเบียน (แบบประเมินความพึงพอใจ)
-  /// self = สมาชิกพิมพ์เลขสมาชิก + ชื่อเอง ไม่เทียบทะเบียน มีด่านกันบอท (คำทักท้วงรายงานประชุมใหญ่ · 16 พ.ย. 2569)
-  identityMode String   @default("verify")
   /// false = ร่าง ยังไม่มีใครเห็น
   published   Boolean   @default(false)
   /// ช่วงเปิดรับ — ว่าง = ไม่กำหนด (เปิดทันที / ปิดเมื่อกดปุ่มเอง)
