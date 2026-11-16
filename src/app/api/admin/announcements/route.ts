@@ -74,7 +74,11 @@ export async function PUT(request: Request) {
   }
 
   // ต้องครบทุกตัวในหมวดนั้นและไม่ซ้ำ ไม่งั้นจะมีตัวที่ sortOrder ค้างของเดิมแล้วลำดับเพี้ยน
-  const existing = await db.announcement.findMany({ where: { kind: body.kind }, select: { id: true } });
+  // เฉพาะที่ยังไม่จัดเก็บเข้าคลัง — ของในคลังไม่ได้อยู่ในรายการที่ลากจัดลำดับ
+  const existing = await db.announcement.findMany({
+    where: { kind: body.kind, archiveYear: null },
+    select: { id: true },
+  });
   const ids = new Set(existing.map((a) => a.id));
   if (new Set(order).size !== order.length || order.length !== ids.size || order.some((id) => !ids.has(id))) {
     return NextResponse.json(

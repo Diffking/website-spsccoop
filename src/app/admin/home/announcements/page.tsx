@@ -4,6 +4,7 @@ import { ADMIN_HOME, canArea } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { AI_READY } from "@/lib/ai";
 import { type Kind } from "@/lib/announcementKinds";
+import AnnouncementArchive from "@/components/admin/AnnouncementArchive";
 import AnnouncementsManager from "@/components/admin/AnnouncementsManager";
 import StorageStatus from "@/components/admin/StorageStatus";
 
@@ -16,7 +17,14 @@ export default async function AdminAnnouncementsPage() {
   // ต้องเรียงแบบเดียวกับ getAnnouncements() บนหน้าเว็บ — ไม่งั้นลากจัดลำดับแล้วบันทึก
   // ลำดับที่เห็นบนจอนี้ทับลำดับจริงของหน้าเว็บไปด้วย
   const announcements = await db.announcement.findMany({
+    where: { archiveYear: null },
     orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
+  });
+  // ประกาศที่จัดเก็บเข้าคลังปีบัญชีแล้ว — แยกไปอยู่ในกล่องคลังด้านล่าง
+  const archived = await db.announcement.findMany({
+    where: { archiveYear: { not: null } },
+    orderBy: { publishedAt: "desc" },
+    select: { id: true, number: true, title: true, archiveYear: true, kind: true },
   });
 
   return (
@@ -39,6 +47,10 @@ export default async function AdminAnnouncementsPage() {
           fileUrl: a.fileUrl,
           published: a.published,
         }))}
+      />
+
+      <AnnouncementArchive
+        rows={archived.map((a) => ({ id: a.id, number: a.number, title: a.title, archiveYear: a.archiveYear as number }))}
       />
     </main>
   );

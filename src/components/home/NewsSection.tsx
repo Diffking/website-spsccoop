@@ -70,7 +70,16 @@ function CardGlow() {
   );
 }
 
-function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Kind }) {
+function AnnouncementList({
+  items,
+  kind,
+  archiveYears = [],
+}: {
+  items: AnnouncementItem[];
+  kind: Kind;
+  /** ปีบัญชีที่มีคลังประกาศ — ลิงก์ใต้ปุ่ม "ดูทั้งหมด" ของแท็บประกาศ */
+  archiveYears?: number[];
+}) {
   const [page, setPage] = useState(0);
   const pageCount = Math.max(1, Math.ceil(items.length / PER_PAGE));
   // กันหน้าค้างเกินขอบเวลาประกาศถูกลบจนเหลือน้อยลง
@@ -224,6 +233,15 @@ function AnnouncementList({ items, kind }: { items: AnnouncementItem[]; kind: Ki
         >
           ดูทั้งหมด →
         </Link>
+        {kind === "ANNOUNCEMENT" && archiveYears.length > 0 && (
+          <p className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs">
+            {archiveYears.map((y) => (
+              <Link key={y} href={`/news/archive/${y}/`} className="text-brand-700 hover:underline">
+                ประกาศปีบัญชี {y} →
+              </Link>
+            ))}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -383,6 +401,7 @@ export default function NewsSection({
   committeeSet,
   committeePhotoScale,
   committeeUpdating = false,
+  archiveYears = [],
   bg = "bg-white",
 }: {
   announcements: AnnouncementItem[];
@@ -390,6 +409,7 @@ export default function NewsSection({
   committeeSet: number;
   committeePhotoScale: number;
   committeeUpdating?: boolean;
+  archiveYears?: number[];
   /** คลาสพื้นหลังของส่วนนี้ — กำหนดได้ที่ /admin/home */
   bg?: string;
 }) {
@@ -415,7 +435,7 @@ export default function NewsSection({
           {/* min-w-0 = ห้ามช่องกริดกว้างตามเนื้อหา ไม่งั้นประกาศชื่อยาวจะดันการ์ดกว้างไม่เท่ากันทุกแท็บ */}
           <Reveal className="h-full min-w-0">
             {/* key={tab} ให้เริ่มที่หน้า 1 ใหม่ทุกครั้งที่สลับแท็บ */}
-            <AnnouncementList key={tab} items={byKind[tab]} kind={tab} />
+            <AnnouncementList key={tab} items={byKind[tab]} kind={tab} archiveYears={archiveYears} />
           </Reveal>
           <Reveal delay={0.1} className="h-full min-w-0">
             <CommitteeCard
