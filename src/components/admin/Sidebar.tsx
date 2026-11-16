@@ -23,6 +23,7 @@ import {
   Menu,
   X,
   ExternalLink,
+  Images,
 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
 import CommandPalette, { type PaletteEntry } from "@/components/admin/CommandPalette";
@@ -36,6 +37,7 @@ import {
 export type MenuKey =
   | "dashboard"
   | "home"
+  | "gallery"
   | "header"
   | "footer"
   | "splash"
@@ -135,6 +137,15 @@ const ITEMS: {
     icon: FileStack,
     label: "หน้าเนื้อหา",
     desc: "ประวัติความเป็นมา วิสัยทัศน์ ระเบียบข้อบังคับ",
+  },
+  {
+    key: "gallery",
+    group: "เนื้อหาเว็บ",
+    area: "gallery",
+    href: "/admin/gallery",
+    icon: Images,
+    label: "ภาพกิจกรรม",
+    desc: "อัลบั้มภาพกิจกรรม — ภาพเด่นหนึ่งภาพ + ลิงก์อัลบั้มเต็ม",
   },
   {
     key: "designed",

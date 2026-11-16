@@ -134,6 +134,34 @@ model HomeItem {
 }
 
 /// กิจกรรมบนปฏิทินหน้าแรก — วันหยุดสหกรณ์อยู่คนละตาราง (Holiday) เพราะแก้คนละเมนู
+/// อัลบั้มภาพกิจกรรม (หน้า /gallery/) — เก็บภาพเด่นอัลบั้มละ 1 ภาพในเครื่องนี้
+/// ภาพที่เหลือทั้งหมดอยู่บน Google Photos/Drive/Facebook ผ่าน albumUrl (ไม่เก็บไฟล์เยอะ)
+/// แบ่งตามปีบัญชี 1 ต.ค. – 30 ก.ย. คิดจาก eventDate (ดู src/lib/galleryShared.ts)
+model GalleryAlbum {
+  id         String   @id @default(cuid())
+  /// เป็นภาพเกี่ยวกับอะไร
+  title      String
+  /// วันที่จัดกิจกรรม (เที่ยงคืนเวลาไทย) — ใช้เรียงและแบ่งปีบัญชี
+  eventDate  DateTime
+  /// ที่ไหน
+  place      String?
+  /// รายละเอียดสั้น ๆ
+  caption    String?
+  /// ภาพเด่น /uploads/<uuid>.webp — ภาพเดียวที่เก็บในเครื่องเรา
+  coverUrl   String
+  /// ลิงก์อัลบั้มเต็มภายนอก — รับเฉพาะโดเมนใน ALBUM_HOSTS
+  albumUrl   String
+  /// จำนวนภาพในอัลบั้ม (ไม่บังคับ) โชว์เป็นป้ายบนการ์ด
+  photoCount Int?
+  /// เผื่อ Phase 2: สไลด์ภาพกิจกรรมบนหน้าแรก
+  showOnHome Boolean  @default(true)
+  published  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([published, eventDate])
+}
+
 model CalendarEvent {
   id        String   @id @default(cuid())
   /// วันที่ในเดือน 1-31 — คิดจาก date ให้เอง ปฏิทินหน้าแรกใช้ค่านี้วางลงช่องวัน
