@@ -10,8 +10,10 @@ import { db } from "@/lib/db";
  *       เข้าคลังปีบัญชี year · ตัวที่จัดเก็บไปแล้วไม่ถูกแตะ
  *   { action: "restore", id }
  *       ย้ายกลับมาเป็นประกาศปัจจุบัน (ขึ้นหน้าแรกอีกครั้ง)
- *
- * ไม่ลบอะไรเลย ไฟล์แนบอยู่ครบ ลิงก์เดิมยังเปิดได้
+ *   { action: "delete", id } · { action: "deleteYear", year }
+ *       ลบประกาศในคลังทิ้งถาวร ทีละฉบับ / ทั้งปีบัญชี (เจ้าของเว็บขอ 16 พ.ย. 2569)
+ *       ⚠️ ลบได้เฉพาะแถวที่จัดเก็บแล้ว (archiveYear มีค่า) ประกาศปัจจุบันลบทางนี้ไม่ได้
+ *       ลบแค่แถวในฐาน ไฟล์ใน uploads/ ยังอยู่ (หลักเดียวกับปุ่มลบประกาศเดิม) · กู้ได้จากไฟล์สำรองรายวัน
  */
 export async function POST(request: Request) {
   const auth = await requireWrite("home.announcements");
@@ -23,6 +25,21 @@ export async function POST(request: Request) {
     const id = typeof body.id === "string" ? body.id : "";
     const updated = await db.announcement.updateMany({ where: { id }, data: { archiveYear: null, sortOrder: 0 } });
     return NextResponse.json({ ok: true, count: updated.count });
+  }
+
+  if (body.action === "delete") {
+    const id = typeof body.id === "string" ? body.id : "";
+    const removed = await db.announcement.deleteMany({ where: { id, archiveYear: { not: null } } });
+    return NextResponse.json({ ok: true, count: removed.count });
+  }
+
+  if (body.action === "deleteYear") {
+    const year = Math.trunc(Number(body.year));
+    if (!(year >= 2560 && year <= 2700)) {
+      return NextResponse.json({ error: "ปีไม่ถูกต้อง" }, { status: 400 });
+    }
+    const removed = await db.announcement.deleteMany({ where: { archiveYear: year } });
+    return NextResponse.json({ ok: true, count: removed.count });
   }
 
   if (body.action === "archive") {
