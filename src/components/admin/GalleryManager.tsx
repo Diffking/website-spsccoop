@@ -25,6 +25,8 @@ type Draft = {
   caption: string;
   photoCount: string;
   published: boolean;
+  /** ขึ้นสไลด์ภาพกิจกรรมบนหน้าแรก (Phase 2) */
+  showOnHome: boolean;
 };
 
 const EMPTY: Draft = {
@@ -36,6 +38,7 @@ const EMPTY: Draft = {
   caption: "",
   photoCount: "",
   published: true,
+  showOnHome: true,
 };
 
 const fromAlbum = (a: GalleryAlbumView): Draft => ({
@@ -47,6 +50,7 @@ const fromAlbum = (a: GalleryAlbumView): Draft => ({
   caption: a.caption ?? "",
   photoCount: a.photoCount ? String(a.photoCount) : "",
   published: a.published,
+  showOnHome: a.showOnHome,
 });
 
 const input =
@@ -295,6 +299,15 @@ export default function GalleryManager({ items }: { items: GalleryAlbumView[] })
               />
               เผยแพร่บนหน้าเว็บ
             </label>
+            <label className="inline-flex min-h-11 items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={draft.showOnHome}
+                onChange={(e) => set({ showOnHome: e.target.checked })}
+                className="h-5 w-5"
+              />
+              ขึ้นสไลด์หน้าแรก
+            </label>
             {status && (
               <span className={`text-sm ${status.kind === "ok" ? "text-emerald-700" : "text-red-600"}`}>
                 {status.text}
@@ -347,6 +360,7 @@ export default function GalleryManager({ items }: { items: GalleryAlbumView[] })
                       {albumDateLabel(new Date(a.eventDate))}
                       {a.place ? ` · ${a.place}` : ""}
                       {a.published ? "" : " · ซ่อนอยู่"}
+                      {a.published && a.showOnHome ? " · ขึ้นสไลด์หน้าแรก" : ""}
                     </p>
                   </div>
                   <a

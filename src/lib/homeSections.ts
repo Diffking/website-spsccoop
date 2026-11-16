@@ -17,6 +17,8 @@ export const HOME_SECTIONS = [
   { key: "member", label: "สำหรับสมาชิก (การ์ดใหญ่ + คิวอาร์โค้ด/โซเชียล + แนะนำสมาชิก)" },
   { key: "calendar", label: "ปฏิทินสหกรณ์" },
   { key: "officers", label: "สำนักงานบริการสมาชิก" },
+  // สไลด์อ่านจากหลังบ้าน → ภาพกิจกรรม (อัลบั้มที่ติ๊ก "แสดงบนหน้าแรก") · ไม่มีอัลบั้มก็ไม่ขึ้นเอง
+  { key: "gallery", label: "ภาพกิจกรรม (สไลด์จากอัลบั้ม)" },
 ] as const;
 
 export type HomeSectionKey = (typeof HOME_SECTIONS)[number]["key"];
@@ -37,6 +39,7 @@ export const SECTION_SHORT: Partial<Record<HomeSectionKey, string>> = {
   member: "สมาชิก",
   calendar: "ปฏิทิน",
   officers: "สำนักงาน",
+  gallery: "กิจกรรม",
 };
 export type HomeSections = Record<HomeSectionKey, boolean>;
 

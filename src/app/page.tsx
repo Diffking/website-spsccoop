@@ -13,6 +13,8 @@ import ScrollProgress from "@/components/ui/ScrollProgress";
 import PageTracker from "@/components/site/PageTracker";
 import BackToTop from "@/components/ui/BackToTop";
 import SectionNav from "@/components/home/SectionNav";
+import GallerySlides from "@/components/home/GallerySlides";
+import { getHomeAlbums } from "@/lib/gallery";
 import { site } from "@/data/home";
 import { SECTION_SHORT, orderedSections, resolveTones, type HomeSectionKey } from "@/lib/homeSections";
 import {
@@ -60,6 +62,7 @@ export default async function Home() {
     order,
     welfare,
     hours,
+    albums,
   ] = await Promise.all([
     getSiteInfo(),
     getRates(),
@@ -82,10 +85,17 @@ export default async function Home() {
     getHomeOrder(),
     getWelfareBrief(),
     getOfficeHours(),
+    getHomeAlbums(),
   ]);
 
+  /*
+    ส่วนภาพกิจกรรมขึ้นได้ต่อเมื่อมีอัลบั้มให้โชว์จริง — ไม่งั้นจะเหลือกล่องว่างสูงเต็มจอ
+    และจุดในตัวนำทางที่กดแล้วไปไม่ถึงอะไร · คิดรวมไว้ใน `visible` ที่เดียว ใช้ทั้งสีพื้น การวาด และตัวนำทาง
+  */
+  const visible = (key: HomeSectionKey) => show[key] && (key !== "gallery" || albums.length > 0);
+
   // สีพื้นหลังของแต่ละส่วน — "สลับให้เอง" คิดจากส่วนที่แสดงอยู่จริง ตามลำดับที่จัดไว้
-  const bg = resolveTones(tones, (key) => show[key], order);
+  const bg = resolveTones(tones, visible, order);
 
   // ปฏิทินรับ place/time เป็น optional ส่วนฐานเก็บเป็น null — แปลงก่อนส่งเข้า
   const calendar = events.map((e) => ({
@@ -121,6 +131,7 @@ export default async function Home() {
       <CoopCalendar holidays={holidays} events={calendar} officeDays={hours.days} bg={bg.calendar} />
     ),
     officers: <OfficerService items={officers} bg={bg.officers} />,
+    gallery: <GallerySlides albums={albums} bg={bg.gallery} />,
   };
 
   // JSON-LD structured data สำหรับ SEO หน้า Home
@@ -164,7 +175,7 @@ export default async function Home() {
       */}
       <main>
         {orderedSections(order).map((section) => {
-          if (!show[section.key]) return null;
+          if (!visible(section.key)) return null;
           const node = blocks[section.key];
           /*
             ห่อด้วย div ที่มี id เพื่อให้ตัวนำทางลอยด้านซ้าย (SectionNav) กระโดดมาได้
@@ -217,7 +228,7 @@ export default async function Home() {
       {/* รายการในตัวนำทางต้องตรงกับที่วาดจริง — ส่งลำดับที่กรองแล้วไปเลย ไม่ให้มันคำนวณเอง */}
       <SectionNav
         items={orderedSections(order)
-          .filter((s) => show[s.key] && SECTION_SHORT[s.key])
+          .filter((s) => visible(s.key) && SECTION_SHORT[s.key])
           .map((s) => ({ key: s.key, label: SECTION_SHORT[s.key] as string }))}
       />
       <BackToTop />
