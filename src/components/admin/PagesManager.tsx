@@ -12,6 +12,7 @@ import {
   Search,
   FolderOpen,
   Pencil,
+  Wrench,
 } from "lucide-react";
 import { groupPages } from "@/lib/pageGroups";
 
@@ -20,6 +21,8 @@ export type PageRow = {
   slug: string;
   title: string;
   published: boolean;
+  /** ปิดชั่วคราวระหว่างอัปเดตข้อมูล — สมาชิกเห็นกล่องแจ้งแทนเนื้อหา (ดู src/lib/pageUpdating.ts) */
+  updating?: boolean;
   updatedAt: string;
   /** หมวดที่ตั้งเอง — ไม่ตั้งก็จัดกลุ่มตามที่อยู่หน้าให้ (ดู src/lib/pageGroups.ts) */
   category?: string | null;
@@ -63,6 +66,18 @@ export default function PagesManager({
       setError(data.error ?? "เปลี่ยนชื่อหมวดไม่สำเร็จ");
       return;
     }
+    router.refresh();
+  }
+
+  /** เปิด/ปิด "กำลังอัปเดตข้อมูล" — กดเองเมื่อจะเริ่มแก้ และกดอีกทีเมื่อแก้เสร็จ */
+  async function toggleUpdating(id: string, next: boolean) {
+    setBusy(true);
+    await fetch(`/api/admin/pages/${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ updating: next }),
+    }).catch(() => null);
+    setBusy(false);
     router.refresh();
   }
 
@@ -278,6 +293,29 @@ export default function PagesManager({
                       {page.published ? "เผยแพร่" : "ฉบับร่าง"}
                     </span>
                   </Link>
+
+                  {/* ปิดชั่วคราวระหว่างอัปเดต — สมาชิกเห็นกล่องแจ้งแทนข้อมูลเก่า (เจ้าของเว็บขอ 16 พ.ย. 2569) */}
+                  <div className="pb-2 pl-11 pr-1 sm:pb-0 sm:pl-0">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void toggleUpdating(page.id, !page.updating)}
+                      aria-pressed={Boolean(page.updating)}
+                      title={
+                        page.updating
+                          ? "สมาชิกเห็นกล่อง “กำลังอัปเดตข้อมูล” อยู่ — กดเพื่อเปิดให้เห็นเนื้อหาตามปกติ"
+                          : "ปิดชั่วคราวระหว่างอัปเดต — สมาชิกจะเห็นกล่องแจ้งแทนข้อมูลเก่า"
+                      }
+                      className={`inline-flex min-h-8 items-center gap-1 rounded-full px-2.5 text-[11px] font-medium ring-1 transition disabled:opacity-50 ${
+                        page.updating
+                          ? "bg-orange-100 text-orange-800 ring-orange-300 hover:bg-orange-200"
+                          : "bg-white text-gray-500 ring-gray-200 hover:bg-gray-50 hover:text-gray-700"
+                      }`}
+                    >
+                      <Wrench className="h-3 w-3" />
+                      {page.updating ? "กำลังอัปเดต" : "ปิดเพื่ออัปเดต"}
+                    </button>
+                  </div>
 
                   {/* ย้ายหมวดจากตรงนี้ได้เลย ไม่ต้องเปิดเข้าไปในหน้าแก้ไข — อยู่นอกลิงก์ เลือกแล้วไม่พาเปิดหน้า */}
                   <div className="flex items-center gap-1.5 pb-2 pl-11 pr-2 sm:pb-0 sm:pl-0">

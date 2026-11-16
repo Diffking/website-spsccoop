@@ -21,6 +21,8 @@ import { readWelfare } from "@/lib/welfareGroups";
 import { readDocTables } from "@/lib/pageDocs";
 import { groupDeposits, groupLoans } from "@/lib/rateGroups";
 import { getRates } from "@/lib/settings";
+import { Wrench } from "lucide-react";
+import { UPDATING_DEFAULT_NOTE } from "@/lib/pageUpdating";
 
 /**
  * หน้าเนื้อหาทั่วไป — ประวัติความเป็นมา วิสัยทัศน์ ระเบียบ ฯลฯ
@@ -51,7 +53,7 @@ export async function generateMetadata({ params }: Params) {
   const meta = await pageMetadata(path);
 
   const page = await db.page
-    .findUnique({ where: { slug: slug.join("/") }, select: { title: true, published: true } })
+    .findUnique({ where: { slug: slug.join("/") }, select: { title: true, published: true, updating: true } })
     .catch(() => null);
   if (!page) return meta;
 
@@ -59,7 +61,8 @@ export async function generateMetadata({ params }: Params) {
     ...meta,
     title: page.title,
     // หน้าที่ยังไม่เผยแพร่ต้องไม่ให้ Google เก็บ ต่อให้สวิตช์ SEO เปิดอยู่
-    robots: page.published ? meta.robots : { index: false, follow: false },
+    // ระหว่างอัปเดตข้อมูลก็ไม่ให้เก็บ — ไม่งั้นผลค้นหาจะเป็นกล่องแจ้งแทนเนื้อหาจริง
+    robots: page.published && !page.updating ? meta.robots : { index: false, follow: false },
   };
 }
 
@@ -69,8 +72,47 @@ export default async function ContentPage({ params }: Params) {
   if (!page) notFound();
 
   // ยังไม่เผยแพร่ = คนทั่วไปเจอหน้า 404 ส่วนเจ้าหน้าที่ที่ล็อกอินอยู่ดูตัวอย่างได้
-  const user = page.published ? null : await currentUser();
+  const user = page.published && !page.updating ? null : await currentUser();
   if (!page.published && !user) notFound();
+
+  /*
+   * กำลังอัปเดตข้อมูล — คนทั่วไป (รวมตัวมิเรอร์ .com) เห็นกล่องแจ้งแทนเนื้อหาเก่า
+   * ตอบ 200 ตั้งใจ ห้ามเปลี่ยนเป็น 503 (ดู src/lib/pageUpdating.ts)
+   */
+  if (page.updating && !user) {
+    return (
+      <>
+        <PageTracker />
+        <Header />
+        <main className="mx-auto w-full max-w-6xl px-4 py-8">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-brand-600"
+          >
+            <ArrowLeft className="h-4 w-4" /> กลับหน้าแรก
+          </Link>
+          <h1 className="mt-3 text-2xl font-bold leading-snug text-gray-800 md:text-3xl">{page.title}</h1>
+          <div className="mt-5 flex flex-col items-center rounded-2xl bg-white px-6 py-14 text-center shadow-sm ring-1 ring-black/5">
+            <span className="grid h-16 w-16 place-items-center rounded-2xl bg-amber-50 text-amber-600 ring-1 ring-amber-200">
+              <Wrench className="h-8 w-8" aria-hidden="true" />
+            </span>
+            <p className="mt-5 text-xl font-bold text-brand-800">อยู่ระหว่างอัปเดตข้อมูล</p>
+            <p className="mt-2 max-w-xl text-sm leading-7 text-gray-600 sm:text-base">
+              {page.updatingNote || UPDATING_DEFAULT_NOTE}
+            </p>
+            <Link
+              href="/"
+              className="mt-6 inline-flex min-h-11 items-center rounded-full bg-brand-600 px-5 text-sm font-semibold text-white shadow transition hover:bg-brand-700"
+            >
+              กลับหน้าหลัก
+            </Link>
+          </div>
+        </main>
+        <BackToTop />
+        <Footer />
+      </>
+    );
+  }
 
   /*
     หน้าไหนมีหมุดอัตราดอกเบี้ยถึงจะไปอ่านค่าจากฐาน หน้าอื่นไม่ต้องเสียเวลา
@@ -113,6 +155,13 @@ export default async function ContentPage({ params }: Params) {
         >
           <ArrowLeft className="h-4 w-4" /> กลับหน้าแรก
         </Link>
+
+        {page.updating && (
+          <p className="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200">
+            <Wrench className="h-4 w-4 shrink-0" />
+            เปิด “กำลังอัปเดตข้อมูล” อยู่ — สมาชิกเห็นกล่องแจ้งอัปเดต ไม่เห็นเนื้อหานี้ · คุณเห็นเพราะล็อกอินหลังบ้านอยู่
+          </p>
+        )}
 
         {!page.published && (
           <p className="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200">

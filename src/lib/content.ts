@@ -271,9 +271,10 @@ export async function getWelfareBrief(): Promise<{ label: string; note: string }
   try {
     const page = await db.page.findUnique({
       where: { slug: "welfare" },
-      select: { body: true, published: true },
+      select: { body: true, published: true, updating: true },
     });
-    if (!page?.published) return [];
+    // หน้าสวัสดิการปิดเพื่ออัปเดตอยู่ = หน้าแรกก็ไม่ควรโชว์ข้อมูลเก่าที่สรุปจากหน้านั้น
+    if (!page?.published || page.updating) return [];
 
     const read = readWelfare(repairStructure(page.body));
     if (!read) return [];

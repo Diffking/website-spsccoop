@@ -49,6 +49,8 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
             title: page.title,
             body: page.body,
             published: page.published,
+            updating: page.updating,
+            updatingNote: page.updatingNote ?? "",
             // หน้าเก่าที่สร้างก่อนมีช่องนี้ ยังไม่มีค่าในฐาน — คำนวณจาก slug ให้ไปก่อน
             assetFolder: page.assetFolder ?? pageFolder(page.slug),
             category: page.category ?? "",

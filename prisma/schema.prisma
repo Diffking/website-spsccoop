@@ -266,6 +266,11 @@ model Page {
   /// ไม่ได้ตั้งไว้ ระบบจัดกลุ่มตามที่อยู่หน้าให้เอง
   category    String?
   published   Boolean  @default(false)
+  /// ปิดชั่วคราวระหว่างเจ้าหน้าที่อัปเดตข้อมูล — สมาชิกเห็นกล่องแจ้งแทนเนื้อหาเก่า
+  /// คนที่ล็อกอินหลังบ้านยังเห็นเนื้อหาจริง · ต่างจาก published=false ที่ขึ้นหน้า 404
+  updating     Boolean  @default(false)
+  /// ข้อความเฉพาะหน้านี้ระหว่างอัปเดต (ว่าง = ใช้ข้อความกลาง UPDATING_DEFAULT_NOTE)
+  updatingNote String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
