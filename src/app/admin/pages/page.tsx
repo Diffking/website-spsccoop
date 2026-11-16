@@ -20,6 +20,7 @@ export default async function AdminPagesPage() {
       slug: true,
       title: true,
       published: true,
+      updating: true,
       updatedAt: true,
       category: true,
     },

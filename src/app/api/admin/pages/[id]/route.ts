@@ -6,6 +6,7 @@ import { cleanPageFolder, pageFolder } from "@/lib/assetFolders";
 import { repairStructure } from "@/lib/htmlStructure";
 import { cleanPageHtml, limitInlineStyles } from "@/lib/pageHtml";
 import { purgeEverySite } from "@/lib/mirrorPurge";
+import { cleanUpdatingNote } from "@/lib/pageUpdating";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -26,6 +27,8 @@ export async function PATCH(request: Request, { params }: Params) {
     slug?: string;
     content?: string;
     published?: boolean;
+    updating?: boolean;
+    updatingNote?: string;
     assetFolder?: string;
     category?: string;
   };
@@ -35,6 +38,8 @@ export async function PATCH(request: Request, { params }: Params) {
     slug?: string;
     body?: string;
     published?: boolean;
+    updating?: boolean;
+    updatingNote?: string | null;
     assetFolder?: string;
     category?: string | null;
   } = {};
@@ -75,6 +80,9 @@ export async function PATCH(request: Request, { params }: Params) {
     data.body = limitInlineStyles(cleanPageHtml(repairStructure(body.content)));
   }
   if (typeof body.published === "boolean") data.published = body.published;
+  // ปิดชั่วคราวระหว่างอัปเดตข้อมูล (ดู src/lib/pageUpdating.ts)
+  if (typeof body.updating === "boolean") data.updating = body.updating;
+  if (body.updatingNote !== undefined) data.updatingNote = cleanUpdatingNote(body.updatingNote);
 
   // หมวดไว้จัดกลุ่มในหลังบ้านเท่านั้น เว้นว่าง = ให้ระบบจัดกลุ่มตามที่อยู่หน้าเอง
   if (typeof body.category === "string") data.category = body.category.trim() || null;

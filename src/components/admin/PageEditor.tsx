@@ -13,7 +13,9 @@ import {
   Sparkles,
   Trash2,
   Undo2,
+  Wrench,
 } from "lucide-react";
+import { UPDATING_DEFAULT_NOTE, UPDATING_NOTE_MAX } from "@/lib/pageUpdating";
 import ContentToolbar from "@/components/admin/ContentToolbar";
 import VisualEditor from "@/components/admin/VisualEditor";
 import { repairStructure, structureProblems } from "@/lib/htmlStructure";
@@ -43,6 +45,9 @@ type Props = {
     title: string;
     body: string;
     published: boolean;
+    /** ปิดชั่วคราวระหว่างอัปเดตข้อมูล (ดู src/lib/pageUpdating.ts) */
+    updating: boolean;
+    updatingNote: string;
     /** โฟลเดอร์เก็บไฟล์แนบของหน้านี้ใต้ assets/ */
     assetFolder: string;
     /** หมวดสำหรับจัดกลุ่มในรายการหลังบ้าน */
@@ -517,6 +522,8 @@ export default function PageEditor({
           <span className="text-xs text-gray-400">(ไม่ติ๊ก = เก็บเป็นฉบับร่าง คนนอกไม่เห็น)</span>
         </label>
 
+        <UpdatingSwitch id={page.id} initial={page.updating} initialNote={page.updatingNote} />
+
         {status && (
           <p
             className={`mt-3 rounded-lg px-3 py-2 text-sm ${
@@ -576,6 +583,89 @@ export default function PageEditor({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * สวิตช์ "กำลังอัปเดตข้อมูล" — บันทึกทันทีที่กด ไม่รอปุ่มบันทึกของหน้า
+ *
+ * แยกจากการบันทึกเนื้อหาตั้งใจ: เจ้าหน้าที่กดปิดก่อนเริ่มแก้ แล้วค่อยแก้เนื้อหาไปเรื่อย ๆ
+ * (บันทึกหลายรอบได้) สมาชิกไม่เห็นของครึ่ง ๆ กลาง ๆ จนกว่าจะกดเปิดเอง
+ * และปุ่มบันทึกเนื้อหาไม่ส่งค่านี้ไปด้วย จึงไม่มีทางเผลอเปิดหน้ากลับโดยไม่ตั้งใจ
+ */
+function UpdatingSwitch({
+  id,
+  initial,
+  initialNote,
+}: {
+  id: string;
+  initial: boolean;
+  initialNote: string;
+}) {
+  const [on, setOn] = useState(initial);
+  const [note, setNote] = useState(initialNote);
+  const [savedNote, setSavedNote] = useState(initialNote);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function send(body: Record<string, unknown>) {
+    setBusy(true);
+    setError("");
+    const res = await fetch(`/api/admin/pages/${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).catch(() => null);
+    setBusy(false);
+    if (!res?.ok) setError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+    return Boolean(res?.ok);
+  }
+
+  return (
+    <div
+      className={`mt-4 rounded-xl p-3 ring-1 ${on ? "bg-orange-50 ring-orange-200" : "bg-gray-50 ring-gray-200"}`}
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <Wrench className={`h-4 w-4 shrink-0 ${on ? "text-orange-600" : "text-gray-400"}`} />
+        <p className="min-w-0 flex-1 text-sm text-gray-700">
+          {on ? (
+            <>
+              <b className="text-orange-800">กำลังอัปเดตข้อมูล</b> — สมาชิกเห็นกล่องแจ้งแทนเนื้อหาหน้านี้
+            </>
+          ) : (
+            <>ปิดหน้าชั่วคราวระหว่างอัปเดต — สมาชิกจะไม่เห็นข้อมูลเก่า</>
+          )}
+        </p>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            if (await send({ updating: !on })) setOn(!on);
+          }}
+          className={`inline-flex min-h-10 items-center rounded-full px-4 text-sm font-semibold transition disabled:opacity-50 ${
+            on ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-orange-500 text-white hover:bg-orange-600"
+          }`}
+        >
+          {on ? "อัปเดตเสร็จแล้ว เปิดให้สมาชิกเห็น" : "ปิดเพื่ออัปเดต"}
+        </button>
+      </div>
+      <label className="mt-2 block text-xs text-gray-500">
+        ข้อความที่สมาชิกเห็น (เว้นว่าง = “{UPDATING_DEFAULT_NOTE}”)
+        <input
+          value={note}
+          maxLength={UPDATING_NOTE_MAX}
+          onChange={(e) => setNote(e.target.value)}
+          onBlur={async () => {
+            if (note === savedNote) return;
+            if (await send({ updatingNote: note })) setSavedNote(note);
+          }}
+          placeholder="เช่น อยู่ระหว่างรอผลการเลือกตั้งคณะกรรมการชุดที่ 46"
+          className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:border-brand-400"
+        />
+        <span className="mt-0.5 block text-[11px] text-gray-400">บันทึกให้เองเมื่อคลิกออกจากช่อง · .com ตามภายใน 2 นาที</span>
+      </label>
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
     </div>
   );
 }
