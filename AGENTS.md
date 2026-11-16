@@ -449,6 +449,15 @@ docker compose up -d web            # migrate รันก่อน web สต�
 docker compose logs migrate | tail  # ต้องเห็นชื่อ migration ใหม่ ไม่ใช่ "No pending"
 ```
 
+⚠️ **16 พ.ย. 2569 `docker compose build` ตันที่ `additional privileges requested: pass "--allow=fs.read=Dockerfile"`**
+(Compose v5 ใช้ bake · `COMPOSE_BAKE=false` ไม่ช่วย) — build ตรงด้วยชื่อ image เดียวกับที่ compose ใช้แทน:
+
+```bash
+docker build --pull -t webcoopsmile-web .
+docker build --target build -t webcoopsmile-migrate .
+docker compose up -d web
+```
+
 ข้อดีของท่านี้คือ **เว็บจริงยังรัน image เก่าอยู่ตลอดช่วง build** ถ้า build พังก็ไม่มีใครรู้สึก
 · ถ้าจะ deploy ตอนมีคนใช้งานเยอะ แยกสองคำสั่งแบบนี้ปลอดภัยกว่า `up -d --build` เสมอ
 
