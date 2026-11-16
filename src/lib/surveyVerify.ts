@@ -132,7 +132,12 @@ export async function verifyResponses(opts: { surveyId?: string; recheck?: boole
 
   const statuses = opts.recheck ? ["pending", "verified"] : ["pending"];
   const rows = await db.surveyResponse.findMany({
-    where: { status: { in: statuses }, ...(opts.surveyId ? { surveyId: opts.surveyId } : {}) },
+    where: {
+      status: { in: statuses },
+      // แบบระบุตัวตนเองไม่มีอะไรให้เทียบ — ห้ามตรวจ ไม่งั้นทุกคำตอบกลายเป็น "ให้เจ้าหน้าที่ดู"
+      survey: { identityMode: "verify" },
+      ...(opts.surveyId ? { surveyId: opts.surveyId } : {}),
+    },
     orderBy: { submittedAt: "asc" },
     select: { id: true, surveyId: true, membNo: true, claimedMembNo: true, claimedPhoneHash: true, status: true },
   });

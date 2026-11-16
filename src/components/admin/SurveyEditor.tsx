@@ -53,6 +53,8 @@ export type SurveyEditorProps = {
   title: string;
   description: string;
   items: SurveyItem[];
+  /** verify = ยืนยันกับทะเบียน · self = สมาชิกพิมพ์เลขสมาชิก + ชื่อเอง */
+  identityMode: "verify" | "self";
   opensAt: string | null;
   closesAt: string | null;
   closedAt: string | null;
@@ -141,6 +143,7 @@ export default function SurveyEditor(props: SurveyEditorProps) {
   const router = useRouter();
   const [title, setTitle] = useState(props.title);
   const [description, setDescription] = useState(props.description);
+  const [identityMode, setIdentityMode] = useState(props.identityMode);
   const [items, setItems] = useState<SurveyItem[]>(props.items);
   const [opens, setOpens] = useState(splitThai(props.opensAt));
   const [closes, setCloses] = useState(splitThai(props.closesAt));
@@ -170,6 +173,7 @@ export default function SurveyEditor(props: SurveyEditorProps) {
     title,
     description,
     questions: items,
+    identityMode,
     opensAt: joinThai(opens.date, opens.time, "00:00"),
     closesAt: joinThai(closes.date, closes.time, "23:59"),
   };
@@ -342,6 +346,21 @@ export default function SurveyEditor(props: SurveyEditorProps) {
             placeholder="คำอธิบายที่สมาชิกเห็นด้านบนแบบประเมิน (เว้นว่างได้)"
             className={`${input} resize-y`}
           />
+
+          {/* ยืนยันตัวตนแบบไหน — คำทักท้วงรายงานประชุมใหญ่ใช้แบบ "พิมพ์เอง" (16 พ.ย. 2569) */}
+          <label className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
+            <span className="font-medium">ผู้ตอบระบุตัวตนด้วย</span>
+            <select
+              value={identityMode}
+              onChange={(e) => setIdentityMode(e.target.value === "self" ? "self" : "verify")}
+              disabled={props.responses > 0}
+              className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand-400 disabled:opacity-60"
+            >
+              <option value="verify">เลขที่สมาชิก + เบอร์มือถือ (เทียบทะเบียนสมาชิก)</option>
+              <option value="self">เลขที่สมาชิก + ชื่อ-นามสกุล พิมพ์เอง (ไม่เทียบทะเบียน · มีด่านกันบอท)</option>
+            </select>
+            {props.responses > 0 && <span className="text-xs text-gray-400">มีคนตอบแล้ว เปลี่ยนไม่ได้</span>}
+          </label>
 
           {/* ลิงก์ + QR ที่แจกให้สมาชิก — survey.spsccoop.org (Cloudflare Worker) เปิดได้ตลอด 24 ชม. */}
           <div className="grid gap-4 rounded-xl bg-gray-50 p-3 sm:grid-cols-[minmax(0,1fr)_auto]">

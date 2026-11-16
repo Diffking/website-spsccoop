@@ -62,6 +62,17 @@ export async function PATCH(request: Request, { params }: Params) {
     if (!title) return NextResponse.json({ error: "ชื่อแบบประเมินห้ามว่าง" }, { status: 400 });
     data.title = title;
   }
+  if (body.identityMode !== undefined) {
+    const mode = body.identityMode === "self" ? "self" : "verify";
+    if (mode !== existing.identityMode) {
+      // เปลี่ยนวิธียืนยันตัวตนหลังมีคนตอบ = คำตอบเก่ากับใหม่คนละมาตรฐาน ห้าม
+      const answered = await db.surveyResponse.count({ where: { surveyId: existing.id } });
+      if (answered > 0) {
+        return NextResponse.json({ error: "มีคนตอบแล้ว เปลี่ยนวิธียืนยันตัวตนไม่ได้" }, { status: 409 });
+      }
+      data.identityMode = mode;
+    }
+  }
   if (body.description !== undefined) {
     data.description = String(body.description ?? "").trim().slice(0, 4000);
   }

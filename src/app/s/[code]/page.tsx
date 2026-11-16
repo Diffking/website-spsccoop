@@ -85,6 +85,7 @@ export default async function SurveyPage({ params }: Params) {
             title={survey.title}
             description={survey.description}
             items={survey.items.filter((i) => !i.hidden)}
+            selfMode={survey.identityMode === "self"}
           />
         )}
 

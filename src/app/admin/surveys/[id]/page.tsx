@@ -26,6 +26,7 @@ export default async function AdminSurveyEditPage({ params }: Params) {
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
       <SurveyEditor
+        identityMode={survey.identityMode === "self" ? "self" : "verify"}
         id={survey.id}
         code={survey.code}
         url={surveyUrl(survey.code, process.env.SURVEY_PUBLIC_URL)}
