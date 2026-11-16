@@ -29,7 +29,6 @@ import {
   type ChoiceAnswer,
   type GridAnswer,
 } from "@/lib/surveyAnswers";
-import { challengeOf, proofTime, solvePow } from "@/lib/surveyBot";
 
 type Step = "identify" | "confirm" | "offline" | "answer" | "review" | "done" | "already";
 
@@ -126,66 +125,6 @@ function IdFields({
     </>
   );
 }
-
-/**
- * โหมด "ระบุตัวตนเอง" (คำทักท้วงรายงานประชุมใหญ่) — เลขที่สมาชิก + ชื่อ-นามสกุล พิมพ์เอง ไม่เทียบทะเบียน
- * มีช่องดักบอทซ่อนไว้ (คนมองไม่เห็น โปรแกรมอ่านหน้าจอข้าม) — ดู src/lib/surveyBot.ts
- */
-function SelfIdFields({
-  membNo,
-  name,
-  trap,
-  onMembNo,
-  onName,
-  onTrap,
-}: {
-  membNo: string;
-  name: string;
-  trap: string;
-  onMembNo: (v: string) => void;
-  onName: (v: string) => void;
-  onTrap: (v: string) => void;
-}) {
-  return (
-    <>
-      <label className="block">
-        <span className="text-sm text-gray-600">เลขที่สมาชิก</span>
-        <input
-          value={membNo}
-          onChange={(e) => onMembNo(e.target.value)}
-          inputMode="numeric"
-          autoComplete="off"
-          maxLength={10}
-          placeholder="เช่น 07337"
-          className={inputCls}
-        />
-      </label>
-      <label className="block">
-        <span className="text-sm text-gray-600">ชื่อ-นามสกุล</span>
-        <input
-          value={name}
-          onChange={(e) => onName(e.target.value)}
-          autoComplete="name"
-          maxLength={120}
-          placeholder="เช่น นายสมชาย ใจดี"
-          className={`${inputCls} tracking-normal`}
-        />
-      </label>
-      {/* ช่องดักบอท — ซ่อนจากคนและโปรแกรมอ่านหน้าจอ บอทที่กรอกทุกช่องจะติดตรงนี้ */}
-      <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
-        <label>
-          เว็บไซต์
-          <input tabIndex={-1} autoComplete="off" value={trap} onChange={(e) => onTrap(e.target.value)} />
-        </label>
-      </div>
-      <p className="text-xs leading-relaxed text-gray-500">
-        จำเลขที่สมาชิกไม่ได้ · ดูได้จากสมุดบัญชีเงินฝาก ใบเสร็จรับเงินรายเดือน หรือสอบถามเจ้าหน้าที่สหกรณ์
-      </p>
-    </>
-  );
-}
-
-const selfNameOk = (v: string) => v.replace(/\s+/g, " ").trim().length >= 3;
 
 /** แบ่งเป็นหน้า ๆ ตามหัวตอน — เหมือน Google Form ที่กด "ถัดไป" ทีละตอน */
 function paginate(items: SurveyItem[]): { head: SurveyItem | null; items: SurveyItem[] }[] {
@@ -470,7 +409,6 @@ export default function SurveyForm({
   description,
   items,
   preview = false,
-  selfMode = false,
 }: {
   code: string;
   title: string;
@@ -478,8 +416,6 @@ export default function SurveyForm({
   items: SurveyItem[];
   /** ตัวอย่างในหลังบ้าน — ข้ามขั้นยืนยันตัวตน และส่งจริงไม่ได้ */
   preview?: boolean;
-  /** สมาชิกพิมพ์เลขสมาชิก + ชื่อเอง ไม่เทียบทะเบียน (identityMode = "self") */
-  selfMode?: boolean;
 }) {
   const pages = useMemo(() => paginate(items), [items]);
   const [step, setStep] = useState<Step>(preview ? "answer" : "identify");
@@ -500,10 +436,6 @@ export default function SurveyForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
-  /** โหมดระบุตัวตนเอง — ชื่อที่พิมพ์ · ช่องดักบอท · เวลาที่เปิดหน้า (ด่านเวลากรอกขั้นต่ำ) */
-  const [selfName, setSelfName] = useState("");
-  const [trap, setTrap] = useState("");
-  const [startedAt] = useState(() => Date.now());
 
   const scrollTop = () => topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
@@ -611,7 +543,6 @@ export default function SurveyForm({
       setError("นี่คือหน้าตัวอย่าง — ส่งจริงไม่ได้");
       return;
     }
-    if (selfMode) return submitSelf();
     if (offline) return submitQueued();
     setBusy(true);
     setError(null);
@@ -679,48 +610,7 @@ export default function SurveyForm({
     setError(String(r.data.error ?? "ส่งคำตอบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"));
   }
 
-  /**
-   * ส่งแบบระบุตัวตนเอง — แก้โจทย์กันบอทในเครื่องก่อน (~1 วินาที) แล้วส่งไป /queue/
-   * เครื่องสำนักงานปิดอยู่ Worker ที่ survey.spsccoop.org พักไว้ให้ แล้วเครื่องนี้ดึงเข้ามาเอง
-   */
-  async function submitSelf() {
-    setBusy(true);
-    setError(null);
-    const membNo = membText.replace(/\D/g, "");
-    let nonce = 0;
-    const ts = proofTime();
-    try {
-      nonce = await solvePow(challengeOf(code, membNo, ts));
-    } catch {
-      setBusy(false);
-      setError("เบราว์เซอร์นี้ส่งไม่ได้ กรุณาลองเปิดด้วย Chrome หรือ Safari รุ่นใหม่");
-      return;
-    }
-    const r = await post(`/api/survey/${code}/queue/`, {
-      membNo,
-      name: selfName,
-      answers,
-      bot: { ts, nonce, startedAt, hp: trap },
-    });
-    setBusy(false);
-    if (r.ok) {
-      setStep("done");
-      scrollTop();
-      return;
-    }
-    const serverMiss = Array.isArray(r.data.missing) ? (r.data.missing as string[]) : [];
-    if (serverMiss.length) {
-      setStep("answer");
-      const at = pages.findIndex((p) => p.items.some((i) => serverMiss.includes(i.id)));
-      if (at >= 0) setPage(at);
-      return jumpToFirst(serverMiss);
-    }
-    setError(String(r.data.error ?? "ส่งไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"));
-  }
-
-  const idReady = selfMode
-    ? membLooksOk(membText) && selfNameOk(selfName)
-    : membLooksOk(membText) && phoneLooksOk(phoneText);
+  const idReady = membLooksOk(membText) && phoneLooksOk(phoneText);
 
   const current = pages[page];
   const last = page === pages.length - 1;
@@ -748,46 +638,7 @@ export default function SurveyForm({
       <AnimatePresence initial={false}>
         <motion.div key={step === "answer" ? `answer-${page}` : step} {...fadeSwap(0.5)} style={STACKED} className="min-w-0">
           {/* ---------- ยืนยันตัวตน ---------- */}
-          {step === "identify" && selfMode && (
-            <section className={`${box} relative`}>
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800">
-                <ShieldCheck className="h-5 w-5 text-brand-600" /> ข้อมูลผู้ทักท้วง
-              </h2>
-              <p className="mt-1 text-sm text-gray-500">กรอกเลขที่สมาชิกและชื่อ-นามสกุลของท่าน</p>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!idReady) return;
-                  setError(null);
-                  setStep(answersReady ? "review" : "answer");
-                  scrollTop();
-                }}
-                className="mt-4 space-y-3"
-              >
-                <SelfIdFields
-                  membNo={membText}
-                  name={selfName}
-                  trap={trap}
-                  onMembNo={setMembText}
-                  onName={setSelfName}
-                  onTrap={setTrap}
-                />
-                <button
-                  type="submit"
-                  disabled={!idReady}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white shadow transition hover:bg-brand-700 disabled:opacity-50"
-                >
-                  <ArrowRight className="h-5 w-5" />
-                  {answersReady ? "ตรวจทานก่อนส่ง" : "ถัดไป"}
-                </button>
-              </form>
-              <p className="mt-4 rounded-xl bg-gray-50 px-3 py-2 text-[11px] leading-relaxed text-gray-500">
-                สหกรณ์ใช้ข้อมูลนี้เพื่อพิจารณาคำทักท้วงเท่านั้น · ส่งได้เลขที่สมาชิกละ 1 ครั้ง
-              </p>
-            </section>
-          )}
-
-          {step === "identify" && !selfMode && (
+          {step === "identify" && (
             <section className={box}>
               <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800">
                 <ShieldCheck className="h-5 w-5 text-brand-600" /> ยืนยันตัวตนสมาชิก
@@ -982,12 +833,7 @@ export default function SurveyForm({
                 <div className="mt-3">
                   <WhoCard
                     rows={
-                      selfMode
-                        ? [
-                            ["เลขที่สมาชิก", membText.replace(/\D/g, "")],
-                            ["ชื่อ-นามสกุล", selfName.replace(/\s+/g, " ").trim()],
-                          ]
-                        : offline
+                      offline
                         ? [
                             ["เลขที่สมาชิก", membText.replace(/\D/g, "")],
                             ["เบอร์มือถือ", phoneText.replace(/\D/g, "")],
@@ -1000,19 +846,6 @@ export default function SurveyForm({
                     }
                   />
                 </div>
-                {selfMode && !preview && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAnswersReady(true);
-                      setStep("identify");
-                      scrollTop();
-                    }}
-                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 hover:underline"
-                  >
-                    <Pencil className="h-3.5 w-3.5" /> แก้ข้อมูลผู้ทักท้วง
-                  </button>
-                )}
                 {offline && (
                   <p className="mt-2 text-xs leading-relaxed text-amber-700">
                     สหกรณ์จะตรวจข้อมูลนี้กับทะเบียนสมาชิกอีกครั้ง — พิมพ์ผิดแก้ได้ที่ปุ่มด้านล่าง
@@ -1080,7 +913,7 @@ export default function SurveyForm({
                   className="ml-auto inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow transition hover:bg-emerald-700 disabled:opacity-60"
                 >
                   {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                  {busy && selfMode ? "กำลังตรวจสอบความปลอดภัย…" : "ยืนยันส่งคำตอบ"}
+                  ยืนยันส่งคำตอบ
                 </button>
               </div>
             </div>

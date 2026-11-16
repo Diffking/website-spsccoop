@@ -30,10 +30,6 @@ export async function POST(request: Request, { params }: Params) {
   const { code } = await params;
   const survey = await publicSurvey(code);
   if (!survey) return NextResponse.json({ error: "ไม่พบแบบประเมินนี้" }, { status: 404 });
-  // แบบระบุตัวตนเองส่งผ่าน /queue ทางเดียว (มีด่านกันบอท) — เส้นนี้ไม่เปิดให้
-  if (survey.identityMode === "self") {
-    return NextResponse.json({ error: "แบบนี้ไม่ใช้การยืนยันตัวตน" }, { status: 400 });
-  }
   if (survey.status !== "open") {
     return NextResponse.json({ error: NOT_OPEN[survey.status as "scheduled" | "closed"] }, { status: 409 });
   }
