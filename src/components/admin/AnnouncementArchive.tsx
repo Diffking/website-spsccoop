@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, ExternalLink, RotateCcw } from "lucide-react";
+import { Archive, ExternalLink, RotateCcw, Trash2 } from "lucide-react";
 
 export type ArchivedRow = { id: string; number: string; title: string; archiveYear: number };
 
@@ -46,6 +46,25 @@ export default function AnnouncementArchive({ rows }: { rows: ArchivedRow[] }) {
     if (r) setStatus({ kind: "ok", text: `จัดเก็บแล้ว ${r.count ?? 0} ฉบับ` });
   }
 
+  async function removeYear(y: number, count: number) {
+    const typed = window.prompt(
+      `ลบประกาศปีบัญชี ${y} ทั้งหมด ${count} ฉบับ ทิ้งถาวร?
+หน้า "ประกาศปีบัญชี ${y}" จะหายไปด้วย
+
+พิมพ์ ${y} เพื่อยืนยัน`,
+    );
+    if (typed?.trim() !== String(y)) return;
+    const r = await post({ action: "deleteYear", year: y });
+    if (r) setStatus({ kind: "ok", text: `ลบประกาศปีบัญชี ${y} แล้ว ${r.count ?? 0} ฉบับ` });
+  }
+
+  async function removeOne(row: ArchivedRow) {
+    if (!window.confirm(`ลบประกาศ ${row.number} ทิ้งถาวร?
+${row.title}`)) return;
+    const r = await post({ action: "delete", id: row.id });
+    if (r) setStatus({ kind: "ok", text: `ลบประกาศ ${row.number} แล้ว` });
+  }
+
   const years = [...new Set(rows.map((r) => r.archiveYear))].sort((a, b) => b - a);
 
   return (
@@ -83,6 +102,14 @@ export default function AnnouncementArchive({ rows }: { rows: ArchivedRow[] }) {
             <a href={`/news/archive/${y}/`} target="_blank" rel="noopener noreferrer" className="ml-auto inline-flex items-center gap-1 text-xs font-normal text-brand-700 hover:underline">
               ดูหน้าเว็บ <ExternalLink className="h-3 w-3" />
             </a>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void removeYear(y, rows.filter((r) => r.archiveYear === y).length)}
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-red-600 ring-1 ring-red-200 hover:bg-red-50 disabled:opacity-50"
+            >
+              <Trash2 className="h-3 w-3" /> ลบทั้งปีบัญชี {y}
+            </button>
           </h3>
           <ul className="grid grid-cols-1 divide-y divide-gray-100 rounded-xl ring-1 ring-gray-100">
             {rows
@@ -99,6 +126,16 @@ export default function AnnouncementArchive({ rows }: { rows: ArchivedRow[] }) {
                     className="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50"
                   >
                     <RotateCcw className="h-3 w-3" /> ย้ายกลับ
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void removeOne(r)}
+                    aria-label={`ลบประกาศ ${r.number}`}
+                    title="ลบทิ้งถาวร"
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-red-500 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </li>
               ))}
