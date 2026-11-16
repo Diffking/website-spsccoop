@@ -84,7 +84,7 @@ export async function POST(request: Request) {
   const maxEdge =
     Number.isFinite(asked) && asked >= 200 && asked <= 2000
       ? asked
-      : folder === "page_images"
+      : folder === "page_images" || folder === "gallery"
         ? 1200
         : MAX_EDGE;
   const limit = isPdf ? MAX_PDF_BYTES : MAX_BYTES;

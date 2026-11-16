@@ -18,6 +18,7 @@ export const FOLDERS = {
   page_images: "รูปในหน้าเนื้อหา",
   brand: "โลโก้และภาพประจำเว็บ",
   home_items: "รูปรายการหน้าแรก",
+  gallery: "ภาพเด่นอัลบั้มกิจกรรม",
 } as const;
 
 /**
