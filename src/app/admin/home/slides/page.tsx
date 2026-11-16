@@ -27,7 +27,7 @@ export default async function AdminSlidesPage() {
    * ไม่งั้นวันหลังแก้กฎว่าหมวดไหนอ่านแบบ E-Book แล้วหลังบ้านจะพาไปคนละที่กับที่หน้าเว็บพาไป
    * · ตัวที่ยังไม่มีไฟล์แนบถูกตัดออก (readerHref คืน null) จะได้ไม่มีให้เลือกแล้วกดไปเจอที่ว่าง
    */
-  const docs: DocLink[] = (await getAnnouncements(500))
+  const docs: DocLink[] = (await getAnnouncements(500, undefined, { includeArchived: true }))
     .map((a) => {
       const href = readerHref(a.kind, a.id, a.href);
       return href

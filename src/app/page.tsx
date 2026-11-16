@@ -29,7 +29,7 @@ import {
   getSiteInfo,
   getSplash,
 } from "@/lib/settings";
-import { getAnnouncements, getHolidayEvents, getSlides, getWelfareBrief } from "@/lib/content";
+import { getAnnouncements, getArchiveYears, getHolidayEvents, getSlides, getWelfareBrief } from "@/lib/content";
 import { getCalendarEvents, getItems } from "@/lib/homeItems";
 import { pageMetadata } from "@/lib/seo";
 import { splashRedirectScript } from "@/lib/splashRedirect";
@@ -65,6 +65,7 @@ export default async function Home() {
     hours,
     albums,
     committeeUpdating,
+    archiveYears,
   ] = await Promise.all([
     getSiteInfo(),
     getRates(),
@@ -89,6 +90,7 @@ export default async function Home() {
     getOfficeHours(),
     getHomeAlbums(),
     getCommitteeUpdating(),
+    getArchiveYears(),
   ]);
 
   /*
@@ -121,6 +123,7 @@ export default async function Home() {
         committeeSet={committeeSet}
         committeePhotoScale={committeePhotoScale}
         committeeUpdating={committeeUpdating}
+        archiveYears={archiveYears}
         bg={bg.news}
       />
     ),

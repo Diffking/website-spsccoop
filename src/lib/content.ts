@@ -233,10 +233,20 @@ export async function getSlides(): Promise<SlideItem[]> {
 }
 
 /** ไม่ระบุ kind = เอาทุกหมวดปนกัน (ข่าววิ่งใช้แบบนั้น) */
-export async function getAnnouncements(take = 20, kind?: Kind): Promise<AnnouncementItem[]> {
+export async function getAnnouncements(
+  take = 20,
+  kind?: Kind,
+  /** รวมประกาศที่จัดเก็บเข้าคลังปีบัญชีแล้วด้วย (หลังบ้านใช้เลือกลิงก์) — หน้าเว็บไม่รวม */
+  opts: { includeArchived?: boolean } = {},
+): Promise<AnnouncementItem[]> {
   try {
     const rows = await db.announcement.findMany({
-      where: { published: true, ...(kind ? { kind } : {}) },
+      where: {
+        published: true,
+        ...(kind ? { kind } : {}),
+        // จัดเก็บเข้าคลังแล้ว = ไม่ขึ้นหน้าแรก/หน้ารวม/ข่าววิ่ง ไปอยู่ที่ /news/archive/<ปี>/
+        ...(opts.includeArchived ? {} : { archiveYear: null }),
+      },
       // ลำดับที่จัดเองมาก่อน · ตัวที่ยังไม่เคยจัด (0) เรียงตามวันที่ใหม่ไปเก่า
       orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
       take,
@@ -297,4 +307,38 @@ export async function getWelfareBrief(): Promise<{ label: string; note: string }
     console.error("อ่านสวัสดิการไม่ได้:", error);
     return [];
   }
+}
+
+/** ปีบัญชีที่มีประกาศจัดเก็บไว้ (ใหม่ → เก่า) — ลิงก์ "ประกาศปีบัญชี …" ใต้รายการประกาศ */
+export async function getArchiveYears(): Promise<number[]> {
+  const rows = await db.announcement
+    .findMany({
+      where: { published: true, archiveYear: { not: null } },
+      select: { archiveYear: true },
+      distinct: ["archiveYear"],
+    })
+    .catch(() => []);
+  return rows.map((r) => r.archiveYear as number).sort((a, b) => b - a);
+}
+
+/** เลขลำดับหน้าเครื่องหมาย / — "30/2569" → 30 · อ่านไม่ออก = 0 */
+const numberOrder = (n: string) => Number.parseInt(n, 10) || 0;
+
+/** ประกาศในคลังปีบัญชีหนึ่ง — เรียงตามเลขที่ ใหม่ → เก่า */
+export async function getArchivedAnnouncements(year: number): Promise<AnnouncementItem[]> {
+  const rows = await db.announcement
+    .findMany({ where: { published: true, archiveYear: year }, orderBy: { publishedAt: "desc" } })
+    .catch(() => []);
+  return rows
+    .sort((a, b) => numberOrder(b.number) - numberOrder(a.number) || b.publishedAt.getTime() - a.publishedAt.getTime())
+    .map((r) => ({
+      id: r.id,
+      number: r.number,
+      title: r.title,
+      kind: r.kind as Kind,
+      badge: r.badge?.trim() || null,
+      hideNumber: r.hideNumber,
+      date: thaiDate.format(r.publishedAt),
+      href: localAsset(r.fileUrl) || "#",
+    }));
 }

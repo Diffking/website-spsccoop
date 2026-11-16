@@ -89,11 +89,15 @@ model Announcement {
   sortOrder   Int              @default(0)
   /// ซ่อนเลขที่บนหน้าเว็บ — รายงานกิจการที่ชื่อเรื่องบอกปีอยู่แล้ว ใส่ RS-63 ซ้ำจะรก
   hideNumber  Boolean          @default(false)
+  /// จัดเก็บเข้าคลังของปีบัญชีไหน (พ.ศ.) — ว่าง = ประกาศปัจจุบัน ขึ้นหน้าแรก/หน้ารวม
+  /// มีค่า = ไม่ขึ้นหน้าแรก ย้ายไปอยู่หน้า /news/archive/<ปี>/ (16 พ.ย. 2569)
+  archiveYear Int?
   published   Boolean          @default(true)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
   @@index([published, kind, sortOrder, publishedAt])
+  @@index([archiveYear])
 }
 
 /// ข่าววิ่งบนแถบด้านบน — สั้นๆ ไม่มีไฟล์แนบ

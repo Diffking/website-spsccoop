@@ -14,6 +14,7 @@ import { DESIGNED_PAGES } from "@/lib/designedPages";
 import { CODED_ROUTES } from "@/lib/siteRoutes";
 import { PROGRAM_PATHS } from "@/lib/programPages";
 import { getFiscalYears } from "@/lib/gallery";
+import { getArchiveYears } from "@/lib/content";
 
 /** เว็บนี้ตั้งให้ทุกที่อยู่ลงท้ายด้วย / — ไม่ใส่จะโดนพาไปที่อยู่ใหม่ก่อนหนึ่งจังหวะ */
 function withSlash(path: string): string {
@@ -32,6 +33,7 @@ export async function publicPaths(): Promise<string[]> {
     .findMany({ where: { published: true }, select: { slug: true }, orderBy: { slug: "asc" } })
     .catch(() => []);
   const galleryYears = await getFiscalYears();
+  const archiveYears = await getArchiveYears();
 
   return [
     ...new Set([
@@ -45,6 +47,8 @@ export async function publicPaths(): Promise<string[]> {
       ...pages.map((p) => withSlash(p.slug)),
       // ภาพกิจกรรมแยกหน้าตามปีบัญชี (/gallery/2569/) — /gallery/ เฉย ๆ อยู่ใน CODED_ROUTES แล้ว
       ...galleryYears.map((fy) => `/gallery/${fy}/`),
+      // คลังประกาศตามปีบัญชี (/news/archive/2569/)
+      ...archiveYears.map((y) => `/news/archive/${y}/`),
     ]),
   ];
 }
