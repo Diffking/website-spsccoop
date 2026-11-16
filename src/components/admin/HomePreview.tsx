@@ -25,6 +25,7 @@ const PARTS: { href: string; label: string }[] = [
   { href: "/admin/home/member", label: "สำหรับสมาชิก" },
   { href: "/admin/home/calendar", label: "ปฏิทินสหกรณ์" },
   { href: "/admin/home/officers", label: "สำนักงานบริการสมาชิก" },
+  { href: "/admin/gallery", label: "ภาพกิจกรรม" },
 ];
 
 export default function HomePreview() {

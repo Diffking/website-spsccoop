@@ -64,3 +64,18 @@ export async function getAlbumsForAdmin(): Promise<GalleryAlbumView[]> {
     .catch(() => []);
   return rows.map(toView);
 }
+
+/** จำนวนสไลด์ภาพกิจกรรมบนหน้าแรกสูงสุด — มากกว่านี้วนนานจนไม่มีใครดูครบ */
+export const HOME_ALBUM_LIMIT = 8;
+
+/** อัลบั้มที่ขึ้นสไลด์หน้าแรก (Phase 2) — เผยแพร่ + ติ๊ก "แสดงบนหน้าแรก" ใหม่สุดขึ้นก่อน */
+export async function getHomeAlbums(): Promise<GalleryAlbumView[]> {
+  const rows = await db.galleryAlbum
+    .findMany({
+      where: { published: true, showOnHome: true },
+      orderBy: [{ eventDate: "desc" }, { createdAt: "desc" }],
+      take: HOME_ALBUM_LIMIT,
+    })
+    .catch(() => []);
+  return rows.map(toView);
+}

@@ -17,7 +17,7 @@ export default async function Page() {
     <main className="mx-auto max-w-3xl px-4 py-6">
       <h1 className="mb-1 text-xl font-bold text-gray-800">ภาพกิจกรรม</h1>
       <p className="mb-3 text-sm text-gray-500">
-        เก็บภาพเด่นอัลบั้มละ 1 ภาพ ภาพที่เหลืออยู่บน Google Photos ผ่านลิงก์ · แยกหน้าตามปีบัญชี (1 ต.ค. – 30 ก.ย.)
+        เก็บภาพเด่นอัลบั้มละ 1 ภาพ ภาพที่เหลืออยู่บน Google Photos ผ่านลิงก์ · แยกหน้าตามปีบัญชี (1 ต.ค. – 30 ก.ย.) · อัลบั้มที่ติ๊ก “ขึ้นสไลด์หน้าแรก” ใหม่สุด 8 อัลบั้มจะวนบนหน้าแรก
       </p>
       <PublishDelayNote />
       <GalleryManager items={items} />
