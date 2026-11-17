@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ChevronDown,
@@ -8,6 +8,7 @@ import {
   Code2,
   Copy,
   FileText,
+  GripVertical,
   FileType2,
   Heading,
   ImagePlus,
@@ -186,7 +187,55 @@ function BlockList({
     onChange([...blocks.slice(0, i + 1), copy, ...blocks.slice(i + 1)]);
   };
 
+  /*
+   * ลากรูปบุคคลสลับตำแหน่ง — ต้องอยู่ที่ระดับรายการก้อน ไม่ใช่ในก้อนทำเนียบเอง
+   * เพราะลากข้ามแถวได้ (แต่ละแถวของทำเนียบคือก้อนแยกกัน) · รูป ชื่อ ตำแหน่งย้ายไปด้วยกันเสมอ
+   */
+  const [peopleDrag, setPeopleDrag] = useState<PeopleSpot | null>(null);
+  const [peopleOver, setPeopleOver] = useState<PeopleSpot | null>(null);
+  const movePerson = (from: PeopleSpot, to: PeopleSpot) => {
+    const fb = blocks.find((b) => b.id === from.block);
+    const tb = blocks.find((b) => b.id === to.block);
+    if (fb?.kind !== "people" || tb?.kind !== "people") return;
+    const person = fb.people[from.index];
+    if (!person) return;
+    let at = to.index;
+    // ย้ายในแถวเดียวกันไปข้างหลังตัวเอง — เอาออกก่อนแล้วตำแหน่งปลายทางเลื่อนมาหนึ่งช่อง
+    if (fb.id === tb.id && from.index < at) at -= 1;
+    if (fb.id === tb.id && at === from.index) return;
+    onChange(
+      blocks.map((b) => {
+        if (b.kind !== "people") return b;
+        let people = b.people;
+        if (b.id === fb.id) people = people.filter((_, n) => n !== from.index);
+        if (b.id === tb.id) people = [...people.slice(0, at), person, ...people.slice(at)];
+        return people === b.people ? b : { ...b, people };
+      }),
+    );
+  };
+  const peopleDnd: PeopleDnd = {
+    drag: peopleDrag,
+    over: peopleOver,
+    start: (spot) => {
+      setPeopleDrag(spot);
+      setPeopleOver(null);
+    },
+    hover: (spot) => {
+      if (peopleOver?.block !== spot.block || peopleOver.index !== spot.index) setPeopleOver(spot);
+    },
+    drop: () => {
+      if (peopleDrag && peopleOver) movePerson(peopleDrag, peopleOver);
+      setPeopleDrag(null);
+      setPeopleOver(null);
+    },
+    end: () => {
+      setPeopleDrag(null);
+      setPeopleOver(null);
+    },
+  };
+
   return (
+    <PeopleDndContext.Provider value={peopleDnd}>
     <div className={`prose-page prose-edit ${nested ? "" : "min-h-[50vh]"}`}>
       <InsertLine onPick={(kind) => insertAt(0, kind)} first />
 
@@ -256,8 +305,29 @@ function BlockList({
         <InsertLine onPick={(kind) => insertAt(blocks.length, kind)} big />
       </div>
     </div>
+    </PeopleDndContext.Provider>
   );
 }
+
+/** ตำแหน่งในทำเนียบ — ก้อนไหน ช่องที่เท่าไร (ปลายทาง = แทรกก่อนช่องนั้น) */
+type PeopleSpot = { block: string; index: number };
+type PeopleDnd = {
+  drag: PeopleSpot | null;
+  over: PeopleSpot | null;
+  start: (spot: PeopleSpot) => void;
+  hover: (spot: PeopleSpot) => void;
+  drop: () => void;
+  end: () => void;
+};
+/** ค่าตั้งต้น = ลากไม่ได้ (ไม่มีรายการก้อนครอบ) ไม่ทำอะไรเลย */
+const PeopleDndContext = createContext<PeopleDnd>({
+  drag: null,
+  over: null,
+  start: () => {},
+  hover: () => {},
+  drop: () => {},
+  end: () => {},
+});
 
 function Tool({
   icon: Icon,
@@ -1309,6 +1379,25 @@ function PeopleView({
 }) {
   const set = (i: number, patch: Partial<Person>) =>
     onChange({ ...block, people: block.people.map((p, n) => (n === i ? { ...p, ...patch } : p)) });
+  const dnd = useContext(PeopleDndContext);
+  const dragging = dnd.drag !== null;
+  const overHere = dnd.over?.block === block.id ? dnd.over.index : -1;
+  const count = block.people.length;
+
+  /*
+   * จับลากได้ที่รูปกับจุดจับเท่านั้น — ชื่อกับตำแหน่งเป็นช่องพิมพ์ (contentEditable)
+   * ถ้าทั้งกล่องลากได้ จะคลุมดำเลือกตัวหนังสือไม่ได้เลย
+   */
+  const dragProps = (i: number) => ({
+    draggable: true,
+    onDragStart: (e: React.DragEvent) => {
+      e.stopPropagation();
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", "person");
+      dnd.start({ block: block.id, index: i });
+    },
+    onDragEnd: () => dnd.end(),
+  });
 
   return (
     <>
@@ -1321,11 +1410,59 @@ function PeopleView({
           ซ่อนชื่อกับตำแหน่งใต้รูปอยู่ — บนหน้าเว็บจริงจะเห็นแค่รูป · ข้อความยังเก็บไว้ครบ ไม่หายไปไหน
         </p>
       )}
-      <div className={`people cols-${block.cols}${block.noCaption ? " no-caption" : ""}`}>
+      <div
+        className={`people cols-${block.cols}${block.noCaption ? " no-caption" : ""}${
+          dragging && count === 0 && overHere === 0 ? " edit-people-over" : ""
+        }`}
+        onDragOver={(e) => {
+          if (!dragging) return;
+          e.preventDefault();
+          // แถวว่าง — วางลงช่องแรก · แถวที่มีคนแล้วให้ช่องแต่ละคนเป็นคนบอกตำแหน่ง
+          if (count === 0) dnd.hover({ block: block.id, index: 0 });
+        }}
+        onDrop={(e) => {
+          if (!dragging) return;
+          e.preventDefault();
+          dnd.drop();
+        }}
+      >
         {block.people.map((person, i) => (
-          <figure key={i} className="person edit-removable">
+          <figure
+            // ผูกกับรูปด้วย — ย้ายคนแล้วช่องพิมพ์ชื่อต้องสร้างใหม่ ไม่งั้นค้างชื่อของคนเดิมในช่องนั้น
+            key={`${i}:${person.src}`}
+            className={`person edit-removable${
+              dnd.drag?.block === block.id && dnd.drag.index === i ? " edit-person-dragging" : ""
+            }${overHere === i ? " edit-drop-before" : ""}${
+              overHere === count && i === count - 1 ? " edit-drop-after" : ""
+            }`}
+            onDragOver={(e) => {
+              if (!dragging) return;
+              e.preventDefault();
+              e.stopPropagation();
+              e.dataTransfer.dropEffect = "move";
+              // ครึ่งซ้ายของรูป = แทรกก่อนคนนี้ · ครึ่งขวา = แทรกหลัง
+              const box = e.currentTarget.getBoundingClientRect();
+              const after = e.clientX > box.left + box.width / 2;
+              dnd.hover({ block: block.id, index: after ? i + 1 : i });
+            }}
+            onDrop={(e) => {
+              if (!dragging) return;
+              e.preventDefault();
+              e.stopPropagation();
+              dnd.drop();
+            }}
+          >
+            <span className="edit-person-grip" title="กดค้างแล้วลากเพื่อย้ายตำแหน่ง" {...dragProps(i)}>
+              <GripVertical className="h-3.5 w-3.5" />
+            </span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={person.src} alt={person.name} />
+            <img
+              src={person.src}
+              alt={person.name}
+              title="กดค้างที่รูปแล้วลากไปวางตำแหน่งใหม่ได้ (ลากข้ามแถวได้)"
+              className="cursor-grab active:cursor-grabbing"
+              {...dragProps(i)}
+            />
             <figcaption>
               <RichText
                 as="span"
