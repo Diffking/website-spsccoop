@@ -311,7 +311,7 @@ function CommitteeCard({
       {/*
         ห่อรูป+ชื่อ+ตำแหน่งเป็นก้อนเดียวแล้วจางทั้งก้อนตอนเปลี่ยนคน
         กรอบนอกถือ flex-1 ไว้เอง (เหตุผลเดียวกับการ์ดประกาศ — กันปุ่มข้างล่างกระพริบ)
-        ส่วนก้อนข้างในยังให้บรรทัดชื่อถือ flex-1 ต่อ ระยะห่างจึงกระจายเหมือนเดิมเป๊ะ
+        ส่วนก้อนข้างในให้บรรทัดตำแหน่งถือ flex-1 ต่อ (ที่ว่างอยู่ใต้ตำแหน่ง ชื่อกับตำแหน่งชิดกัน)
       */}
       <div className="grid min-h-0 min-w-0 flex-1">
       <AnimatePresence initial={false}>
@@ -336,14 +336,16 @@ function CommitteeCard({
           <UserRound className="h-16 w-16 text-brand-300" />
         )}
       </div>
-      <p className="mt-4 line-clamp-1 flex-1 text-base font-semibold text-gray-700" title={c.title}>
+      <p className="mt-4 line-clamp-1 text-base font-semibold text-gray-700" title={c.title}>
         {c.title}
       </p>
       {/*
         กันบรรทัดตำแหน่งหายตอนเจอคนที่ไม่ได้กรอกตำแหน่งไว้ — ถ้าปล่อยให้หาย
         การ์ดจะเตี้ยลงหนึ่งบรรทัดแล้วกระตุกทุกครั้งที่กดเปลี่ยนคน
+        · ที่ว่างที่เหลือของการ์ดไปอยู่ "ใต้" บรรทัดตำแหน่ง (flex-1 ที่นี่) ไม่ใช่ที่บรรทัดชื่อ
+          เดิมชื่อถือ flex-1 ชื่อกับตำแหน่งเลยห่างกันเป็นช่องใหญ่ (เจ้าของเว็บทัก 17 พ.ย. 2569)
       */}
-      <p className="line-clamp-1 min-h-[1.25rem] text-sm text-gray-400" title={c.subtitle ?? ""}>
+      <p className="mt-1 line-clamp-1 min-h-[1.25rem] flex-1 text-sm text-gray-500" title={c.subtitle ?? ""}>
         {c.subtitle}
       </p>
       </motion.div>
