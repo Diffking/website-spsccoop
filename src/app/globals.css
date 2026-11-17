@@ -851,6 +851,17 @@ body {
   box-shadow: 0 1px 4px rgb(0 0 0 / .2); opacity: 0; transition: opacity .12s;
 }
 .edit-removable:hover > .edit-person-grip { opacity: 1; }
+/* ปุ่มเปลี่ยนรูป — ใต้จุดจับลาก มุมซ้ายบน · กำลังอัปค้างให้เห็นตลอด */
+.edit-person-photo {
+  position: absolute; top: 1.15rem; left: -.4rem; z-index: 10;
+  display: flex; align-items: center; gap: .2rem; height: 1.25rem; min-width: 1.25rem;
+  padding: 0 .2rem; justify-content: center; border-radius: 999px; background: #fff; color: #1c7fca;
+  font-size: .65rem; cursor: pointer; box-shadow: 0 1px 4px rgb(0 0 0 / .2);
+  opacity: 0; transition: opacity .12s;
+}
+.edit-removable:hover > .edit-person-photo,
+.edit-person-photo.is-busy { opacity: 1; }
+.edit-person-photo:hover { background: #1c7fca; color: #fff; }
 .edit-person-grip:active { cursor: grabbing; }
 .prose-edit .person.edit-person-dragging { opacity: .35; }
 .prose-edit .person.edit-drop-before::before,

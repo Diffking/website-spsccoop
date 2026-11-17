@@ -1366,6 +1366,52 @@ function CardsView({
 
 /* ---------- ทำเนียบบุคลากร ---------- */
 
+/**
+ * เปลี่ยนรูปของคนนี้คนเดียว — ชื่อ ตำแหน่ง และลำดับคงเดิม
+ * (เดิมต้องลบคนทิ้งแล้วเพิ่มใหม่ ซึ่งไปต่อท้ายแถว ต้องจัดลำดับใหม่ทุกครั้ง)
+ * ย่อ 600px เท่ากับปุ่ม "เพิ่มรูปบุคคล" · ไฟล์รูปเดิมไม่ถูกลบ (หลักเดียวกับทั้งระบบ)
+ */
+function PersonPhotoButton({ folder, onDone }: { folder: string; onDone: (src: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [percent, setPercent] = useState(0);
+
+  return (
+    <label
+      className={`edit-person-photo ${busy ? "is-busy" : ""}`}
+      title={busy ? `กำลังอัป ${percent}%` : "เปลี่ยนรูปคนนี้ (ชื่อและตำแหน่งคงเดิม)"}
+    >
+      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+      {busy && <span>{percent}%</span>}
+      <input
+        type="file"
+        accept="image/*"
+        className="hidden"
+        disabled={busy}
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (!file) return;
+          setBusy(true);
+          setPercent(0);
+          const form = new FormData();
+          form.append("file", file);
+          form.append("folder", folder);
+          form.append("maxEdge", "600");
+          const result = await uploadWithProgress<{ url: string }>("/api/admin/upload/", form, (p) =>
+            setPercent(p),
+          );
+          setBusy(false);
+          if (!result.ok) {
+            alert(`อัปรูป ${file.name} ไม่สำเร็จ — ลองใหม่อีกครั้ง`);
+            return;
+          }
+          onDone(result.data.url);
+        }}
+      />
+    </label>
+  );
+}
+
 function PeopleView({
   block,
   picked,
@@ -1455,6 +1501,7 @@ function PeopleView({
             <span className="edit-person-grip" title="กดค้างแล้วลากเพื่อย้ายตำแหน่ง" {...dragProps(i)}>
               <GripVertical className="h-3.5 w-3.5" />
             </span>
+            <PersonPhotoButton folder={folder} onDone={(src) => set(i, { src })} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={person.src}
