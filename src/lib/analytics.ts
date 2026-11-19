@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
 import { publicPaths } from "@/lib/publicPaths";
+import { fiscalRange, fiscalYearOf } from "@/lib/galleryShared";
 
 /**
  * นับผู้เข้าชมเว็บเอง ไม่ใช้บริการภายนอก
@@ -161,24 +162,35 @@ function pageLabel(path: string, titles: Map<string, string>): string {
 }
 
 /**
- * จำนวนครั้งที่เปิดเว็บรายปี (พ.ศ.) — ปีที่ยังไม่มีข้อมูลจะไม่ถูกใส่มา
- * นับหน่วยเดียวกับตัวนับสะสมที่ท้ายเว็บ คือ "ครั้ง" ไม่ใช่ "คน"
+ * จำนวนครั้งที่เปิดเว็บราย "ปีบัญชี" (1 ต.ค. – 30 ก.ย. ตั้งชื่อตามปี พ.ศ. ที่สิ้นสุด)
+ * ปีที่ยังไม่มีข้อมูลจะไม่ถูกใส่มา · หน่วย "ครั้ง" เหมือนตัวนับท้ายเว็บ
+ *
+ * เดิมจัดกลุ่มตามปีปฏิทิน แต่หน้าภาพรวมเขียนป้ายว่า "ปีบัญชี" — แก้ให้ตรงกัน 19 พ.ย. 2569
  */
 export async function visitsByYear(): Promise<YearPoint[]> {
+  return (await fiscalVisitRows()).map(({ year, visits }) => ({ year, visits }));
+}
+
+type FiscalRow = { year: number; visits: number; firstDay: Date; lastDay: Date };
+
+/** รวม PageView ตามปีบัญชี พร้อมวันแรก/วันสุดท้ายที่มีข้อมูล (บอกว่าปีไหนนับได้ไม่ครบ) */
+async function fiscalVisitRows(): Promise<FiscalRow[]> {
   try {
-    const rows = await db.pageView.findMany({ select: { day: true, count: true } });
-    const byYear = new Map<number, number>();
-
+    const rows = await db.pageView.groupBy({ by: ["day"], _sum: { count: true } });
+    const byYear = new Map<number, FiscalRow>();
     for (const row of rows) {
-      // +543 = พ.ศ. · ใช้ปีตามเวลาไทยให้ตรงกับตอนบันทึก
-      const year =
-        Number(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric" }).format(row.day)) + 543;
-      byYear.set(year, (byYear.get(year) ?? 0) + row.count);
+      // day เก็บเป็นเที่ยงคืนเวลาไทย · fiscalYearOf คิดตามเวลาไทยเหมือนกัน 1 ต.ค. จึงตกปีใหม่ถูก
+      const year = fiscalYearOf(row.day);
+      const visits = row._sum.count ?? 0;
+      const cur = byYear.get(year);
+      if (!cur) byYear.set(year, { year, visits, firstDay: row.day, lastDay: row.day });
+      else {
+        cur.visits += visits;
+        if (row.day < cur.firstDay) cur.firstDay = row.day;
+        if (row.day > cur.lastDay) cur.lastDay = row.day;
+      }
     }
-
-    return [...byYear.entries()]
-      .map(([year, visits]) => ({ year, visits }))
-      .sort((a, b) => a.year - b.year);
+    return [...byYear.values()].sort((a, b) => a.year - b.year);
   } catch (error) {
     console.error("อ่านสถิติรายปีไม่ได้:", error);
     return [];
@@ -186,25 +198,70 @@ export async function visitsByYear(): Promise<YearPoint[]> {
 }
 
 /**
- * ยอดเข้าชมสะสม (ครั้ง) = ยอดยกมาจากเว็บเดิม + ที่ระบบนี้นับได้เอง
+ * ตัวนับท้ายเว็บ — จำนวนครั้งที่เปิดเว็บ "ในปีบัญชีปัจจุบัน" (เจ้าของเว็บสั่ง 19 พ.ย. 2569)
  *
- * **นับเป็นครั้ง ไม่ใช่คน** — คนเดิมเปิดเว็บสิบรอบก็นับสิบครั้ง เป็นตัวนับแบบเดียว
- * กับที่เว็บเดิมใช้มาตลอด เปิดหน้าเว็บกี่หน้าก็เดินหน้าไปเท่านั้นครั้ง
- * (จำนวน "คน" ยังเก็บอยู่ที่ VisitorDay ใช้ดูแยกได้ในหน้าภาพรวม)
+ * เริ่มนับใหม่เองทุก 1 ต.ค. เวลาไทย ไม่มีใครต้องไปกดรีเซ็ต และไม่ลบข้อมูลอะไรเลย
+ * แค่เลือกช่วงวันที่ตอนรวม · ยอดปีก่อน ๆ ดูได้ที่หลังบ้าน → สถิติผู้เข้าชมรายปี (ADMIN)
  *
- * เว็บเดิมนับมาหลายปีก่อนจะย้ายมาระบบนี้ ถ้าเริ่มนับใหม่จากศูนย์ ตัวเลขบนหน้าเว็บ
- * จะร่วงจากสองแสนกว่าเหลือหลักสิบ เหมือนเว็บเพิ่งเปิด จึงยกยอดเดิมมาเป็นจุดตั้งต้น
- * แล้วนับต่อจากตรงนั้น · ยอดยกมาแก้ได้ที่หลังบ้าน (ส่วนท้ายเว็บ) ไม่ได้ฝังไว้ในโค้ด
+ * **นับเป็นครั้ง ไม่ใช่คน** — คนเดิมเปิดเว็บสิบรอบก็นับสิบครั้ง แบบเดียวกับเว็บเดิม
+ * · เดิมเป็นยอดสะสม = ยอดยกมาจากเว็บเดิม (`visitorCarriedOver` 228,000) + ที่ระบบนับ
+ *   ค่านั้นยังอยู่ใน Setting แต่ไม่ได้ใช้คิดแล้ว
  */
-export async function visitTotal(carriedOver: number): Promise<number> {
+export async function fiscalVisitTotal(at = new Date()): Promise<{ year: number; visits: number }> {
+  const year = fiscalYearOf(at);
+  const { from, to } = fiscalRange(year);
   try {
-    const sum = await db.pageView.aggregate({ _sum: { count: true } });
-    return carriedOver + (sum._sum.count ?? 0);
+    const sum = await db.pageView.aggregate({
+      _sum: { count: true },
+      where: { day: { gte: from, lt: to } },
+    });
+    return { year, visits: sum._sum.count ?? 0 };
   } catch (error) {
-    console.error("อ่านยอดเข้าชมสะสมไม่ได้:", error);
-    // ฐานล่มก็ยังต้องโชว์ยอดยกมา ดีกว่าโชว์ 0 ให้สมาชิกเห็น
-    return carriedOver;
+    console.error("อ่านยอดเข้าชมปีบัญชีนี้ไม่ได้:", error);
+    return { year, visits: 0 };
   }
+}
+
+/** ยอดที่ไอทีพิมพ์เองรายปีบัญชี — Setting["visitorYearManual"] = { "2566": 123456 } */
+export const VISITOR_MANUAL_KEY = "visitorYearManual";
+/** แสดงปีบัญชีปัจจุบัน + ย้อนหลังกี่ปี */
+export const VISITOR_HISTORY_YEARS = 5;
+
+export type FiscalHistoryRow = {
+  year: number;
+  /** ที่ระบบนี้นับได้ — null = ไม่มีข้อมูลเลยในปีนั้น */
+  system: number | null;
+  /** ระบบนับได้ไม่ครบปี (เริ่มนับกลางปี / ปีปัจจุบันยังไม่จบ) — วันแรก-วันสุดท้ายที่มีข้อมูล */
+  firstDay: Date | null;
+  lastDay: Date | null;
+  /** ยอดที่ไอทีพิมพ์เอง — มีค่าเมื่อไหร่ใช้ค่านี้แทนยอดของระบบทั้งปี */
+  manual: number | null;
+  /** ยอดที่ใช้จริง = manual ?? system ?? null */
+  shown: number | null;
+};
+
+/** ตารางสถิติรายปี: ปีบัญชีปัจจุบัน + 5 ปีย้อนหลัง เรียงใหม่ไปเก่า · ขึ้นปีใหม่เลื่อนเอง */
+export async function fiscalVisitHistory(
+  manual: Record<string, number>,
+  at = new Date(),
+): Promise<FiscalHistoryRow[]> {
+  const current = fiscalYearOf(at);
+  const rows = new Map((await fiscalVisitRows()).map((r) => [r.year, r]));
+  return Array.from({ length: VISITOR_HISTORY_YEARS + 1 }, (_, i) => {
+    const year = current - i;
+    const r = rows.get(year);
+    // ปีปัจจุบันใช้ยอดสดของระบบเสมอ ให้ตรงกับตัวนับท้ายเว็บ — ไม่รับยอดพิมพ์เอง
+    const typed = i > 0 && Number.isFinite(manual[String(year)]) ? manual[String(year)] : null;
+    const system = r ? r.visits : null;
+    return {
+      year,
+      system,
+      firstDay: r?.firstDay ?? null,
+      lastDay: r?.lastDay ?? null,
+      manual: typed,
+      shown: typed ?? system,
+    };
+  });
 }
 
 /** จำนวน "คน" สะสม — นับคนเดิมที่มาคนละวันเป็นคนละครั้ง (ลายนิ้วมือเปลี่ยนทุกวัน) */

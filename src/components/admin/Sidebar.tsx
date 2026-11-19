@@ -25,6 +25,7 @@ import {
   ExternalLink,
   Images,
   MessageSquareWarning,
+  BarChart3,
 } from "lucide-react";
 import LogoutButton from "@/components/admin/LogoutButton";
 import CommandPalette, { type PaletteEntry } from "@/components/admin/CommandPalette";
@@ -51,6 +52,7 @@ export type MenuKey =
   | "seo"
   | "bridge"
   | "security"
+  | "visits"
   | "users";
 
 const ITEMS: {
@@ -204,6 +206,14 @@ const ITEMS: {
     desc: "ข้อมูลที่แบ่งปันให้ระบบอื่นในสำนักงานอ่าน",
   },
   {
+    key: "visits",
+    group: "ตั้งค่าระบบ",
+    href: "/admin/visits",
+    icon: BarChart3,
+    label: "สถิติผู้เข้าชมรายปี",
+    desc: "จำนวนครั้งที่เปิดเว็บไซต์ แยกตามปีบัญชี 5 ปีย้อนหลัง (ผู้ดูแลระบบ)",
+  },
+  {
     key: "security",
     group: "ตั้งค่าระบบ",
     href: "/admin/security",
@@ -235,7 +245,7 @@ const GROUPS = ["", "เนื้อหาเว็บ", "ส่วนประ�
 
 function visibleItems(user: Actor) {
   return ITEMS.flatMap((item) => {
-    if (item.key === "users" || item.key === "security") return user.role === "ADMIN" ? [item] : [];
+    if (item.key === "users" || item.key === "security" || item.key === "visits") return user.role === "ADMIN" ? [item] : [];
     if (item.key === "pages") return canAnyPage(user) ? [item] : [];
 
     const children = item.children?.filter((child) => canArea(user, child.area));

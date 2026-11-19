@@ -3,7 +3,7 @@ import { MapPin, Phone, Mail, Clock, CircleX, Users, ExternalLink, Navigation, P
 import { getItems } from "@/lib/homeItems";
 import { getBrand } from "@/lib/nav";
 import { getOfficeHours, getSiteInfo } from "@/lib/settings";
-import { parseCount, visitTotal } from "@/lib/analytics";
+import { fiscalVisitTotal } from "@/lib/analytics";
 import { describeClosedDays, describeOfficeHours } from "@/lib/officeHours";
 
 function FacebookIcon({ className }: { className?: string }) {
@@ -61,13 +61,13 @@ export default async function Footer() {
 
   /*
    * ตัวนับเข้าชม — เลขจริงจากระบบนับ ไม่ใช่เลขที่พิมพ์เองอย่างเมื่อก่อน
-   * นับเป็น "ครั้ง" คนเดิมเข้าซ้ำก็นับเพิ่ม และนับต่อจากยอดที่ยกมาจากเว็บเดิม
-   * (ตั้งได้ที่หลังบ้าน ส่วนท้ายเว็บ)
+   * นับเป็น "ครั้ง" คนเดิมเข้าซ้ำก็นับเพิ่ม · **เฉพาะปีบัญชีปัจจุบัน** เริ่มใหม่ทุก 1 ต.ค.
+   * (เจ้าของเว็บสั่ง 19 พ.ย. 2569 · ยอดปีก่อน ๆ อยู่ที่หลังบ้าน → สถิติผู้เข้าชมรายปี)
    *
    * สมาชิกส่วนใหญ่อ่านผ่านสำเนาบนโฮสต์ ตัวเลขที่เห็นจึงเป็นของตอนที่สำเนาถูกสร้าง
    * ขยับตามรอบล้าง/อุ่นแคช ไม่ได้วิ่งสด ๆ ทุกวินาที
    */
-  const visits = await visitTotal(parseCount(info.visitorCarriedOver));
+  const { year: visitYear, visits } = await fiscalVisitTotal();
   return (
     <footer className="mt-auto bg-brand-800 text-white">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-4">
@@ -81,7 +81,7 @@ export default async function Footer() {
                 {visits.toLocaleString("th-TH")}{" "}
                 <span className="text-sm font-normal">ครั้ง</span>
               </p>
-              <p className="text-xs text-white/70">จำนวนครั้งที่เปิดเว็บไซต์ทั้งหมด</p>
+              <p className="text-xs text-white/70">จำนวนครั้งที่เปิดเว็บไซต์ ปีบัญชี {visitYear}</p>
             </div>
           </div>
           {(info.facebook || info.youtube) && (
