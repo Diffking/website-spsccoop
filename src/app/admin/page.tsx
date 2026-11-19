@@ -5,13 +5,11 @@ import { canAnyPage, canArea, filterPages, hasFullAccess } from "@/lib/permissio
 import { db } from "@/lib/db";
 import { getBackupStatus } from "@/lib/backups";
 import {
-  parseCount,
   popularPages,
   uniqueVisitors,
-  visitTotal,
+  fiscalVisitTotal,
   visitsByYear,
 } from "@/lib/analytics";
-import { getSiteInfo } from "@/lib/settings";
 import { publicSiteUrl } from "@/lib/siteUrl";
 import { syncStatus } from "@/lib/memberSync";
 import Dashboard, { BackupPanel } from "@/components/admin/Dashboard";
@@ -27,7 +25,7 @@ export default async function AdminPage() {
   const full = hasFullAccess(user);
   const now = new Date();
 
-  const [announcements, tickers, holidays, pages, users, backup, visits, popular, info, people] =
+  const [announcements, tickers, holidays, pages, users, backup, visits, popular, people] =
     await Promise.all([
       db.announcement.count(),
       db.newsTicker.count(),
@@ -37,13 +35,11 @@ export default async function AdminPage() {
       getBackupStatus(),
       visitsByYear(),
       popularPages(),
-      getSiteInfo(),
       uniqueVisitors(),
     ]);
 
   // ยอดเดียวกับที่สมาชิกเห็นท้ายเว็บ — เจ้าหน้าที่จะได้ไม่งงว่าทำไมสองที่ไม่ตรงกัน
-  const carriedOver = parseCount(info.visitorCarriedOver);
-  const total = await visitTotal(carriedOver);
+  const { year: fiscalYear, visits: total } = await fiscalVisitTotal();
 
   /*
    * ถามโฮสต์เฉพาะคนที่จะเห็นกล่องสำเนา (ดูแลทั้งเว็บ) — เดิมถามทุกคนที่เปิดหน้านี้
@@ -114,7 +110,8 @@ export default async function AdminPage() {
         visits={visits}
         popular={popular}
         total={total}
-        carriedOver={carriedOver}
+        fiscalYear={fiscalYear}
+        isAdmin={user.role === "ADMIN"}
         people={people}
         tiles={tiles}
       />

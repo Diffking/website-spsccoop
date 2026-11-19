@@ -55,17 +55,20 @@ export default function Dashboard({
   visits,
   popular,
   total,
-  carriedOver,
+  fiscalYear,
+  isAdmin,
   people,
   tiles,
 }: {
   counts: Counts;
   visits: YearPoint[];
   popular: PagePoint[];
-  /** ยอดสะสมที่โชว์ท้ายเว็บ (ครั้ง) = ยอดยกมาจากเว็บเดิม + ที่ระบบนี้นับได้ */
+  /** ยอดที่โชว์ท้ายเว็บ (ครั้ง) = เฉพาะปีบัญชีปัจจุบัน เริ่มใหม่ทุก 1 ต.ค. */
   total: number;
-  /** ยอดยกมาจากเว็บเดิม — แยกให้เห็นว่าในยอดสะสมมีของเก่าเท่าไหร่ */
-  carriedOver: number;
+  /** ปีบัญชีของยอดข้างบน (พ.ศ.) */
+  fiscalYear: number;
+  /** ADMIN เห็นลิงก์ไปหน้าสถิติรายปี */
+  isAdmin: boolean;
   /** จำนวน "คน" ที่ระบบนี้นับได้ — คนละหน่วยกับตัวนับสะสม แยกไว้ให้ดูเทียบ */
   people: number;
   /** การ์ดที่คนนี้เปิดเข้าไปได้ — ที่เหลือไม่ต้องโชว์ กดแล้วก็โดนเด้งกลับมาอยู่ดี */
@@ -86,19 +89,23 @@ export default function Dashboard({
         transition={{ duration: 0.45, ease: "easeOut" }}
         className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-400 p-5 text-white shadow-sm"
       >
-        <p className="text-sm text-brand-50/80">จำนวนครั้งที่เปิดเว็บไซต์ทั้งหมด</p>
+        <p className="text-sm text-brand-50/80">จำนวนครั้งที่เปิดเว็บไซต์ ปีบัญชี {fiscalYear}</p>
         <p className="mt-1 text-5xl font-bold tabular-nums leading-none">
           {total.toLocaleString("th-TH")}
         </p>
         <p className="mt-2 text-sm text-brand-50/90">
-          ครั้ง — ตัวเลขเดียวกับที่โชว์ท้ายเว็บ · คนเดิมเข้าซ้ำก็นับเพิ่ม
-          {carriedOver > 0 && (
-            <span className="mt-0.5 block text-xs text-brand-50/70">
-              ยกมาจากเว็บเดิม {carriedOver.toLocaleString("th-TH")} ครั้ง · ระบบนี้นับเองได้{" "}
-              {(total - carriedOver).toLocaleString("th-TH")} ครั้ง จาก{" "}
-              {people.toLocaleString("th-TH")} คน
-            </span>
-          )}
+          ครั้ง — ตัวเลขเดียวกับที่โชว์ท้ายเว็บ · เริ่มนับใหม่ทุก 1 ต.ค. · คนเดิมเข้าซ้ำก็นับเพิ่ม
+          <span className="mt-0.5 block text-xs text-brand-50/70">
+            ระบบนับคนได้ทั้งหมด {people.toLocaleString("th-TH")} คน (นับคนเดิมต่างวันเป็นคนใหม่)
+            {isAdmin && (
+              <>
+                {" · "}
+                <Link href="/admin/visits/" className="underline underline-offset-2 hover:text-white">
+                  ดูสถิติรายปีย้อนหลัง
+                </Link>
+              </>
+            )}
+          </span>
         </p>
 
         {/* ยอดของปีบัญชีปัจจุบัน — ยอดสะสมอย่างเดียวดูไม่ออกว่าปีนี้คนเข้ามากขึ้นหรือน้อยลง */}
